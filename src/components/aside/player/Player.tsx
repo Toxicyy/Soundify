@@ -15,6 +15,9 @@ import {
 } from "@ant-design/icons";
 import testPlayerImage from "../../../images/player/testPlayerImage.jpg";
 import { useState } from "react";
+import { setQueueOpen } from "../../../state/QueseOpen.slice";
+import type { AppDispatch } from "../../../store";
+import { useDispatch } from "react-redux";
 
 export const Player = () => {
   const [liked, setLiked] = useState(false);
@@ -26,6 +29,7 @@ export const Player = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isQueue, setIsQueue] = useState(false);
   const [isShare, setIsShare] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
   const currentStr = "2:24";
   const totalStr = "3:24";
   const value = 120;
@@ -197,7 +201,7 @@ export const Player = () => {
               fontSize: "24px",
               color: isQueue ? "white" : "rgba(255, 255, 255, 0.3)",
             }}
-            onClick={() => setIsQueue(!isQueue)}
+            onClick={() => {setIsQueue(!isQueue); dispatch(setQueueOpen(!isQueue))}}
           />
           <ShareAltOutlined
             style={{

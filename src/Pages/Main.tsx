@@ -3,7 +3,7 @@ import MainMenu from "../components/mainMenu/MainMenu";
 
 export default function Main(){
     return (
-        <div className="flex">
+        <div className="flex overflow-hidden">
             <Aside />
             <MainMenu />
         </div>
