@@ -7,12 +7,14 @@ import {
   HomeOutlined,
   InsertRowRightOutlined,
 } from "@ant-design/icons";
+import { motion } from "framer-motion";
 
 interface MainBarProps {
   text: string;
+  animationDuration: number;
 }
 
-export const MainBar: FC<MainBarProps> = ({ text }) => {
+export const MainBar: FC<MainBarProps> = ({ text, animationDuration }) => {
   const [hover, setHover] = useState(false);
   const icons = {
     Home: <HomeOutlined />,
@@ -24,7 +26,10 @@ export const MainBar: FC<MainBarProps> = ({ text }) => {
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ marginRight: "800px" }}
+      animate={{ marginRight: "0px" }}
+      transition={{ duration: animationDuration, ease: "easeInOut" }}
       className={
         "flex items-center gap-3 w-[13vw] h-[35px] rounded-lg pl-5 cursor-pointer duration-300 " +
         (hover ? "bg-gray-100/70" : "glass")
@@ -36,6 +41,6 @@ export const MainBar: FC<MainBarProps> = ({ text }) => {
         {icons[text as keyof typeof icons]}
       </div>
       <h1 className="font-semibold tracking-wider">{text}</h1>
-    </div>
+    </motion.div>
   );
 };

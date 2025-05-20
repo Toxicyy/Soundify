@@ -6,38 +6,44 @@
 }
 
 .aside {
-  background-color:#d199ff;
-  background-image:
-  radial-gradient(at 11% 23%, hsla(222,87%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 43% 18%, hsla(161,61%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 60% 33%, hsla(248,63%,63%,1) 0px, transparent 50%),
-  radial-gradient(at 74% 70%, hsla(169,78%,70%,1) 0px, transparent 50%),
-  radial-gradient(at 2% 78%, hsla(310,90%,74%,1) 0px, transparent 50%),
-  radial-gradient(at 0% 100%, hsla(138,88%,72%,1) 0px, transparent 50%),
-  radial-gradient(at 28% 54%, hsla(318,93%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 55% 33%, hsla(186,64%,68%,1) 0px, transparent 50%),
-  radial-gradient(at 87% 85%, hsla(319,97%,79%,1) 0px, transparent 50%),
-  radial-gradient(at 53% 67%, hsla(337,69%,61%,1) 0px, transparent 50%),
-  radial-gradient(at 40% 44%, hsla(71,81%,63%,1) 0px, transparent 50%),
-  radial-gradient(at 96% 29%, hsla(259,72%,75%,1) 0px, transparent 50%),
-  radial-gradient(at 98% 12%, hsla(210,76%,75%,1) 0px, transparent 50%);
+  background-color: #d199ff;
+  background-image: radial-gradient(
+      at 11% 23%,
+      hsla(222, 87%, 73%, 1) 0px,
+      transparent 50%
+    ),
+    radial-gradient(at 43% 18%, hsla(161, 61%, 73%, 1) 0px, transparent 50%),
+    radial-gradient(at 60% 33%, hsla(248, 63%, 63%, 1) 0px, transparent 50%),
+    radial-gradient(at 74% 70%, hsla(169, 78%, 70%, 1) 0px, transparent 50%),
+    radial-gradient(at 2% 78%, hsla(310, 90%, 74%, 1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(138, 88%, 72%, 1) 0px, transparent 50%),
+    radial-gradient(at 28% 54%, hsla(318, 93%, 73%, 1) 0px, transparent 50%),
+    radial-gradient(at 55% 33%, hsla(186, 64%, 68%, 1) 0px, transparent 50%),
+    radial-gradient(at 87% 85%, hsla(319, 97%, 79%, 1) 0px, transparent 50%),
+    radial-gradient(at 53% 67%, hsla(337, 69%, 61%, 1) 0px, transparent 50%),
+    radial-gradient(at 40% 44%, hsla(71, 81%, 63%, 1) 0px, transparent 50%),
+    radial-gradient(at 96% 29%, hsla(259, 72%, 75%, 1) 0px, transparent 50%),
+    radial-gradient(at 98% 12%, hsla(210, 76%, 75%, 1) 0px, transparent 50%);
 }
 
 .mainMenu {
-  background-color:#d199ff;
-  background-image:
-  radial-gradient(at 11% 23%, hsla(222,87%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 12% 58%, hsla(161,61%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 20% 10%, hsla(248,63%,63%,1) 0px, transparent 50%),
-  radial-gradient(at 32% 16%, hsla(169,78%,70%,1) 0px, transparent 50%),
-  radial-gradient(at 7% 18%, hsla(310,90%,74%,1) 0px, transparent 50%),
-  radial-gradient(at 49% 14%, hsla(138,88%,72%,1) 0px, transparent 50%),
-  radial-gradient(at 27% 57%, hsla(318,93%,73%,1) 0px, transparent 50%),
-  radial-gradient(at 18% 75%, hsla(186,64%,68%,1) 0px, transparent 50%),
-  radial-gradient(at 82% 24%, hsla(319,97%,79%,1) 0px, transparent 50%),
-  radial-gradient(at 16% 46%, hsla(337,69%,61%,1) 0px, transparent 50%),
-  radial-gradient(at 68% 58%, hsla(259,72%,75%,1) 0px, transparent 50%),
-  radial-gradient(at 84% 74%, hsla(210,76%,75%,1) 0px, transparent 50%);
+  background-color: #d199ff;
+  background-image: radial-gradient(
+      at 11% 23%,
+      hsla(222, 87%, 73%, 1) 0px,
+      transparent 50%
+    ),
+    radial-gradient(at 12% 58%, hsla(161, 61%, 73%, 1) 0px, transparent 50%),
+    radial-gradient(at 20% 10%, hsla(248, 63%, 63%, 1) 0px, transparent 50%),
+    radial-gradient(at 32% 16%, hsla(169, 78%, 70%, 1) 0px, transparent 50%),
+    radial-gradient(at 7% 18%, hsla(310, 90%, 74%, 1) 0px, transparent 50%),
+    radial-gradient(at 49% 14%, hsla(138, 88%, 72%, 1) 0px, transparent 50%),
+    radial-gradient(at 27% 57%, hsla(318, 93%, 73%, 1) 0px, transparent 50%),
+    radial-gradient(at 18% 75%, hsla(186, 64%, 68%, 1) 0px, transparent 50%),
+    radial-gradient(at 82% 24%, hsla(319, 97%, 79%, 1) 0px, transparent 50%),
+    radial-gradient(at 16% 46%, hsla(337, 69%, 61%, 1) 0px, transparent 50%),
+    radial-gradient(at 68% 58%, hsla(259, 72%, 75%, 1) 0px, transparent 50%),
+    radial-gradient(at 84% 74%, hsla(210, 76%, 75%, 1) 0px, transparent 50%);
 }
 
 .glass {
@@ -46,4 +52,32 @@
   -webkit-backdrop-filter: blur(8px); /* для поддержки Safari */
   color: #222;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.queue-scroll {
+  max-height: 27.5vh; /* подберите под ваш дизайн */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #575757 #181818;
+}
+
+.queue-full {
+  max-height: 87vh;
+}
+
+/* Для Chrome, Edge, Safari */
+.queue-scroll::-webkit-scrollbar {
+  width: 10px;
+  background: #181818;
+  border-radius: 8px;
+}
+
+.queue-scroll::-webkit-scrollbar-thumb {
+  background: #575757;
+  border-radius: 8px;
+}
+
+.queue-scroll::-webkit-scrollbar-track {
+  background: #181818;
+  border-radius: 8px;
 }

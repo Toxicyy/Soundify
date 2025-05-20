@@ -48,7 +48,7 @@ export const QueueTemplate: FC<QueueTemplateProps> = ({ track }) => {
         </div>
         <h1 className="text-white/50">{track.duration}</h1>
       </div>
-      <h1 className="text-white/50 pl-5.5">{track.artist}</h1>
+      <h1 className="text-white/50 pl-8">{track.artist}</h1>
     </div>
   );
 };

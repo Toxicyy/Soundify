@@ -2,6 +2,7 @@ import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
 import mice from "../../images/Artist/9Mice.jpg";
 import kai from "../../images/Artist/KaiAngel.jpg";
+import { motion } from "framer-motion";
 
 export default function ArtistModule() {
   return (
@@ -27,8 +28,20 @@ export default function ArtistModule() {
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <ArtistCard artistImage={mice} artistName="9mice" />
-        <ArtistCard artistImage={kai} artistName="Kai Angel" />
+        <motion.div
+          initial={{ opacity: 0, y: 1000 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <ArtistCard artistImage={mice} artistName="9mice" />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 1000 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        >
+          <ArtistCard artistImage={kai} artistName="Kai Angel" />
+        </motion.div>
       </div>
     </div>
   );

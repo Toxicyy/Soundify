@@ -22,32 +22,71 @@ export default function MainMenu() {
     <div className="h-screen w-[80vw] mainMenu pl-8 pt-6 flex gap-10">
       <div className="min-w-[65%] flex flex-col">
         <div className="flex items-center justify-end">
-          <div className="w-[70%] flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: -300 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="w-[70%] flex items-center justify-between"
+          >
             <SearchInput />
             <UserIcon userIcon={userAvatar} />
-          </div>
+          </motion.div>
         </div>
-        <div className="flex gap-4 mb-[10px]">
+        <motion.div
+          initial={{ opacity: 0, y: -300 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex gap-4 mb-[10px]"
+        >
           <div className="w-[30px] h-[30px] rounded-md glass flex justify-center items-center cursor-not-allowed">
             <LeftOutlined style={{ color: "white" }} />
           </div>
           <div className="w-[30px] h-[30px] rounded-md bg-white flex justify-center items-center hover:bg-gray-200 cursor-pointer">
             <RightOutlined style={{ color: "black" }} />
           </div>
-        </div>
-        <PlaylistModule />
-        <ArtistModule />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 2000 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <PlaylistModule />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 1200 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <ArtistModule />
+        </motion.div>
       </div>
 
-      {/* Правая колонка */}
-      <div className="w-[35%] pt-21 flex flex-col gap-3">
+      <div className="w-[35%] flex flex-col gap-3">
+        <motion.div
+          initial={{ opacity: 0, height: 0, y: -400 }}
+          animate={
+            !queueOpen
+              ? { opacity: 1, height: "auto", y: 0 }
+              : { opacity: 0, height: "auto", y: -400 }
+          }
+          exit={{ opacity: 0, height: 0, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          className="flex items-center justify-center gap-10 mb-6"
+        >
+          <div className="cursor-pointer w-[100px] h-[40px] rounded-full bg-transparent border-2 border-black flex items-center justify-center">
+            <h1 className="text-black text-xl font-bold">Sign up</h1>
+          </div>
+          <div className="cursor-pointer w-[120px] h-[50px] rounded-full bg-transparent border-2 border-white flex items-center justify-center">
+            <h1 className="text-white text-xl font-bold">Log in</h1>
+          </div>
+        </motion.div>
         <AnimatePresence>
           {!queueOpen && (
             <motion.div
               className="pr-8"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, height: 0, x: 2000 }}
+              animate={{ opacity: 1, height: "auto", x: 0 }}
+              exit={{ opacity: 0, height: 0, x: 2000 }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
               style={{ overflow: "visible" }}
             >
@@ -58,10 +97,10 @@ export default function MainMenu() {
         <motion.div
           key="queue"
           layout
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0, ease: "easeInOut" }}
+          initial={{ opacity: 0, y: 1000 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 1000 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="transition-all"
         >
           <Queue queueOpen={queueOpen} />
