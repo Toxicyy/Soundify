@@ -12,7 +12,7 @@ export default function ArtistCard({
   artistName: string;
 }) {
   return (
-    <div className="flex gap-17">
+    <div className="flex justify-between gap-[20px]">
       <div className="flex flex-col items-center gap-2">
         <img
           src={artistImage}

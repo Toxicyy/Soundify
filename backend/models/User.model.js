@@ -1,16 +1,10 @@
 import { Schema, model } from "mongoose";
 
-interface IUser {
-    username: string;
-    email: string;
-    password: string;
-    playlists: Schema.Types.ObjectId[];
-    likedSongs: Schema.Types.ObjectId[];
-    likedPlaylists: Schema.Types.ObjectId[];
-    likedArtists: Schema.Types.ObjectId[];
-}
-
-const userSchema = new Schema<IUser>({
+const userSchema = new Schema({
+    name: {
+        type: String,
+        required: true
+    },
     username: {
         type: String,
         required: true,
@@ -43,6 +37,6 @@ const userSchema = new Schema<IUser>({
     },
 }, { timestamps: true });
 
-const User = model<IUser>('User', userSchema);
+const User = model('User', userSchema);
 
 export default User;

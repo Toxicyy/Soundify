@@ -1,52 +1,23 @@
-import { useSelector } from "react-redux";
-import type { AppState } from "../store";
-
-const API_URL = "https://api.spotify.com/v1/";
-const tokenUrl = "https://accounts.spotify.com/api/token";
+const BASEURL = 'http://localhost:5000'
 
 
 export const api = {
-    getToken: async () => {
-        const response = await fetch(`${tokenUrl}`, {
-            method: "POST",
+    register: async (email: string, password: string, name: string, username: string) => {
+        return await fetch(`${BASEURL}/auth/registration`, {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
+                'Content-Type': 'application/json'
             },
-            body: `grant_type=client_credentials&client_id=${import.meta.env.VITE_SPOTIFY_CLIENT_ID}&client_secret=${import.meta.env.VITE_SPOTIFY_CLIENT_SECRET}`,
-        });
-        const data = await response.json();
-        return data;
-    },
-    getArtistByName: async (name: string, token: string) => {
-        const response = await fetch(`${API_URL}search?q=${name}&type=artist`, {
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            body: JSON.stringify({ email, password, name, username })
         })
-        const data = await response.json();
-        return data;
     },
-    getArtistPopularTracks: async (id: string, token: string) => {
-        const response = await fetch(`${API_URL}artists/${id}/top-tracks`, {
+    login: async (email: string, password: string) => {
+        return fetch(`${BASEURL}/auth/login`, {
+            method: 'POST',
             headers: {
-                "Authorization": `Bearer ${token}`
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
         })
-        const data = await response.json();
-        return data;
     }
-}
-
-export const api2 ={
-    searchUser: async (username: string) => {
-        const url = `https://api.soundcloud.com/users?q=${encodeURIComponent(username)}&client_id=${import.meta.env.VITE_SOUNDCLOUD_CLIENT_ID}`;
-        
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          return data[0]; // Возвращаем первого найденного исполнителя
-        } catch (error) {
-          console.error('Ошибка поиска:', error);
-        }
-      }
 }

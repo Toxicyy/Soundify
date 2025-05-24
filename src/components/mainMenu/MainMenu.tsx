@@ -10,16 +10,13 @@ import Queue from "./Queue";
 import { useSelector } from "react-redux";
 import type { AppState } from "../../store";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queueOpen.isOpen);
 
-  // Задай высоты под свои нужды!
-  const closedQueueHeight = 0.47 * window.innerHeight; // 37.8vh
-  const openQueueHeight = window.innerHeight - 120; // Например, 100vh минус header/отступы
-
   return (
-    <div className="h-screen w-[80vw] mainMenu pl-8 pt-6 flex gap-10">
+    <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10">
       <div className="min-w-[65%] flex flex-col">
         <div className="flex items-center justify-end">
           <motion.div
@@ -74,10 +71,14 @@ export default function MainMenu() {
           className="flex items-center justify-center gap-10 mb-6"
         >
           <div className="cursor-pointer w-[100px] h-[40px] rounded-full bg-transparent border-2 border-black flex items-center justify-center">
-            <h1 className="text-black text-xl font-bold">Sign up</h1>
+            <Link to={"/signup"}>
+              <h1 className="text-black text-xl font-bold">Sign up</h1>
+            </Link>
           </div>
           <div className="cursor-pointer w-[120px] h-[50px] rounded-full bg-transparent border-2 border-white flex items-center justify-center">
-            <h1 className="text-white text-xl font-bold">Log in</h1>
+            <Link to={"/login"}>
+              <h1 className="text-white text-xl font-bold">Log in</h1>
+            </Link>
           </div>
         </motion.div>
         <AnimatePresence>

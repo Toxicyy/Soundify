@@ -48,6 +48,7 @@ export const Player = ({ max }: { max: number }) => {
   };
   const track = "What We Takin` Bout";
   const artist = "NCT127";
+  
   return (
     <div className="flex flex-col">
       <motion.div
