@@ -2,6 +2,7 @@ import { createBrowserRouter, Outlet, redirect } from "react-router-dom";
 import Main from "./Pages/Main";
 import SignUp from "./Pages/SignUp";
 import Login from "./Pages/Login";
+import Dashboard from "./Pages/Dashboard/Dashboard";
 
 export const router = createBrowserRouter([
   {
@@ -21,9 +22,14 @@ export const router = createBrowserRouter([
         element: <Login />,
       },
       {
+        path: "/dashboard",
+        element: <Dashboard />,
+        children: [],
+      },
+      {
         path: "*",
         loader: () => {
-          return redirect("/");
+          return redirect("/discover");
         },
       },
     ],

@@ -43,6 +43,7 @@ app.post("/auth/registration", async (req, res) => {
     password: hash,
     name,
     username,
+    status: "USER",
   });
 
   try {
@@ -72,6 +73,43 @@ app.post("/auth/login", async (req, res) => {
   if (!isPasswordValid) {
     return res.status(401).json({ message: "Invalid password" });
   } else {
-    return res.status(200).json({ message: "Login successful", tokenInfo: {token: token, expires: new Date().getTime() + 7 * 24 * 60 * 60 * 1000 } });
+    return res.status(200).json({
+      message: "Login successful",
+      tokenInfo: {
+        token: token,
+        expires: new Date().getTime() + 7 * 24 * 60 * 60 * 1000,
+      },
+    });
+  }
+});
+
+app.get("/auth/get/user", async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, "secret");
+
+    const user = await User.findOne({ email: decoded.email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const resUser = {
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      status: user.status,
+      avatar: user.avatar,
+      playlists: user.playlists,
+      likedSongs: user.likedSongs,
+      likedPlaylists: user.likedPlaylists,
+      likedArtists: user.likedArtists,
+    };
+
+    return res.status(200).json(resUser);
+  } catch (e) {
+    if (e.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    return res.status(500).json({ message: "Something went wrong" });
   }
 });

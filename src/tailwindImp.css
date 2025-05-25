@@ -54,6 +54,16 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+.username {
+
+  background: linear-gradient(90deg, #f7609f, #24baff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-weight: bold;
+  display: inline;
+}
 .queue-scroll {
   max-height: 27.5vh; /* подберите под ваш дизайн */
   overflow-y: auto;

@@ -19,6 +19,13 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
+    status: {
+        type: String,
+        required: true,
+    },
+    avatar: {
+        type: String,
+    },
     playlists: {
         type: [Schema.Types.ObjectId],
         ref: 'Playlist',
