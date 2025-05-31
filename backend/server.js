@@ -8,12 +8,31 @@ import jwt from "jsonwebtoken";
 
 const app = express();
 const PORT = 5000;
-const upload = multer({ dest: "uploads/" });
 
 app.use(cors());
 app.use(express.json());
 
 connectDB();
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not an image!'), false);
+    }
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

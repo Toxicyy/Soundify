@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Tab from "./aside/Tab";
 import DashBoardImage from "../../images/dashboard/tabs/dashboard.png";
 import FileManagerImage from "../../images/dashboard/tabs/fileManager.png";
@@ -9,7 +9,7 @@ const tabs = [
   {
     icon: DashBoardImage,
     name: "Dashboard",
-    path: "/dashboard",
+    path: "/dashboard/statistic",
     children: [],
   },
   {
@@ -36,7 +36,7 @@ export default function Aside() {
     >
       <div className="flex items-center gap-2 justify-center p-4">
         <img
-          src="./src/images/logo/Soundify.png"
+          src="../src/images/logo/Soundify.png"
           alt="Soundify"
           className="w-[50px] min-w-[50px]"
         />

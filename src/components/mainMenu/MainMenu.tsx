@@ -16,7 +16,6 @@ import type { AppState } from "../../store";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../state/UserApi.slice";
-import { div } from "framer-motion/client";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queueOpen.isOpen);
