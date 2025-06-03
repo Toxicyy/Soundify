@@ -1,6 +1,10 @@
-import { useState, useRef } from 'react';
-import { UploadOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import { message } from 'antd';
+import { useState, useRef } from "react";
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
+import { message } from "antd";
 
 interface AudioUploadProps {
   onAudioChange: (file: File | null, chunks: Blob[]) => void;
@@ -9,11 +13,15 @@ interface AudioUploadProps {
 
 const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks
 
-export const AudioUpload = ({ onAudioChange, initialPreview = null }: AudioUploadProps) => {
-  const [audioPreview, setAudioPreview] = useState<string | null>(initialPreview);
+export const AudioUpload = ({
+  onAudioChange,
+  initialPreview = null,
+}: AudioUploadProps) => {
+  const [audioPreview, setAudioPreview] = useState<string | null>(
+    initialPreview
+  );
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const splitFileIntoChunks = (file: File): Promise<Blob[]> => {
     return new Promise((resolve) => {
       const chunks: Blob[] = [];
@@ -39,8 +47,8 @@ export const AudioUpload = ({ onAudioChange, initialPreview = null }: AudioUploa
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.match('audio.*') && !file.name.endsWith('.mp3')) {
-      message.error('Пожалуйста, выберите MP3 файл');
+    if (!file.type.match("audio.*") && !file.name.endsWith(".mp3")) {
+      message.error("Пожалуйста, выберите MP3 файл");
       return;
     }
 
@@ -56,7 +64,7 @@ export const AudioUpload = ({ onAudioChange, initialPreview = null }: AudioUploa
     setAudioFile(null);
     onAudioChange(null, []);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -100,7 +108,7 @@ export const AudioUpload = ({ onAudioChange, initialPreview = null }: AudioUploa
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="audio/mp3"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
 
       <div className="flex flex-col">
@@ -108,7 +116,7 @@ export const AudioUpload = ({ onAudioChange, initialPreview = null }: AudioUploa
           onClick={triggerFileInput}
           className="px-4 py-2 bg-[#1890ff] text-white rounded-md hover:bg-[#40a9ff] transition-colors"
         >
-          {audioFile ? audioFile.name : 'Выбрать аудио'}
+          {audioFile ? audioFile.name : "Выбрать аудио"}
         </button>
         {audioFile && (
           <span className="text-xs text-gray-500 mt-1">

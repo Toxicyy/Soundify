@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export const useAudioDuration = (audioUrl: string) => {
   const [duration, setDuration] = useState("");
