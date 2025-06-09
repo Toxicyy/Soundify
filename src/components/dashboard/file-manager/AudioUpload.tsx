@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef} from "react";
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -9,6 +9,7 @@ import { message } from "antd";
 interface AudioUploadProps {
   onAudioChange: (file: File | null, chunks: Blob[]) => void;
   initialPreview?: string | null;
+  isAdded?: boolean;
 }
 
 const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks
@@ -16,6 +17,7 @@ const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks
 export const AudioUpload = ({
   onAudioChange,
   initialPreview = null,
+  isAdded,
 }: AudioUploadProps) => {
   const [audioPreview, setAudioPreview] = useState<string | null>(
     initialPreview
@@ -74,7 +76,7 @@ export const AudioUpload = ({
 
   return (
     <div className="flex items-center gap-4">
-      <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center justify-center ">
         {audioPreview ? (
           <>
             <button
@@ -95,7 +97,10 @@ export const AudioUpload = ({
           </>
         ) : (
           <div
-            className="w-[50px] h-[50px] rounded-xl bg-[#F4F4F4] flex items-center justify-center cursor-pointer"
+            className={
+              "w-[50px] h-[50px] rounded-xl bg-[#F4F4F4] flex items-center justify-center cursor-pointer " +
+              (isAdded ? "" : "border-2 border-red-400")
+            }
             onClick={triggerFileInput}
           >
             <UploadOutlined className="text-gray-400" />
@@ -116,7 +121,7 @@ export const AudioUpload = ({
           onClick={triggerFileInput}
           className="px-4 py-2 bg-[#1890ff] text-white rounded-md hover:bg-[#40a9ff] transition-colors"
         >
-          {audioFile ? audioFile.name : "Выбрать аудио"}
+          {audioFile ? audioFile.name : "Select audio file"}
         </button>
         {audioFile && (
           <span className="text-xs text-gray-500 mt-1">

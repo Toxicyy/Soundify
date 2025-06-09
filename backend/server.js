@@ -5,6 +5,10 @@ import multer from "multer";
 import connectDB from "./config/db.js";
 import User from "./models/User.model.js";
 import jwt from "jsonwebtoken";
+import B2 from "backblaze-b2";
+import Track from "./models/Track.model.js";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 const PORT = 5000;
@@ -14,25 +18,36 @@ app.use(express.json());
 
 connectDB();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB лимит
   },
 });
 
-const upload = multer({ 
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not an image!'), false);
-    }
-  }
+const b2 = new B2({
+  applicationKeyId: process.env.B2_ACCOUNT_ID,
+  applicationKey: process.env.B2_SECRET_KEY,
 });
+
+async function uploadToB2(file, folder = "") {
+  await b2.authorize();
+  const fileName = `${folder}${Date.now()}-${file.originalname}`;
+  const uploadUrl = await b2.getUploadUrl({
+    bucketId: process.env.B2_BUCKET_ID,
+  });
+
+  const response = await b2.uploadFile({
+    uploadUrl: uploadUrl.data.uploadUrl,
+    uploadAuthToken: uploadUrl.data.authorizationToken,
+    fileName,
+    data: file.buffer,
+  });
+
+  return `https://f003.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${fileName}`;
+}
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
@@ -81,7 +96,7 @@ app.post("/auth/login", async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  const token = jwt.sign({ email }, "secret", { expiresIn: "7d" });
+  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
   const user = await User.findOne({ email });
   if (!user) {
@@ -105,7 +120,7 @@ app.post("/auth/login", async (req, res) => {
 app.get("/auth/get/user", async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
-    const decoded = jwt.verify(token, "secret");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findOne({ email: decoded.email });
     if (!user) {
@@ -131,4 +146,77 @@ app.get("/auth/get/user", async (req, res) => {
     }
     return res.status(500).json({ message: "Something went wrong" });
   }
+});
+
+app.post(
+  "/api/tracks",
+  upload.fields([
+    { name: "audio", maxCount: 1 },
+    { name: "cover", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      console.log("Request body:", req.body);
+      console.log("Files received:", req.files);
+      
+      const { name, artist } = req.body;
+      
+      // Проверка наличия файлов
+      if (!req.files || !req.files.audio || !req.files.cover) {
+        return res.status(400).json({ 
+          error: "Audio and cover files are required",
+          received: req.files 
+        });
+      }
+      
+      const audioFile = req.files.audio[0];
+      const coverFile = req.files.cover[0];
+      
+      console.log("Audio file:", audioFile.originalname, audioFile.size);
+      console.log("Cover file:", coverFile.originalname, coverFile.size);
+
+      // Проверка наличения обязательных полей
+      if (!name || !artist) {
+        return res.status(400).json({ 
+          error: "Name and artist are required" 
+        });
+      }
+
+      // Загружаем файлы в B2
+      console.log("Uploading to B2...");
+      const [audioUrl, coverUrl] = await Promise.all([
+        uploadToB2(audioFile, "audio/"),
+        uploadToB2(coverFile, "covers/"),
+      ]);
+      
+      console.log("B2 URLs:", { audioUrl, coverUrl });
+
+      // Сохраняем в MongoDB
+      const track = new Track({ 
+        name, 
+        artist, 
+        audioUrl, 
+        coverUrl,
+        listenCount: 0,
+        createdAt: new Date()
+      });
+      
+      const savedTrack = await track.save();
+      console.log("Track saved to DB:", savedTrack._id);
+
+      res.status(201).json(savedTrack);
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ 
+        error: "Upload failed", 
+        details: error.message 
+      });
+    }
+  }
+);
+
+// Роут для получения треков
+app.get("/api/tracks", async (req, res) => {
+  const tracks = await Track.find();
+  res.json(tracks);
 });

@@ -39,7 +39,17 @@ export default function AddTrack() {
     preview: null,
   });
   const [audioUploadKey, setAudioUploadKey] = useState(0);
-  const [queue, setQueue] = useState<TrackData[]>([]);
+  const [inputErrors, setInputErrors] = useState<{
+    name: boolean;
+    artist: boolean;
+    cover: boolean;
+    audio: boolean;
+  }>({
+    name: false,
+    artist: false,
+    cover: false,
+    audio: false,
+  });
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
@@ -61,7 +71,7 @@ export default function AddTrack() {
       setCurrentTrack((prev) => ({ ...prev, cover: null }));
       return;
     }
-
+    setInputErrors((prev) => ({ ...prev, cover: false }));
     const reader = new FileReader();
     reader.onload = (event) => {
       setCoverImage({
@@ -74,6 +84,7 @@ export default function AddTrack() {
   };
 
   const handleAudioChange = (file: File | null, chunks: Blob[]) => {
+    setInputErrors((prev) => ({ ...prev, audio: false }));
     setAudioData({ file, chunks });
     setCurrentTrack((prev) => ({ ...prev, audio: file }));
   };
@@ -85,21 +96,27 @@ export default function AddTrack() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setInputErrors((prev) => ({ ...prev, [name]: false }));
     setCurrentTrack((prev) => ({ ...prev, [name]: value }));
   };
 
   const addToQueue = () => {
-    if (!currentTrack.name || !currentTrack.artist) {
-      message.error("Заполните название трека и исполнителя");
+    if (
+      !currentTrack.name ||
+      !currentTrack.artist ||
+      !currentTrack.audio ||
+      !currentTrack.cover
+    ) {
+      setInputErrors((prev) => ({
+        ...prev,
+        name: !currentTrack.name,
+        artist: !currentTrack.artist,
+        audio: !currentTrack.audio,
+        cover: !currentTrack.cover,
+      }));
       return;
     }
 
-    if (!currentTrack.audio) {
-      message.error("Добавьте аудиофайл");
-      return;
-    }
-
-    setQueue((prev) => [...prev, currentTrack]);
     currentTrack.id = 0;
     if (coverImage) {
       currentTrack.preview = coverImage.preview;
@@ -107,7 +124,6 @@ export default function AddTrack() {
       currentTrack.preview = null;
     }
     dispatch(addToQueueState(currentTrack));
-    console.log(currentTrack);
 
     // Reset form
     setCurrentTrack({
@@ -118,51 +134,12 @@ export default function AddTrack() {
       audio: null,
       preview: null,
     });
-    setAudioUploadKey(prev => prev + 1)
+    setAudioUploadKey((prev) => prev + 1);
     setCoverImage(null);
     setAudioData({ file: null, chunks: [] });
 
     message.success("Трек добавлен в очередь");
   };
-
-  const removeFromQueue = (index: number) => {
-    setQueue((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmitQueue = async () => {
-    if (queue.length === 0) {
-      message.error("Очередь треков пуста");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-
-      queue.forEach((track, index) => {
-        formData.append(`tracks[${index}][name]`, track.name);
-        formData.append(`tracks[${index}][artist]`, track.artist);
-        if (track.cover)
-          formData.append(`tracks[${index}][cover]`, track.cover);
-        if (track.audio)
-          formData.append(`tracks[${index}][audio]`, track.audio);
-        console.log(formData);
-      });
-
-      const response = await fetch("/api/tracks/bulk", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Ошибка загрузки треков");
-
-      setQueue([]);
-      message.success(`Успешно загружено ${queue.length} треков`);
-    } catch (error) {
-      message.error("Ошибка при загрузке очереди треков");
-      console.error(error);
-    }
-  };
-
   return (
     <motion.div
       className="drop-shadow-2xl h-full bg-white rounded-3xl flex min-w-[460px]"
@@ -186,12 +163,14 @@ export default function AddTrack() {
           name="name"
           value={currentTrack.name}
           onChange={handleInputChange}
+          status={!inputErrors.name ? "" : "error"}
         />
         <Input
           placeholder="Artist"
           name="artist"
           value={currentTrack.artist}
           onChange={handleInputChange}
+          status={!inputErrors.artist ? "" : "error"}
         />
 
         <div className="flex justify-between">
@@ -201,6 +180,7 @@ export default function AddTrack() {
               preview={coverImage?.preview || null}
               onFileChange={handleFileChange}
               onRemove={removeCover}
+              isAdded={!inputErrors.cover}
             />
           </div>
 
@@ -209,6 +189,7 @@ export default function AddTrack() {
             <AudioUpload
               key={audioUploadKey}
               onAudioChange={handleAudioChange}
+              isAdded={!inputErrors.audio}
             />
           </div>
         </div>
@@ -228,43 +209,7 @@ export default function AddTrack() {
           >
             Add to Queue
           </button>
-
-          <button
-            onClick={handleSubmitQueue}
-            disabled={queue.length === 0}
-            className={`px-4 py-2 text-white rounded-md transition-colors ${
-              queue.length === 0
-                ? "bg-gray-400"
-                : "bg-green-500 hover:bg-green-600"
-            }`}
-          >
-            Upload All ({queue.length})
-          </button>
         </div>
-
-        {queue.length > 0 && (
-          <div className="mt-4">
-            <h3 className="font-medium">Queue ({queue.length})</h3>
-            <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-              {queue.map((track, index) => (
-                <li
-                  key={index}
-                  className="flex justify-between items-center text-sm text-gray-600"
-                >
-                  <span>
-                    {track.name} - {track.artist}
-                  </span>
-                  <button
-                    onClick={() => removeFromQueue(index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </motion.div>
   );

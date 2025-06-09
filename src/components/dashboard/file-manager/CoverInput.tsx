@@ -1,13 +1,19 @@
-import { useRef } from 'react';
-import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useRef } from "react";
+import { UploadOutlined, DeleteOutlined } from "@ant-design/icons";
 
 interface CoverInputProps {
   preview: string | null;
   onFileChange: (file: File | null) => void;
   onRemove: () => void;
+  isAdded: boolean;
 }
 
-export const CoverInput = ({ preview, onFileChange, onRemove }: CoverInputProps) => {
+export const CoverInput = ({
+  preview,
+  onFileChange,
+  onRemove,
+  isAdded,
+}: CoverInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,9 +28,12 @@ export const CoverInput = ({ preview, onFileChange, onRemove }: CoverInputProps)
   return (
     <div className="flex items-center gap-4">
       <div
-        className="relative w-[50px] h-[50px] rounded-xl bg-[#F4F4F4] flex items-center justify-center overflow-hidden"
+        className={
+          "relative w-[50px] h-[50px] rounded-xl bg-[#F4F4F4] flex items-center justify-center overflow-hidden " +
+          (isAdded ? "" : "border-2 border-red-400")
+        }
         onClick={triggerFileInput}
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: "pointer" }}
       >
         {preview ? (
           <>
@@ -53,7 +62,7 @@ export const CoverInput = ({ preview, onFileChange, onRemove }: CoverInputProps)
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="image/*"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
 
       <button

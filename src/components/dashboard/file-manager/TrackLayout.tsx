@@ -1,6 +1,9 @@
 import { CaretRightOutlined, PauseOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState, type FC } from "react";
 import { useAudioDuration } from "../../../hooks/useAudioDuration";
+import { useDispatch, useSelector } from "react-redux";
+import { type AppDispatch, type AppState } from "../../../store";
+import { setCurrentTrack } from "../../../state/CurrentTrack.slice";
 
 type Props = {
   trackInfo: {
@@ -16,6 +19,8 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const duration = useAudioDuration(audio || "");
+  const currentTrack = useSelector((state: AppState) => state.currentTrack);
+  const dispatch = useDispatch<AppDispatch>();
 
   const togglePlayPause = () => {
     if (!audioRef.current) return; // Проверяем, существует ли ссылка
@@ -23,12 +28,23 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      if (currentTrack?.currentTrack?.name !== trackInfo.name) {
+        dispatch(setCurrentTrack(trackInfo));
+      }
       audioRef.current
         .play()
         .catch((error) => console.error("Ошибка воспроизведения:", error));
     }
     setIsPlaying(!isPlaying);
   };
+
+  useEffect(() => {
+    if (currentTrack.currentTrack?.name !== trackInfo.name) {
+      if (!audioRef.current) return;
+      setIsPlaying(false);
+      audioRef.current.pause();
+    }
+  }, [currentTrack]);
 
   useEffect(() => {
     const audio = audioRef.current;

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { Playlist } from '../models/Playlist.model';
 
-// Создание плейлиста
 export const createPlaylist = async (req: Request, res: Response) => {
   try {
     const { name, userId } = req.body;
@@ -17,8 +16,6 @@ export const createPlaylist = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error creating playlist' });
   }
 };
-
-// Получение плейлистов пользователя
 export const getUserPlaylists = async (req: Request, res: Response) => {
   try {
     const playlists = await Playlist.find({ owner: req.params.userId })

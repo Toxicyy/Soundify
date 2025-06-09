@@ -4,6 +4,8 @@ import dashboardMenuSliceReducer from "./state/DashboardMenu.slice";
 import tokenReducer from "./state/Token.slice";
 import { userApiSlice } from "./state/UserApi.slice";
 import audioQueueSliceReducer from "./state/AudioQueue.slice";
+import currentTrackSliceReducer from "./state/CurrentTrack.slice";
+
 export const store = configureStore({
   reducer: {
     queueOpen: queueOpenReducer,
@@ -11,6 +13,7 @@ export const store = configureStore({
     token: tokenReducer,
     userApi: userApiSlice.reducer,
     audioQueue: audioQueueSliceReducer,
+    currentTrack: currentTrackSliceReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
