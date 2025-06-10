@@ -25,10 +25,6 @@ export default function TrackQueue() {
     );
   }
 
-  const handleTest = () => {
-    console.log(trackQueue);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
