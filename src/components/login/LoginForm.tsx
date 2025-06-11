@@ -26,7 +26,7 @@ export const LoginForm: React.FC = () => {
     if (errors.username.length === 0 && errors.password.length === 0) {
       const response = await api.login(formData.username, formData.password);
       if (response.ok) {
-        localStorage.setItem("token", (await response.json()).tokenInfo.token);
+        localStorage.setItem("token", (await response.json()).data.tokenInfo.token);
         navigate("/");
       }
     }

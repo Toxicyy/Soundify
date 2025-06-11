@@ -5,4 +5,7 @@ export type TrackData = {
     cover: File | null;
     audio: File | null;
     preview: string | null;
+    duration: number;
+    genre: string | null;
+    tags: string[] | null;
 };

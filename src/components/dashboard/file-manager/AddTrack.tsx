@@ -7,6 +7,8 @@ import { AudioUpload } from "./AudioUpload";
 import TrackLayout from "./TrackLayout";
 import { motion } from "framer-motion";
 import { addToQueueState } from "../../../state/AudioQueue.slice";
+import { useAudioDuration } from "../../../hooks/useAudioDuration";
+import GenreSelect from "./GenreSelect";
 
 interface TrackData {
   id: number;
@@ -15,6 +17,9 @@ interface TrackData {
   cover: File | null;
   audio: File | null;
   preview: string | null;
+  duration: number;
+  genre: string | null;
+  tags: string[] | null;
 }
 
 export default function AddTrack() {
@@ -37,6 +42,9 @@ export default function AddTrack() {
     cover: null,
     audio: null,
     preview: null,
+    duration: 0,
+    genre: null,
+    tags: null,
   });
   const [audioUploadKey, setAudioUploadKey] = useState(0);
   const [inputErrors, setInputErrors] = useState<{
@@ -100,6 +108,10 @@ export default function AddTrack() {
     setCurrentTrack((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleGenreSelect = (genre: string) => {
+    setCurrentTrack((prev) => ({ ...prev, genre: genre }));
+  };
+
   const addToQueue = () => {
     if (
       !currentTrack.name ||
@@ -118,6 +130,8 @@ export default function AddTrack() {
     }
 
     currentTrack.id = 0;
+    const audio = new Audio(URL.createObjectURL(currentTrack.audio!));
+    currentTrack.duration = audio.duration;
     if (coverImage) {
       currentTrack.preview = coverImage.preview;
     } else {
@@ -133,6 +147,9 @@ export default function AddTrack() {
       cover: null,
       audio: null,
       preview: null,
+      duration: 0,
+      genre: null,
+      tags: null,
     });
     setAudioUploadKey((prev) => prev + 1);
     setCoverImage(null);
@@ -192,6 +209,14 @@ export default function AddTrack() {
               isAdded={!inputErrors.audio}
             />
           </div>
+        </div>
+
+        <div>
+          <span className="text-sm text-gray-500">Genre</span>
+          <GenreSelect
+            value={currentTrack.genre}
+            onChange={handleGenreSelect}
+          />
         </div>
 
         <div className="px-5 py-5 bg-[#F4F4F4] rounded-3xl">

@@ -3,7 +3,7 @@ const BASEURL = 'http://localhost:5000'
 
 export const api = {
     register: async (email: string, password: string, name: string, username: string) => {
-        return await fetch(`${BASEURL}/auth/registration`, {
+        return await fetch(`${BASEURL}/api/auth/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -12,7 +12,7 @@ export const api = {
         })
     },
     login: async (email: string, password: string) => {
-        return fetch(`${BASEURL}/auth/login`, {
+        return fetch(`${BASEURL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

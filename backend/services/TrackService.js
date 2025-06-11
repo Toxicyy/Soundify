@@ -3,7 +3,7 @@ import { uploadToB2 } from "../utils/upload.js";
 
 class TrackService {
   async createTrack(trackData, files, userId) {
-    const { name, artist, genre, tags } = trackData;
+    const { name, artist, genre, tags, duration } = trackData;
 
     if (!files || !files.audio || !files.cover) {
       throw new Error("Аудио файл и обложка обязательны");
@@ -22,6 +22,8 @@ class TrackService {
         coverUrl,
         genre: genre?.trim(),
         tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
+        duration: parseInt(duration) || 0,
+        isPublic: true,
         uploadedBy: userId,
       });
 

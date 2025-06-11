@@ -6,8 +6,8 @@ import {
   incrementListenCount,
 } from "../controllers/track.controller.js";
 import { authenticate, optionalAuth } from "../middleware/auth.middleware.js";
-import { uploadMiddleware } from "../middleware/upload.middleware.js";
 import { validateTrackCreation } from "../middleware/validation.middleware.js";
+import { uploadMiddleware } from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 

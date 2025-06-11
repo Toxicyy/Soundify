@@ -14,9 +14,12 @@ export const audioQueueSlice = createSlice({
       action.payload.id = state.queue.length + 1;
       state.queue.push(action.payload);
     },
+    clearQueue: (state) => {
+      state.queue = [];
+    },
   },
 });
 
-export const { addToQueueState } = audioQueueSlice.actions;
+export const { addToQueueState, clearQueue } = audioQueueSlice.actions;
 
 export default audioQueueSlice.reducer;

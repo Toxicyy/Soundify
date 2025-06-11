@@ -12,11 +12,15 @@ export const uploadToB2 = async (file, folder) => {
 
     const fileName = `${folder}/${Date.now()}-${file.originalname}`;
 
-    const response = await b2.uploadFile({
+    const uploadUrl = await b2.getUploadUrl({
       bucketId: config.b2.bucketId,
+    });
+
+    const response = await b2.uploadFile({
+      uploadUrl: uploadUrl.data.uploadUrl,
+      uploadAuthToken: uploadUrl.data.authorizationToken,
       fileName,
       data: file.buffer,
-      contentType: file.mimetype,
     });
 
     return (
