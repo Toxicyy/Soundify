@@ -1,10 +1,10 @@
 import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
-import mice from "../../images/Artist/9Mice.jpg";
-import kai from "../../images/Artist/KaiAngel.jpg";
 import { motion } from "framer-motion";
+import type { Track } from "../../types/TrackData";
+import type { Artist } from "../../types/ArtistData";
 
-export default function ArtistModule() {
+export default function ArtistModule({dailyTracks}: {dailyTracks: {artist: Artist; tracks: Track[]}[]}) {
   return (
     <div>
       <div className="flex items-center mt-3 justify-between mb-[15px]">
@@ -33,14 +33,14 @@ export default function ArtistModule() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <ArtistCard artistImage={mice} artistName="9mice" />
+          <ArtistCard artist={dailyTracks[0]} />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 1000 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
-          <ArtistCard artistImage={kai} artistName="Kai Angel" />
+          <ArtistCard artist={dailyTracks[1]} />
         </motion.div>
       </div>
     </div>

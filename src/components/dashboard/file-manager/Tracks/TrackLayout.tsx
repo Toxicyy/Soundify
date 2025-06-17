@@ -1,14 +1,14 @@
 import { CaretRightOutlined, PauseOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState, type FC } from "react";
-import { useAudioDuration } from "../../../hooks/useAudioDuration";
+import { useAudioDuration } from "../../../../hooks/useAudioDuration";
 import { useDispatch, useSelector } from "react-redux";
-import { type AppDispatch, type AppState } from "../../../store";
-import { setCurrentTrack } from "../../../state/CurrentTrack.slice";
+import { type AppDispatch, type AppState } from "../../../../store";
+import { setCurrentTrack } from "../../../../state/CurrentTrack.slice";
 
 type Props = {
   trackInfo: {
     name: string;
-    artist: string;
+    artist: { name: string };
   };
   cover: string | null;
   audio: string | null;
@@ -21,6 +21,10 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
   const duration = useAudioDuration(audio || "");
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const dispatch = useDispatch<AppDispatch>();
+    const isGenreSelectOpen = useSelector(
+      (state: AppState) => state.isGenreSelectOpen
+    )
+  
 
   const togglePlayPause = () => {
     if (!audioRef.current) return; // Проверяем, существует ли ссылка
@@ -78,13 +82,13 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
           {/* Оверлей затемнения */}
           <div
             className={`absolute inset-0 transition bg-black ${
-              hover ? "opacity-50" : "opacity-0"
+              (hover && !isGenreSelectOpen) ? "opacity-50" : "opacity-0"
             }`}
             style={{ zIndex: 20 }}
           />
 
           {/* Иконка play/pause */}
-          {hover && (
+          {(hover && !isGenreSelectOpen) && (
             <div className="flex items-center justify-center absolute inset-0 z-30">
               {isPlaying ? (
                 <PauseOutlined
@@ -121,7 +125,9 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
             {trackInfo.name != "" ? trackInfo.name : "Your track name"}
           </h1>
           <h1 className="text-sm tracking-wider text-black">
-            {trackInfo.artist != "" ? trackInfo.artist : "Your artist name"}
+            {trackInfo.artist.name != ""
+              ? trackInfo.artist.name
+              : "Your artist name"}
           </h1>
         </div>
       </div>

@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../../../store";
+import { setIsGenreSelectOpen } from "../../../../state/isGenreSelectOpen.slice";
 
 interface GenreSelectProps {
   value: string | null;
@@ -49,7 +52,7 @@ export default function GenreSelect({
 }: GenreSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
+ const dispatch = useDispatch<AppDispatch>();
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -58,13 +61,18 @@ export default function GenreSelect({
     onChange(genre);
     setIsOpen(false);
     setSearchTerm("");
+    dispatch(setIsGenreSelectOpen(false))
   };
 
   return (
     <div className={`relative ${className}`}>
       <div
-        className="flex items-center justify-between px-4 py-2.5 bg-white border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between px-4 py-2.5 bg-white border border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors z-50"
+        onClick={() => {
+          dispatch(setIsGenreSelectOpen(!isOpen))
+          setIsOpen(!isOpen)
+        }
+      }
       >
         <span className={value ? "text-gray-900" : "text-gray-500"}>
           {value || placeholder}

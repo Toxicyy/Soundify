@@ -5,24 +5,20 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { div } from "framer-motion/client";
 import { useState } from "react";
+import type { Track } from "../../types/TrackData";
+import { useAudioDuration } from "../../hooks/useAudioDuration";
 
 export default function TrackLayout({
-  trackImage,
-  songName,
-  listenCount,
-  duration,
+  track
 }: {
-  trackImage: string;
-  songName: string;
-  listenCount: string;
-  duration: string;
+  track: Track | undefined
 }) {
   const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
   const [hover, setHover] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const duration = useAudioDuration(track?.audioUrl || '');
   return (
     <div
       className="flex justify-between items-center w-[40vw]"
@@ -32,7 +28,7 @@ export default function TrackLayout({
       <div className="flex gap-3 items-end justify-center">
         <div
           className="w-[65px] h-[65px] rounded-[10px] bg-cover bg-center flex items-center justify-center relative overflow-hidden group"
-          style={{ backgroundImage: `url(${trackImage})` }}
+          style={{ backgroundImage: `url(${track?.coverUrl})` }}
         >
           {/* Оверлей затемнения */}
           <div
@@ -76,12 +72,12 @@ export default function TrackLayout({
           )}
         </div>
         <div>
-          <h1 className="text-white text-lg  tracking-wider">{songName}</h1>
+          <h1 className="text-white text-lg  tracking-wider">{track?.name}</h1>
           <h1
             className="text-sm tracking-wider"
             style={{ color: "rgba(255, 255, 255, 0.6)" }}
           >
-            {listenCount}
+            {track?.listenCount}
           </h1>
         </div>
       </div>

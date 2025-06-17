@@ -9,9 +9,14 @@ const trackSchema = new mongoose.Schema(
       maxlength: [100, "Название не может быть длиннее 100 символов"],
     },
     artist: {
-      type: String, // Пока строка, можно будет изменить на ObjectId
+      type: mongoose.Schema.Types.ObjectId,
       required: [true, "Артист обязателен"],
       trim: true,
+    },
+    album: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Album",
+      default: null,
     },
     audioUrl: {
       type: String,
@@ -57,7 +62,9 @@ const trackSchema = new mongoose.Schema(
   }
 );
 
-trackSchema.index({ name: "text", artist: "text", genre: "text" });
+trackSchema.index({ name: "text", genre: "text" });
+trackSchema.index({ artist: 1 });
+trackSchema.index({ album: 1 });
 trackSchema.index({ createdAt: -1 });
 trackSchema.index({ listenCount: -1 });
 

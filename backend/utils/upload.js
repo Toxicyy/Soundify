@@ -23,11 +23,21 @@ export const uploadToB2 = async (file, folder) => {
       data: file.buffer,
     });
 
-    return (
-      response.data.fileUrl ||
-      `https://f003.backblazeb2.com/file/${config.b2.bucketName}/${fileName}`
-    );
+    // Возвращаем объект с URL и fileId
+    return {
+      url:
+        response.data.fileUrl ||
+        `https://f003.backblazeb2.com/file/${config.b2.bucketName}/${fileName}`,
+      fileId: response.data.fileId,
+      fileName: fileName,
+    };
   } catch (error) {
     throw new Error(`Ошибка загрузки в B2: ${error.message}`);
   }
+};
+
+// Для обратной совместимости (если где-то используется старый формат)
+export const uploadToB2Legacy = async (file, folder) => {
+  const result = await uploadToB2(file, folder);
+  return result.url; // возвращаем только URL как раньше
 };

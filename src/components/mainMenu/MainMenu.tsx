@@ -16,10 +16,44 @@ import type { AppState } from "../../store";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../state/UserApi.slice";
+import { useEffect, useState } from "react";
+import { type Track } from "../../types/TrackData";
+import type { Artist } from "../../types/ArtistData";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queueOpen.isOpen);
   const { data: user, isFetching } = useGetUserQuery();
+  const [dailyTracks, setDailyTracks] = useState<
+    {artist: Artist; tracks: Track[]}[]
+  >([]);
+
+  useEffect(()=>{
+    console.log(dailyTracks);
+  }, [dailyTracks])
+
+  async function getArtistsTrack(slug: string) {
+    const artistResponse = await fetch(
+      `http://localhost:5000/api/artists/slug/${slug}`
+    );
+    const artistData = await artistResponse.json();
+    console.log(artistData);
+    const trackResponse = await fetch(
+      `http://localhost:5000/api/artists/${artistData.data._id}/tracks`
+    );
+    const trackData = await trackResponse.json();
+    return {
+      artist: artistData.data,
+      tracks: trackData.data,
+    };
+  }
+  useEffect(() => {
+    const dailyArtist1 = getArtistsTrack("kai-angel");
+    const dailyArtist2 = getArtistsTrack("9mice");
+
+    Promise.all([dailyArtist1, dailyArtist2]).then((results) => {
+      setDailyTracks(results);
+    })
+  }, []);
 
   return (
     <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10">
@@ -60,7 +94,7 @@ export default function MainMenu() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <ArtistModule />
+          <ArtistModule dailyTracks={dailyTracks ? dailyTracks : []} />
         </motion.div>
       </div>
 

@@ -25,6 +25,7 @@
     "express-validator": "^7.2.1",
     "framer-motion": "^12.12.1",
     "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.514.0",
     "mongoose": "^8.15.0",
     "multer": "^2.0.0",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@types/express": "^5.0.2",
+    "@types/lodash": "^4.17.17",
     "@types/node": "^22.15.20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

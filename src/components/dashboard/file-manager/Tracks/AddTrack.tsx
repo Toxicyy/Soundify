@@ -1,26 +1,16 @@
 import { useDispatch, useSelector } from "react-redux";
-import { type AppDispatch, type AppState } from "../../../store";
+import { type AppDispatch, type AppState } from "../../../../store";
 import { useEffect, useState } from "react";
-import { Input, message } from "antd";
+import { Input, message, Select } from "antd";
 import { CoverInput } from "./CoverInput";
 import { AudioUpload } from "./AudioUpload";
 import TrackLayout from "./TrackLayout";
 import { motion } from "framer-motion";
-import { addToQueueState } from "../../../state/AudioQueue.slice";
-import { useAudioDuration } from "../../../hooks/useAudioDuration";
+import { addToQueueState } from "../../../../state/AudioQueue.slice";
 import GenreSelect from "./GenreSelect";
-
-interface TrackData {
-  id: number;
-  name: string;
-  artist: string;
-  cover: File | null;
-  audio: File | null;
-  preview: string | null;
-  duration: number;
-  genre: string | null;
-  tags: string[] | null;
-}
+import type { Artist } from "../../../../types/ArtistData";
+import SelectArtist from "./selectArtist";
+import type { TrackData } from "../../../../types/TrackData";
 
 export default function AddTrack() {
   const isMenuOpen = useSelector(
@@ -38,7 +28,7 @@ export default function AddTrack() {
   const [currentTrack, setCurrentTrack] = useState<TrackData>({
     id: 0,
     name: "",
-    artist: "",
+    artist: { _id: "", name: "" },
     cover: null,
     audio: null,
     preview: null,
@@ -58,6 +48,8 @@ export default function AddTrack() {
     cover: false,
     audio: false,
   });
+  const [genreSelectOpen, setGenreSelectOpen] = useState(false);
+
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
@@ -143,7 +135,7 @@ export default function AddTrack() {
     setCurrentTrack({
       id: 0,
       name: "",
-      artist: "",
+      artist: { _id: "", name: "" },
       cover: null,
       audio: null,
       preview: null,
@@ -156,6 +148,11 @@ export default function AddTrack() {
     setAudioData({ file: null, chunks: [] });
 
     message.success("Трек добавлен в очередь");
+  };
+
+  const handleArtistSelect = (artist: Artist) => {
+    console.log("Выбран артист:", artist);
+    setCurrentTrack((prev) => ({ ...prev, artist: artist }));
   };
   return (
     <motion.div
@@ -182,14 +179,10 @@ export default function AddTrack() {
           onChange={handleInputChange}
           status={!inputErrors.name ? "" : "error"}
         />
-        <Input
-          placeholder="Artist"
-          name="artist"
-          value={currentTrack.artist}
-          onChange={handleInputChange}
-          status={!inputErrors.artist ? "" : "error"}
+        <SelectArtist
+          onSelect={handleArtistSelect}
+          placeholder="Найдите и выберите артиста..."
         />
-
         <div className="flex justify-between">
           <div className="flex flex-col gap-2">
             <span className="text-sm text-gray-500">Cover</span>
@@ -210,7 +203,6 @@ export default function AddTrack() {
             />
           </div>
         </div>
-
         <div>
           <span className="text-sm text-gray-500">Genre</span>
           <GenreSelect
@@ -218,7 +210,6 @@ export default function AddTrack() {
             onChange={handleGenreSelect}
           />
         </div>
-
         <div className="px-5 py-5 bg-[#F4F4F4] rounded-3xl">
           <TrackLayout
             trackInfo={currentTrack}
@@ -226,7 +217,6 @@ export default function AddTrack() {
             audio={audioData.file ? URL.createObjectURL(audioData.file) : null}
           />
         </div>
-
         <div className="flex gap-2">
           <button
             onClick={addToQueue}

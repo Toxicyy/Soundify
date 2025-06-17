@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { type AppDispatch, type AppState } from "../../../store";
+import { type AppDispatch, type AppState } from "../../../../store";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import TrackLayout from "./TrackLayout";
-import { clearQueue } from "../../../state/AudioQueue.slice";
+import { clearQueue } from "../../../../state/AudioQueue.slice";
 
 export default function TrackQueue() {
   const isMenuOpen = useSelector(
@@ -14,7 +14,6 @@ export default function TrackQueue() {
   const queueLength = trackQueue.length;
   const dispatch = useDispatch<AppDispatch>();
   const [fetching, setFetching] = useState(false);
-
   useEffect(() => {
     const updateWidth = () => setWidth(pageWidth());
     updateWidth();
@@ -46,7 +45,7 @@ export default function TrackQueue() {
 
       const formData = new FormData();
       formData.append("name", track.name);
-      formData.append("artist", track.artist);
+      formData.append("artist", track.artist._id);
       formData.append("audio", track.audio);
       formData.append("cover", track.cover);
       formData.append("duration", track.duration.toString());

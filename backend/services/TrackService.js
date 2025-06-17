@@ -1,5 +1,6 @@
 import Track from "../models/Track.model.js";
 import { uploadToB2 } from "../utils/upload.js";
+import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 
 class TrackService {
   async createTrack(trackData, files, userId) {
@@ -11,8 +12,11 @@ class TrackService {
 
     try {
       // Загружаем файлы в B2
-      const audioUrl = await uploadToB2(files.audio[0], "audio");
-      const coverUrl = await uploadToB2(files.cover[0], "images");
+      const audioUpload = await uploadToB2(files.audio[0], "audio");
+      const coverUpload = await uploadToB2(files.cover[0], "images");
+
+      const audioUrl = audioUpload.url;
+      const coverUrl = coverUpload.url;
 
       // Создаем трек
       const track = new Track({
@@ -53,8 +57,10 @@ class TrackService {
       const total = await Track.countDocuments({ isPublic: true });
       const totalPages = Math.ceil(total / limit);
 
+      const tracksWithSignedUrls = await this.addSignedUrlsToTracks(tracks);
+
       return {
-        tracks,
+        tracks: tracksWithSignedUrls,
         pagination: {
           currentPage: page,
           totalPages,
@@ -94,9 +100,9 @@ class TrackService {
 
       const total = await Track.countDocuments(searchCondition);
       const totalPages = Math.ceil(total / limit);
-
+      const tracksWithSignedUrls = await this.addSignedUrlsToTracks(tracks);
       return {
-        tracks,
+        tracks: tracksWithSignedUrls,
         query,
         pagination: {
           currentPage: page,
@@ -135,10 +141,90 @@ class TrackService {
       if (!track) {
         throw new Error("Трек не найден");
       }
-
-      return track;
+      const trackWithSignedUrls = await this.addSignedUrlsToTracks(track);
+      return trackWithSignedUrls;
     } catch (error) {
       throw new Error(`Ошибка при получении трека: ${error.message}`);
+    }
+  }
+  async addSignedUrlsToTracks(tracks) {
+    try {
+      // Проверяем, передан ли массив или один объект
+      const isArray = Array.isArray(tracks);
+      const tracksArray = isArray ? tracks : [tracks];
+
+      const tracksWithSignedUrls = await Promise.all(
+        tracksArray.map(async (track) => {
+          const trackObj = track.toObject ? track.toObject() : track;
+
+          // Обрабатываем coverUrl (обложку трека)
+          if (trackObj.coverUrl) {
+            const coverFileName = extractFileName(trackObj.coverUrl);
+            if (coverFileName) {
+              const signedCoverUrl = await generateSignedUrl(
+                coverFileName,
+                7200
+              ); // 2 часа
+              if (signedCoverUrl) {
+                trackObj.coverUrl = signedCoverUrl;
+              }
+            }
+          }
+
+          // Обрабатываем audioUrl (аудио файл)
+          if (trackObj.audioUrl) {
+            const audioFileName = extractFileName(trackObj.audioUrl);
+            if (audioFileName) {
+              const signedAudioUrl = await generateSignedUrl(
+                audioFileName,
+                7200
+              ); // 2 часа
+              if (signedAudioUrl) {
+                trackObj.audioUrl = signedAudioUrl;
+              }
+            }
+          }
+
+          // Если трек содержит данные артиста, обрабатываем и его аватар
+          if (trackObj.artist && trackObj.artist.avatar) {
+            const artistAvatarFileName = extractFileName(
+              trackObj.artist.avatar
+            );
+            if (artistAvatarFileName) {
+              const signedAvatarUrl = await generateSignedUrl(
+                artistAvatarFileName,
+                7200
+              );
+              if (signedAvatarUrl) {
+                trackObj.artist.avatar = signedAvatarUrl;
+              }
+            }
+          }
+
+          return trackObj;
+        })
+      );
+
+      // Возвращаем в том же формате, что и получили
+      return isArray ? tracksWithSignedUrls : tracksWithSignedUrls[0];
+    } catch (error) {
+      console.error("Ошибка создания подписанных URL для треков:", error);
+
+      // Обработка ошибок с учетом типа входных данных
+      const isArray = Array.isArray(tracks);
+      const fallbackResult = isArray
+        ? tracks.map((track) => ({
+            ...(track.toObject ? track.toObject() : track),
+            coverUrl: null,
+            audioUrl: track.audioUrl, // Оставляем оригинальный audioUrl при ошибке
+          }))
+        : {
+            ...(tracks.toObject ? tracks.toObject() : tracks),
+            coverUrl: null,
+            audioUrl: tracks.audioUrl, // Оставляем оригинальный audioUrl при ошибке
+          };
+
+      return fallbackResult;
     }
   }
 }

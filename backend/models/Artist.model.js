@@ -15,6 +15,7 @@ const artistSchema = new mongoose.Schema({
   },
   bio: String,
   avatar: String,
+  avatarFileId: { type: String },
   genres: [String],
   socialLinks: {
     spotify: String,
