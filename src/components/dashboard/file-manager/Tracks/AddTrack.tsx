@@ -9,8 +9,10 @@ import { motion } from "framer-motion";
 import { addToQueueState } from "../../../../state/AudioQueue.slice";
 import GenreSelect from "./GenreSelect";
 import type { Artist } from "../../../../types/ArtistData";
-import SelectArtist from "./selectArtist";
+
 import type { TrackData } from "../../../../types/TrackData";
+import SelectArtist from "./SelectArtist";
+import { useAudioDurationFromFile } from "../../../../hooks/useAudioDuration";
 
 export default function AddTrack() {
   const isMenuOpen = useSelector(
@@ -37,6 +39,7 @@ export default function AddTrack() {
     tags: null,
   });
   const [audioUploadKey, setAudioUploadKey] = useState(0);
+  const [artistResetKey, setArtistResetKey] = useState(0);
   const [inputErrors, setInputErrors] = useState<{
     name: boolean;
     artist: boolean;
@@ -104,17 +107,17 @@ export default function AddTrack() {
     setCurrentTrack((prev) => ({ ...prev, genre: genre }));
   };
 
-  const addToQueue = () => {
+  const addToQueue = async () => {
     if (
       !currentTrack.name ||
-      !currentTrack.artist ||
+      !currentTrack.artist._id ||
       !currentTrack.audio ||
       !currentTrack.cover
     ) {
       setInputErrors((prev) => ({
         ...prev,
         name: !currentTrack.name,
-        artist: !currentTrack.artist,
+        artist: !currentTrack.artist._id,
         audio: !currentTrack.audio,
         cover: !currentTrack.cover,
       }));
@@ -122,8 +125,13 @@ export default function AddTrack() {
     }
 
     currentTrack.id = 0;
-    const audio = new Audio(URL.createObjectURL(currentTrack.audio!));
-    currentTrack.duration = audio.duration;
+    try {
+      currentTrack.duration = Math.floor(
+        await useAudioDurationFromFile(currentTrack.audio!)
+      );
+    } catch (error) {
+      console.log(error);
+    }
     if (coverImage) {
       currentTrack.preview = coverImage.preview;
     } else {
@@ -144,6 +152,7 @@ export default function AddTrack() {
       tags: null,
     });
     setAudioUploadKey((prev) => prev + 1);
+    setArtistResetKey((prev) => prev + 1);
     setCoverImage(null);
     setAudioData({ file: null, chunks: [] });
 
@@ -153,6 +162,7 @@ export default function AddTrack() {
   const handleArtistSelect = (artist: Artist) => {
     console.log("Выбран артист:", artist);
     setCurrentTrack((prev) => ({ ...prev, artist: artist }));
+    setInputErrors((prev) => ({ ...prev, artist: false }));
   };
   return (
     <motion.div
@@ -181,7 +191,9 @@ export default function AddTrack() {
         />
         <SelectArtist
           onSelect={handleArtistSelect}
-          placeholder="Найдите и выберите артиста..."
+          placeholder="Find and choose artist..."
+          status={!inputErrors.artist ? "" : "error"}
+          key={artistResetKey}
         />
         <div className="flex justify-between">
           <div className="flex flex-col gap-2">

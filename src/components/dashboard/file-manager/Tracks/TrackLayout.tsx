@@ -27,7 +27,7 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
   
 
   const togglePlayPause = () => {
-    if (!audioRef.current) return; // Проверяем, существует ли ссылка
+    if (!audioRef.current) return;
 
     if (isPlaying) {
       audioRef.current.pause();
@@ -95,7 +95,7 @@ const TrackLayout: FC<Props> = ({ trackInfo, cover, audio }) => {
                   style={{
                     color: "#5cec8c",
                     fontSize: "32px",
-                    filter: "drop-shadow(0 2px 8px #222)", // чтобы светилась
+                    filter: "drop-shadow(0 2px 8px #222)",
                     cursor: "pointer",
                   }}
                   onClick={(e) => {

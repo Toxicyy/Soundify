@@ -6,11 +6,13 @@ import { Select, Spin, Typography } from "antd";
 type selectArtistProps = {
   onSelect: (artist: Artist) => void;
   placeholder?: string;
+  status?: "" | "error" | "warning";
 };
 
 const SelectArtist: FC<selectArtistProps> = ({
   onSelect,
   placeholder = "Выберите артиста...",
+  status
 }) => {
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -202,6 +204,7 @@ const SelectArtist: FC<selectArtistProps> = ({
 
   return (
     <Select
+      status={status}
       showSearch
       placeholder={placeholder}
       filterOption={false}

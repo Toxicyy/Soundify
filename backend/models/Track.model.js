@@ -11,6 +11,7 @@ const trackSchema = new mongoose.Schema(
     artist: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "Артист обязателен"],
+      ref: "Artist",
       trim: true,
     },
     album: {

@@ -28,7 +28,7 @@ export default function TrackQueue() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log(1)
+    console.log(1);
     e.preventDefault();
 
     let successCount = 0;
@@ -122,7 +122,9 @@ export default function TrackQueue() {
       <button
         disabled={queueLength === 0 || fetching}
         className={`px-4 py-2 text-white mx-5 mb-4 rounded-md transition-colors ${
-          queueLength === 0 || fetching ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
+          queueLength === 0 || fetching
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-green-500 hover:bg-green-600"
         }`}
         onClick={handleSubmit}
       >

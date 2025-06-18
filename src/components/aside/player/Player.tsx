@@ -14,16 +14,17 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 import testPlayerImage from "../../../images/player/testPlayerImage.jpg";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { setQueueOpen } from "../../../state/QueseOpen.slice";
-import type { AppDispatch } from "../../../store";
-import { useDispatch } from "react-redux";
+import type { AppDispatch, AppState } from "../../../store";
+import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
+import { useFormatTime } from "../../../hooks/useFormatTime";
+import { setIsPlaying } from "../../../state/CurrentTrack.slice";
 
-export const Player = ({ max }: { max: number }) => {
+export const Player = () => {
   const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
@@ -32,23 +33,75 @@ export const Player = ({ max }: { max: number }) => {
   const [isShare, setIsShare] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const [value, setValue] = useState(0);
+  const currentTrack = useSelector((state: AppState) => state.currentTrack);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const currentStr = useFormatTime(value);
+  const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
 
-  function formatTime(seconds: number) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
+  const togglePlayPause = () => {
+    // Только изменяем состояние
+    dispatch(setIsPlaying(!currentTrack.isPlaying));
+  };
 
-  const currentStr = formatTime(value);
-  const totalStr = formatTime(max);
+  // Этот useEffect отвечает за синхронизацию аудио элемента с Redux состоянием
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    const audio = audioRef.current;
+
+    if (currentTrack.isPlaying) {
+      // Проверяем, не воспроизводится ли уже
+      if (audio.paused) {
+        audio.play().catch((error) => {
+          console.error("Ошибка воспроизведения:", error);
+          dispatch(setIsPlaying(false));
+        });
+      }
+    } else {
+      // Проверяем, не на паузе ли уже
+      if (!audio.paused) {
+        audio.pause();
+      }
+    }
+  }, [currentTrack.isPlaying, dispatch]);
+
+  // Дополнительный useEffect для обработки событий аудио
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = () => {
+      if (!currentTrack.isPlaying) {
+        dispatch(setIsPlaying(true));
+      }
+    };
+
+    const handlePause = () => {
+      if (currentTrack.isPlaying) {
+        dispatch(setIsPlaying(false));
+      }
+    };
+
+    const handleEnded = () => {
+      dispatch(setIsPlaying(false));
+    };
+
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [currentTrack.isPlaying, dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(Number(e.target.value));
     // Здесь обычно вызывается seek в аудиоплеере, если он у тебя есть
   };
-  const track = "What We Takin` Bout";
-  const artist = "NCT127";
-  
+
   return (
     <div className="flex flex-col">
       <motion.div
@@ -57,8 +110,11 @@ export const Player = ({ max }: { max: number }) => {
         transition={{ duration: 0.7, ease: "easeOut" }}
         className="w-[13vw] h-[13vw] mb-7 self-center"
       >
+        {currentTrack?.currentTrack?.audioUrl && (
+          <audio ref={audioRef} src={currentTrack?.currentTrack?.audioUrl} />
+        )}
         <img
-          src={testPlayerImage}
+          src={currentTrack.currentTrack?.coverUrl}
           alt="Music Image"
           className="rounded-2xl drop-shadow-[0_7px_7px_rgba(0,0,0,0.4)]"
         />
@@ -70,7 +126,7 @@ export const Player = ({ max }: { max: number }) => {
       >
         <div className="flex items-center justify-between">
           <h1 className="text-white/90 font-semibold tracking-wider self-start mb-1">
-            {track}
+            {currentTrack.currentTrack?.name}
           </h1>
           {liked ? (
             <HeartFilled
@@ -96,7 +152,9 @@ export const Player = ({ max }: { max: number }) => {
             />
           )}
         </div>
-        <h2 className="text-white/60 mb-2">{artist}</h2>
+        <h2 className="text-white/60 mb-2">
+          {currentTrack.currentTrack?.artist.name}
+        </h2>
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 1000 }}
@@ -108,12 +166,17 @@ export const Player = ({ max }: { max: number }) => {
           <div className="absolute left-0 top-[2px] -translate-y-1/2 w-full h-[3px] rounded-lg bg-white/40 pointer-events-none" />
           <div
             className="absolute left-0 top-[2px] -translate-y-1/2 h-[3px] rounded-lg bg-white pointer-events-none "
-            style={{ width: `${(value / max) * 100}%` }}
+            style={{
+              width: `${
+                currentTrack.currentTrack?.duration &&
+                (value / currentTrack.currentTrack?.duration || 0) * 100
+              }%`,
+            }}
           />
           <input
             type="range"
             min={0}
-            max={max}
+            max={currentTrack.currentTrack?.duration || 0}
             value={value}
             onChange={handleChange}
             className="
@@ -183,16 +246,17 @@ export const Player = ({ max }: { max: number }) => {
           style={{ color: "white", fontSize: "24px" }}
           className="cursor-pointer hover:scale-110 transition-all duration-200"
         />
-        <div
-          className="glass rounded-full w-[50px] h-[50px] flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200"
-          onClick={() => setIsPlaying(!isPlaying)}
-        >
-          {isPlaying ? (
-            <PauseOutlined style={{ fontSize: "24px" }} />
+        <div className="glass rounded-full w-[50px] h-[50px] flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200">
+          {currentTrack.isPlaying ? (
+            <PauseOutlined
+              style={{ fontSize: "24px" }}
+              onClick={togglePlayPause}
+            />
           ) : (
             <CaretRightOutlined
               style={{ fontSize: "26px" }}
               className="ml-[4px]"
+              onClick={togglePlayPause}
             />
           )}
         </div>

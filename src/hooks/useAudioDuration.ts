@@ -1,18 +1,13 @@
 import { useEffect, useState } from "react";
+import { useFormatTime } from "./useFormatTime";
 
 export const useAudioDuration = (audioUrl: string) => {
   const [duration, setDuration] = useState("");
 
-  function formatTime(seconds: number) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
-
   useEffect(() => {
     const audio = new Audio(audioUrl); // Создаем новый Audio (не привязываем к DOM)
     const handleLoadedMetadata = () => {
-      const time = formatTime(audio.duration);
+      const time = useFormatTime(audio.duration);
       setDuration(time);
     };
 
@@ -22,4 +17,20 @@ export const useAudioDuration = (audioUrl: string) => {
   }, [audioUrl]);
 
   return duration;
+};
+
+export const useAudioDurationFromFile = (file: File): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio();
+    
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration);
+    });
+    
+    audio.addEventListener('error', () => {
+      reject(new Error('Ошибка загрузки аудио файла'));
+    });
+    
+    audio.src = URL.createObjectURL(file);
+  });
 };

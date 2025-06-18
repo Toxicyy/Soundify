@@ -5,20 +5,29 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Track } from "../../types/TrackData";
-import { useAudioDuration } from "../../hooks/useAudioDuration";
+import { useFormatTime } from "../../hooks/useFormatTime";
+import type { AppDispatch, AppState } from "../../store";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  playTrack,
+  setCurrentTrack,
+  setIsPlaying,
+} from "../../state/CurrentTrack.slice";
 
-export default function TrackLayout({
-  track
-}: {
-  track: Track | undefined
-}) {
+export default function TrackLayout({ track }: { track: Track | undefined }) {
   const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
   const [hover, setHover] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const duration = useAudioDuration(track?.audioUrl || '');
+  const duration = useFormatTime(track?.duration || 0);
+  const dispatch = useDispatch<AppDispatch>();
+  const currentTrack = useSelector((state: AppState) => state.currentTrack);
+
+  const isThisTrackPlaying = () => currentTrack.isPlaying && currentTrack.currentTrack?.name === track?.name
+  const togglePlayPause = () => {
+    dispatch(playTrack(track));
+  };
   return (
     <div
       className="flex justify-between items-center w-[40vw]"
@@ -41,7 +50,7 @@ export default function TrackLayout({
           {/* Иконка play/pause */}
           {hover && (
             <div className="flex items-center justify-center absolute inset-0 z-30">
-              {isPlaying ? (
+              {isThisTrackPlaying() ? (
                 <PauseOutlined
                   style={{
                     color: "#5cec8c",
@@ -51,7 +60,7 @@ export default function TrackLayout({
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsPlaying(false);
+                    togglePlayPause();
                   }}
                 />
               ) : (
@@ -64,7 +73,7 @@ export default function TrackLayout({
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsPlaying(true);
+                    togglePlayPause();
                   }}
                 />
               )}

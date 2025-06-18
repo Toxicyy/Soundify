@@ -228,18 +228,18 @@ class ArtistService {
 
       const tracks = await Track.find({ artist: artistId })
         .populate("album", "name coverUrl")
+        .populate("artist", "name")
         .sort(sort)
         .skip(skip)
         .limit(limit);
-
       const total = await Track.countDocuments({ artist: artistId });
       const totalPages = Math.ceil(total / limit);
 
-      const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(tracks);
-
+      const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
+        tracks
+      );
       return {
         tracks: tracksWithSignedUrls,
-        artistName: artist.name,
         pagination: {
           currentPage: page,
           totalPages,
