@@ -6,6 +6,7 @@ import Dashboard from "./Pages/Dashboard/Dashboard";
 import AddTrackPage from "./Pages/Dashboard/FileManage/AddTrackPage";
 import AddAlbumPage from "./Pages/Dashboard/FileManage/AddAlbumPage";
 import AddArtistPage from "./Pages/Dashboard/FileManage/AddArtistPage";
+import MainMenu from "./components/mainMenu/MainMenu";
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +16,32 @@ export const router = createBrowserRouter([
       {
         path: "/",
         element: <Main />,
+        children: [
+          {
+            path: "/",
+            element: <MainMenu />,
+          },
+          {
+            path: "/radio",
+            element: <div>radio</div>,
+          },
+          {
+            path: "/library",
+            element: <div>library</div>,
+          },
+          {
+            path: "/liked",
+            element: <div>liked</div>,
+          },
+          {
+            path: "/recently",
+            element: <div>recently</div>,
+          },
+          {
+            path: "/playlist",
+            element: <div>playlist</div>,
+          },
+        ]
       },
       {
         path: "/signup",

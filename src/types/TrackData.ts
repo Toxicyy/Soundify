@@ -11,7 +11,7 @@ export type TrackData = {
 };
 
 export type Track = {
-  id: number;
+  _id: number;
   name: string;
   artist: { _id: string; name: string };
   coverUrl: string;

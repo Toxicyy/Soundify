@@ -28,7 +28,6 @@ export default function TrackQueue() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log(1);
     e.preventDefault();
 
     let successCount = 0;

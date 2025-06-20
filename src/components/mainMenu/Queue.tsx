@@ -1,8 +1,6 @@
 import { CustomerServiceOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { QueueTemplate } from "./QueueTemplate";
-import { useSelector } from "react-redux";
-import type { AppState } from "../../store";
 
 const testQueue = [
   {

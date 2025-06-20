@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { type AppDispatch, type AppState } from "../../../../store";
 import { useEffect, useState } from "react";
-import { Input, message, Select } from "antd";
+import { Input, message } from "antd";
 import { CoverInput } from "./CoverInput";
 import { AudioUpload } from "./AudioUpload";
 import TrackLayout from "./TrackLayout";
@@ -51,7 +51,6 @@ export default function AddTrack() {
     cover: false,
     audio: false,
   });
-  const [genreSelectOpen, setGenreSelectOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
 
@@ -130,7 +129,7 @@ export default function AddTrack() {
         await useAudioDurationFromFile(currentTrack.audio!)
       );
     } catch (error) {
-      console.log(error);
+      console.error("Ошибка получения длительности аудио:", error);
     }
     if (coverImage) {
       currentTrack.preview = coverImage.preview;
@@ -160,7 +159,6 @@ export default function AddTrack() {
   };
 
   const handleArtistSelect = (artist: Artist) => {
-    console.log("Выбран артист:", artist);
     setCurrentTrack((prev) => ({ ...prev, artist: artist }));
     setInputErrors((prev) => ({ ...prev, artist: false }));
   };

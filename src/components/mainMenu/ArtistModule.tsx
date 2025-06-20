@@ -1,10 +1,17 @@
 import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
-import { motion } from "framer-motion";
 import type { Track } from "../../types/TrackData";
 import type { Artist } from "../../types/ArtistData";
 
-export default function ArtistModule({dailyTracks}: {dailyTracks: {artist: Artist; tracks: Track[]}[]}) {
+interface ArtistModuleProps {
+  dailyTracks: { artist: Artist; tracks: Track[] }[];
+  isLoading?: boolean;
+}
+
+export default function ArtistModule({
+  dailyTracks,
+  isLoading = false,
+}: ArtistModuleProps) {
   return (
     <div>
       <div className="flex items-center mt-3 justify-between mb-[15px]">
@@ -13,7 +20,7 @@ export default function ArtistModule({dailyTracks}: {dailyTracks: {artist: Artis
         </h1>
         <div
           style={{ color: "rgba(255, 255, 255, 0.4)" }}
-          className="flex items-center gap-1 cursor-pointer hover:underline  pt-3"
+          className="flex items-center gap-1 cursor-pointer hover:underline pt-3"
         >
           <h1
             style={{ color: "rgba(255, 255, 255, 0.5)" }}
@@ -27,21 +34,16 @@ export default function ArtistModule({dailyTracks}: {dailyTracks: {artist: Artis
           />
         </div>
       </div>
+
       <div className="flex flex-col gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 1000 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <ArtistCard artist={dailyTracks[0]} />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 1000 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        >
-          <ArtistCard artist={dailyTracks[1]} />
-        </motion.div>
+        <ArtistCard
+          artist={isLoading ? null : dailyTracks[0] || null}
+          isLoading={isLoading}
+        />
+        <ArtistCard
+          artist={isLoading ? null : dailyTracks[1] || null}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );

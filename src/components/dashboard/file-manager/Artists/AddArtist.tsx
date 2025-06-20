@@ -2,28 +2,11 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import type { AppState } from "../../../../store";
-import { Input, message, Cascader, Select, Space } from "antd";
+import { Input, message, Select, Space } from "antd";
 import { AvatarInput } from "./AvatarInput";
 import type { SelectProps } from "antd";
-import { SettingOutlined } from "@ant-design/icons";
 import type { ArtistData } from "../../../../types/ArtistData";
 
-const { Option } = Select;
-
-const selectBefore = (
-  <Select defaultValue="http://">
-    <Option value="http://">http://</Option>
-    <Option value="https://">https://</Option>
-  </Select>
-);
-const selectAfter = (
-  <Select defaultValue=".com">
-    <Option value=".com">.com</Option>
-    <Option value=".jp">.jp</Option>
-    <Option value=".cn">.cn</Option>
-    <Option value=".org">.org</Option>
-  </Select>
-);
 const options: SelectProps["options"] = [
   "Pop",
   "Rock",
@@ -178,7 +161,6 @@ export default function AddArtist() {
         avatar: !currentArtist.avatar,
         genres: currentArtist.genres.length === 0,
       }));
-      console.log(inputErrors);
       return;
     }
 
@@ -197,8 +179,10 @@ export default function AddArtist() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      const data = await response.json();
-      console.log(data);
+
+      if (!response.ok) {
+        throw new Error("Failed to add artist");
+      }
       setCurrentArtist({
         name: "",
         bio: "",
@@ -208,11 +192,9 @@ export default function AddArtist() {
       });
       setAvatarImage(null);
     } catch (e) {
-      console.log(e);
       message.error("Произошла ошибка");
       return;
     }
-    console.log(currentArtist);
     message.success("Трек добавлен в базу данных");
   };
 

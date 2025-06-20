@@ -1,4 +1,4 @@
-import { useState, useMemo, type FC, useEffect } from "react";
+import { useState, useMemo, type FC} from "react";
 import { debounce } from "lodash";
 import type { Artist } from "../../../../types/ArtistData";
 import { Select, Spin, Typography } from "antd";
@@ -19,10 +19,6 @@ const SelectArtist: FC<selectArtistProps> = ({
   const [searchValue, setSearchValue] = useState("");
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const [alreadyPopular, setAlreadyPopular] = useState(false);
-
-  useEffect(() => {
-    console.log(searchValue);
-  }, [searchValue]);
 
   const searchArtists = async (query: string) => {
     if (!query?.trim()) {
@@ -49,7 +45,6 @@ const SelectArtist: FC<selectArtistProps> = ({
           artist: artist,
         }));
         if (searchValue === "") {
-          console.log(searchValue);
           setArtists(options);
         }
       }

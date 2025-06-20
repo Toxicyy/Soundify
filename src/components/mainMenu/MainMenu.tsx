@@ -16,44 +16,22 @@ import type { AppState } from "../../store";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../state/UserApi.slice";
-import { useEffect, useState } from "react";
-import { type Track } from "../../types/TrackData";
-import type { Artist } from "../../types/ArtistData";
+import { useEffect } from "react";
+import { useArtistsDataLoader } from "../../hooks/UseArtistDataLoader";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queueOpen.isOpen);
   const { data: user, isFetching } = useGetUserQuery();
-  const [dailyTracks, setDailyTracks] = useState<
-    {artist: Artist; tracks: Track[]}[]
-  >([]);
 
-  useEffect(()=>{
-    console.log(dailyTracks);
-  }, [dailyTracks])
+  // Используем новый хук
+  const { dailyTracks, isLoading, loadArtistsData } = useArtistsDataLoader();
 
-  async function getArtistsTrack(slug: string) {
-    const artistResponse = await fetch(
-      `http://localhost:5000/api/artists/slug/${slug}`
-    );
-    const artistData = await artistResponse.json();
-    console.log(artistData);
-    const trackResponse = await fetch(
-      `http://localhost:5000/api/artists/${artistData.data._id}/tracks`
-    );
-    const trackData = await trackResponse.json();
-    return {
-      artist: artistData.data,
-      tracks: trackData.data,
-    };
-  }
   useEffect(() => {
-    const dailyArtist1 = getArtistsTrack("kai-angel");
-    const dailyArtist2 = getArtistsTrack("9mice");
-
-    Promise.all([dailyArtist1, dailyArtist2]).then((results) => {
-      setDailyTracks(results);
-    })
+    loadArtistsData();
   }, []);
+
+  // Добавляем индикатор загрузки для отладки
+  console.log("MainMenu isLoading:", isLoading, "dailyTracks:", dailyTracks);
 
   return (
     <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10">
@@ -69,6 +47,7 @@ export default function MainMenu() {
             <UserIcon userIcon={userAvatar} />
           </motion.div>
         </div>
+
         <motion.div
           initial={{ opacity: 0, y: -300 }}
           animate={{ opacity: 1, y: 0 }}
@@ -82,6 +61,7 @@ export default function MainMenu() {
             <RightOutlined style={{ color: "black" }} />
           </div>
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0, x: 2000 }}
           animate={{ opacity: 1, x: 0 }}
@@ -89,13 +69,22 @@ export default function MainMenu() {
         >
           <PlaylistModule />
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 1200 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <ArtistModule dailyTracks={dailyTracks ? dailyTracks : []} />
+          {/* Передаем состояние полной загрузки */}
+          <ArtistModule dailyTracks={dailyTracks} isLoading={isLoading} />
         </motion.div>
+
+        {/* Индикатор загрузки для отладки */}
+        {isLoading && (
+          <div className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md border border-white/20">
+            Загрузка изображений...
+          </div>
+        )}
       </div>
 
       <div className="w-[35%] flex flex-col gap-0">
@@ -111,15 +100,15 @@ export default function MainMenu() {
             exit={{ opacity: 0, height: 0, y: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
           >
-            <h1 className="text-2xl font-bold text-white tracking-wider  flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white tracking-wider flex items-center gap-3">
               Happy listening,{" "}
               <div className="glass rounded-full px-4 py-2">
-                <span className="username ">{user.username}</span>
+                <span className="username">{user.username}</span>
               </div>
             </h1>
             <SettingOutlined
               style={{ color: "white", fontSize: "36px" }}
-              className=" cursor-pointer transition-all duration-300 hover:scale-110"
+              className="cursor-pointer transition-all duration-300 hover:scale-110"
             />
           </motion.div>
         ) : (
@@ -146,10 +135,11 @@ export default function MainMenu() {
             </div>
           </motion.div>
         )}
+
         <AnimatePresence>
           {!queueOpen && (
             <motion.div
-              className={"pr-8 " + user ? "mt-5.5" : ""}
+              className={"pr-8 " + (user ? "mt-5.5" : "")}
               initial={{ opacity: 0, height: 0, x: 2000 }}
               animate={{ opacity: 1, height: "auto", x: 0 }}
               exit={{ opacity: 0, height: 0, x: 2000 }}
@@ -160,6 +150,7 @@ export default function MainMenu() {
             </motion.div>
           )}
         </AnimatePresence>
+
         <motion.div
           key="queue"
           layout
