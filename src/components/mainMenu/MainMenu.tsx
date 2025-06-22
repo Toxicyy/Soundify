@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../state/UserApi.slice";
 import { useEffect } from "react";
-import { useArtistsDataLoader } from "../../hooks/UseArtistDataLoader";
+import { useArtistsDataLoader } from "../../hooks/useArtistDataLoader"
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queueOpen.isOpen);
@@ -29,9 +29,6 @@ export default function MainMenu() {
   useEffect(() => {
     loadArtistsData();
   }, []);
-
-  // Добавляем индикатор загрузки для отладки
-  console.log("MainMenu isLoading:", isLoading, "dailyTracks:", dailyTracks);
 
   return (
     <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10">
@@ -82,7 +79,7 @@ export default function MainMenu() {
         {/* Индикатор загрузки для отладки */}
         {isLoading && (
           <div className="fixed bottom-4 right-4 bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md border border-white/20">
-            Загрузка изображений...
+            Image loading...
           </div>
         )}
       </div>

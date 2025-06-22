@@ -57,6 +57,20 @@ const trackSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    isHLS: {
+      type: Boolean,
+      default: false,
+    },
+    hlsSegments: [
+      {
+        type: String, // URLs сегментов
+      },
+    ],
+    audioQuality: {
+      type: String,
+      enum: ["128k", "320k"],
+      default: "128k",
+    },
   },
   {
     timestamps: true,

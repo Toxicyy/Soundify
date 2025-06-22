@@ -16,7 +16,7 @@ router.use("/artists", artistRoutes);
 router.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Soundify API работает",
+    message: "Soundify API working",
     version: "1.0.0",
   });
 });

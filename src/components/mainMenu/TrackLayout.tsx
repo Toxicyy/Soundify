@@ -83,7 +83,7 @@ export default function TrackLayout({
                   {isThisTrackPlaying ? (
                     <PauseOutlined
                       style={{
-                        color: "#5cec8c",
+                        color: "white",
                         fontSize: "32px",
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
@@ -96,7 +96,7 @@ export default function TrackLayout({
                   ) : (
                     <CaretRightOutlined
                       style={{
-                        color: "#5cec8c",
+                        color: "white",
                         fontSize: "32px",
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
