@@ -10,7 +10,7 @@ import {
   updateArtist,
   deleteArtist,
   searchArtists,
-  getPopularArtists, // Добавьте этот импорт
+  getPopularArtists,
 } from "../controllers/artist.controller.js";
 import { uploadAvatar } from "../middleware/upload.middleware.js";
 import {
@@ -18,34 +18,39 @@ import {
   validateArtistUpdate,
 } from "../middleware/validation.middleware.js";
 
+/**
+ * Artist routes configuration
+ * Handles artist management, search, and content retrieval
+ */
+
 const router = express.Router();
 
-// Публичные маршруты
-router.get("/", getAllArtists);
-router.get("/search", searchArtists);
-router.get("/popular", getPopularArtists);
-router.get("/:id", getArtistById);
-router.get("/slug/:slug", getArtistBySlug);
-router.get("/:id/tracks", getArtistTracks);
-router.get("/:id/albums", getArtistAlbums);
+// Public routes - no authentication required
+router.get("/", getAllArtists);                    // Get all artists with pagination and filters
+router.get("/search", searchArtists);              // Search artists by name/slug
+router.get("/popular", getPopularArtists);         // Get popular artists sorted by followers
+router.get("/:id", getArtistById);                 // Get artist by ID
+router.get("/slug/:slug", getArtistBySlug);        // Get artist by slug (SEO-friendly URLs)
+router.get("/:id/tracks", getArtistTracks);        // Get tracks by specific artist
+router.get("/:id/albums", getArtistAlbums);        // Get albums by specific artist
 
-// Защищенные маршруты
+// Protected routes - require authentication
 router.post(
   "/",
-  authenticate,
-  uploadAvatar,
-  validateArtistCreation,
-  createArtist
+  authenticate,                 // Verify user authentication
+  uploadAvatar,                // Handle avatar file upload
+  validateArtistCreation,      // Validate artist creation data
+  createArtist                 // Create new artist
 );
 
 router.put(
   "/:id",
-  authenticate,
-  uploadAvatar,
-  validateArtistUpdate,
-  updateArtist
+  authenticate,                // Verify user authentication
+  uploadAvatar,               // Handle avatar file upload (optional)
+  validateArtistUpdate,       // Validate artist update data
+  updateArtist                // Update existing artist
 );
 
-router.delete("/:id", authenticate, deleteArtist);
+router.delete("/:id", authenticate, deleteArtist); // Delete artist (with ownership check)
 
 export default router;

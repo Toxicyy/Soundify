@@ -100,7 +100,7 @@ const SelectArtist: FC<selectArtistProps> = ({
     }
   };
 
-  const handleSelect = (value: string, option: any) => {
+  const handleSelect = (_: string, option: any) => {
     const artist = option.artist;
     setSelectedArtist(artist);
     setSearchValue("");

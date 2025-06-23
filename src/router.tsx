@@ -6,7 +6,7 @@ import Dashboard from "./Pages/Dashboard/Dashboard";
 import AddTrackPage from "./Pages/Dashboard/FileManage/AddTrackPage";
 import AddAlbumPage from "./Pages/Dashboard/FileManage/AddAlbumPage";
 import AddArtistPage from "./Pages/Dashboard/FileManage/AddArtistPage";
-import MainMenu from "./components/mainMenu/MainMenu";
+import MainMenu from "./components/mainPage/mainMenu/MainMenu";
 
 export const router = createBrowserRouter([
   {

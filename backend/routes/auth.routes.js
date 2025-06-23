@@ -2,13 +2,18 @@ import express from "express";
 import { register, login, getUser } from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 
+/**
+ * Authentication routes configuration
+ * Handles user registration, login, and profile management
+ */
+
 const router = express.Router();
 
-// Публичные маршруты
-router.post("/register", register);
-router.post("/login", login);
+// Public routes - no authentication required
+router.post("/register", register);                // User registration with email/password
+router.post("/login", login);                      // User login with credentials
 
-// Защищенные маршруты
-router.get("/me", authenticate, getUser);
+// Protected routes - require authentication
+router.get("/me", authenticate, getUser);          // Get current user profile data
 
 export default router;

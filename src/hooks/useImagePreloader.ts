@@ -17,7 +17,7 @@ export const useImagePreloader = (imageSrcs: string[]) => {
 
     // Создаем промисы для загрузки каждого изображения
     const imagePromises = imageSrcs.map((src) => {
-      return new Promise<string>((resolve, reject) => {
+      return new Promise<string>((resolve, _) => {
         const img = new Image();
 
         img.onload = () => {

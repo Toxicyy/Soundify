@@ -1,5 +1,5 @@
 import Track from "../models/Track.model.js";
-import { uploadToB2 } from "../utils/upload.js";
+import { uploadToB2, uploadMultipleToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import {
   processAudioToHLS,
@@ -10,7 +10,6 @@ import B2 from "backblaze-b2";
 import fs from "fs/promises";
 
 class TrackService {
-  // Простая проверка B2 доступности
   async checkB2Access() {
     try {
       const b2 = new B2({
@@ -19,291 +18,146 @@ class TrackService {
       });
 
       await b2.authorize();
-      console.log("✅ B2 авторизация успешна");
 
-      // Проверяем доступ к bucket с обработкой ошибок
-      try {
-        const buckets = await b2.listBuckets();
-        const targetBucket = buckets.data.buckets.find(
-          (bucket) => bucket.bucketId === config.b2.bucketId
-        );
+      const buckets = await b2.listBuckets();
+      const targetBucket = buckets.data.buckets.find(
+        (bucket) => bucket.bucketId === config.b2.bucketId
+      );
 
-        if (!targetBucket) {
-          console.warn("⚠️ Bucket не найден среди доступных");
-          return false;
-        }
-
-        console.log("✅ B2 bucket доступен:", targetBucket.bucketName);
-        return true;
-      } catch (bucketError) {
-        console.warn("⚠️ Ошибка доступа к bucket:", bucketError.message);
-        if (bucketError.response && bucketError.response.status === 401) {
-          console.warn(
-            "⚠️ Недостаточно прав для доступа к bucket. Проверьте права Application Key"
-          );
-        }
-        // Возвращаем true, так как авторизация прошла, а bucket может быть недоступен из-за прав
-        return true;
-      }
+      return !!targetBucket;
     } catch (error) {
-      console.error("❌ Проблема с B2:", error.message);
       return false;
     }
   }
 
-  // Проверка системных требований при запуске сервиса
-  async checkSystemRequirements() {
-    console.log("🔍 Проверка системных требований TrackService...");
-
-    let ffmpegReady = false;
-    let b2Ready = false;
-
+  async verifySystemRequirements() {
     try {
-      // Проверяем FFmpeg с подробной диагностикой
-      console.log("🎬 Детальная проверка FFmpeg в TrackService...");
+      await checkFFmpegAvailability();
+      const b2Available = await this.checkB2Access();
 
-      // Импортируем и проверяем ffmpeg прямо здесь
-      const ffmpegPath = await import("@ffmpeg-installer/ffmpeg");
-      console.log("📁 FFmpeg путь в TrackService:", ffmpegPath.default.path);
-
-      // Проверяем функцию из audioProcessor
-      const result = await checkFFmpegAvailability();
-      console.log("✅ checkFFmpegAvailability вернула:", result);
-      ffmpegReady = true;
+      return true; // FFmpeg is primary requirement
     } catch (error) {
-      console.error("❌ Ошибка FFmpeg в checkSystemRequirements:", error);
-      ffmpegReady = false;
-    }
-
-    try {
-      // Проверяем B2 (не критично для создания треков)
-      const b2Result = await this.checkB2Access();
-      b2Ready = b2Result;
-    } catch (error) {
-      console.warn("⚠️ B2 проверка не удалась:", error.message);
-      b2Ready = false;
-    }
-
-    console.log(`📊 Статус системы: FFmpeg=${ffmpegReady}, B2=${b2Ready}`);
-
-    // Возвращаем true если FFmpeg готов (B2 не критично для начальной проверки)
-    return ffmpegReady;
-  }
-
-  async createTrack(trackData, files, userId) {
-    const { name, artist, genre, tags, duration } = trackData;
-
-    if (!files || !files.audio || !files.cover) {
-      throw new Error("Аудио файл и обложка обязательны");
-    }
-
-    try {
-      // Загружаем файлы в B2
-      const audioUpload = await uploadToB2(files.audio[0], "audio");
-      const coverUpload = await uploadToB2(files.cover[0], "images");
-
-      const audioUrl = audioUpload.url;
-      const coverUrl = coverUpload.url;
-
-      // Создаем трек
-      const track = new Track({
-        name: name.trim(),
-        artist: artist.trim(),
-        audioUrl,
-        coverUrl,
-        genre: genre?.trim(),
-        tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
-        duration: parseInt(duration) || 0,
-        isPublic: true,
-        uploadedBy: userId,
-      });
-
-      await track.save();
-      return track;
-    } catch (error) {
-      throw new Error(`Ошибка при создании трека: ${error.message}`);
+      return false;
     }
   }
 
+  // Create track with HLS streaming conversion
   async createTrackWithHLS(trackData, files, userId) {
     const { name, artist, genre, tags } = trackData;
 
-    if (!files || !files.audio || !files.cover) {
-      throw new Error("Аудио файл и обложка обязательны");
+    if (!files?.audio || !files?.cover) {
+      throw new Error("Audio file and cover image are required");
     }
 
-    console.log(`🎵 Начинаем создание HLS трека: ${name}`);
-    console.log(
-      `📁 Размер аудио файла: ${(
-        files.audio[0].buffer.length /
-        1024 /
-        1024
-      ).toFixed(2)} MB`
-    );
-
-    // Проверяем доступность ffmpeg с подробной диагностикой
-    try {
-      console.log("🔍 Проверяем FFmpeg перед созданием трека...");
-      const ffmpegCheck = await this.checkSystemRequirements();
-      if (!ffmpegCheck) {
-        throw new Error(
-          "FFmpeg недоступен. Проверьте установку @ffmpeg-installer/ffmpeg"
-        );
-      }
-      console.log("✅ FFmpeg проверен и готов к работе");
-    } catch (systemError) {
-      console.error("❌ Ошибка проверки FFmpeg:", systemError);
-      throw new Error(`FFmpeg недоступен: ${systemError.message}`);
+    // Verify system requirements
+    const systemReady = await this.verifySystemRequirements();
+    if (!systemReady) {
+      throw new Error("System requirements not met - FFmpeg unavailable");
     }
 
     let tempDir = null;
 
     try {
-      console.log(`🎵 Начинаем обработку трека: ${name}`);
-
-      // Обрабатываем аудио в HLS
+      // Process audio to HLS format
       const hlsData = await processAudioToHLS(
         files.audio[0].buffer,
         files.audio[0].originalname
       );
+      tempDir = hlsData.tempDir;
 
-      tempDir = hlsData.tempDir; // Сохраняем ссылку на временную директорию
-
-      console.log(
-        `📁 HLS обработка завершена, сегментов: ${hlsData.segments.length}`
-      );
-
-      // Загружаем обложку как обычно
+      // Upload cover image
       const coverUpload = await uploadToB2(files.cover[0], "images");
 
-      // Загружаем HLS файлы в B2 с контролируемой параллельностью
-      const folderName = `hls/${Date.now()}-${name.replace(
-        /[^a-zA-Z0-9]/g,
-        "-"
-      )}`;
+      // Prepare HLS folder structure
+      const hlsFolder = `hls/${Date.now()}-${this.sanitizeFileName(name)}`;
 
-      console.log(`☁️ Загружаем HLS файлы в B2: ${folderName}`);
-
-      // Сначала загружаем плейлист
+      // Upload playlist file
       const playlistUpload = await uploadToB2(
         {
           buffer: Buffer.from(hlsData.playlist),
           originalname: "playlist.m3u8",
           mimetype: "application/vnd.apple.mpegurl",
         },
-        folderName
+        hlsFolder
       );
 
-      console.log(`✅ Плейлист загружен: ${playlistUpload.fileName}`);
-
-      // Загружаем сегменты пакетами (по 2 одновременно) для избежания 503 ошибок
+      // Upload HLS segments in batches
       const segmentFiles = hlsData.segments.map((segment) => ({
         buffer: segment.buffer,
         originalname: segment.name,
         mimetype: "video/mp2t",
       }));
 
-      const segmentUploads = [];
-      const batchSize = 3; // Уменьшаем до 2 сегментов одновременно
+      const segmentUploads = await this.uploadHLSSegments(
+        segmentFiles,
+        hlsFolder
+      );
 
-      for (let i = 0; i < segmentFiles.length; i += batchSize) {
-        const batch = segmentFiles.slice(i, i + batchSize);
-        const batchNumber = Math.floor(i / batchSize) + 1;
-        const totalBatches = Math.ceil(segmentFiles.length / batchSize);
+      // Calculate duration from playlist
+      const duration = this.calculatePlaylistDuration(hlsData.playlist);
 
-        console.log(
-          `📦 Загружаем батч ${batchNumber}/${totalBatches} (${batch.length} сегментов)`
-        );
-
-        try {
-          const batchResults = await Promise.all(
-            batch.map((segment) => uploadToB2(segment, folderName, 5)) // 5 попыток для каждого файла
-          );
-          segmentUploads.push(...batchResults);
-
-          console.log(`✅ Батч ${batchNumber} загружен успешно`);
-
-          // Увеличенная пауза между батчами для снижения нагрузки на B2
-          if (i + batchSize < segmentFiles.length) {
-            const pauseDuration = 1000; // 2 секунды между батчами
-            console.log(
-              `⏳ Пауза между батчами: ${pauseDuration / 1000} секунд`
-            );
-            await new Promise((resolve) => setTimeout(resolve, pauseDuration));
-          }
-        } catch (error) {
-          console.error(`❌ Ошибка в батче ${batchNumber}:`, error.message);
-
-          // Если батч не удался, попробуем загрузить файлы по одному
-          console.log(
-            `🔄 Пробуем загрузить файлы из батча ${batchNumber} по одному...`
-          );
-          try {
-            for (const segment of batch) {
-              console.log(
-                `📤 Индивидуальная загрузка: ${segment.originalname}`
-              );
-              const result = await uploadToB2(segment, folderName, 5);
-              segmentUploads.push(result);
-
-              // Пауза между индивидуальными загрузками
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-            console.log(`✅ Батч ${batchNumber} загружен по одному файлу`);
-          } catch (individualError) {
-            console.error(
-              `❌ Критическая ошибка загрузки в батче ${batchNumber}:`,
-              individualError.message
-            );
-            throw individualError;
-          }
-        }
-      }
-
-      console.log(`✅ Все ${segmentUploads.length} сегментов загружены в B2`);
-
-      // Очищаем временные файлы
-      if (tempDir) {
-        await fs.rm(tempDir, { recursive: true, force: true });
-        console.log(`🗑️ Временные файлы очищены`);
-      }
-
-      // Вычисляем длительность из плейлиста
-      const duration = calculateDurationFromPlaylist(hlsData.playlist);
-
-      // Создаем трек
+      // Create track record
       const track = new Track({
         name: name.trim(),
         artist: artist.trim(),
-        audioUrl: playlistUpload.url, // Ссылка на m3u8
-        hlsSegments: segmentUploads.map((upload) => upload.url), // Массив сегментов
+        audioUrl: playlistUpload.url,
+        hlsSegments: segmentUploads.map((upload) => upload.url),
         coverUrl: coverUpload.url,
         genre: genre?.trim(),
         tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
         duration: Math.round(duration),
         isPublic: true,
-        isHLS: true, // Флаг HLS трека
+        isHLS: true,
         uploadedBy: userId,
       });
 
       await track.save();
-      console.log(`💾 Трек сохранен в базе данных: ${track._id}`);
-
       return track;
     } catch (error) {
-      // Очищаем временные файлы при ошибке
+      throw new Error(`HLS track creation failed: ${error.message}`);
+    } finally {
+      // Cleanup temporary files
       if (tempDir) {
-        try {
-          await fs.rm(tempDir, { recursive: true, force: true });
-          console.log(`🗑️ Временные файлы очищены после ошибки`);
-        } catch (cleanupError) {
-          console.error("Ошибка очистки временных файлов:", cleanupError);
+        await this.cleanupTempDirectory(tempDir);
+      }
+    }
+  }
+
+  // Upload HLS segments with controlled concurrency to prevent B2 rate limiting
+  async uploadHLSSegments(segmentFiles, folder) {
+    const batchSize = 3;
+    const uploads = [];
+
+    for (let i = 0; i < segmentFiles.length; i += batchSize) {
+      const batch = segmentFiles.slice(i, i + batchSize);
+
+      try {
+        const batchResults = await Promise.all(
+          batch.map((segment) => uploadToB2(segment, folder, 5))
+        );
+        uploads.push(...batchResults);
+
+        // Delay between batches to reduce B2 load
+        if (i + batchSize < segmentFiles.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        // Fallback: upload segments individually
+        for (const segment of batch) {
+          try {
+            const result = await uploadToB2(segment, folder, 5);
+            uploads.push(result);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          } catch (individualError) {
+            throw new Error(
+              `Segment upload failed: ${individualError.message}`
+            );
+          }
         }
       }
-
-      console.error(`❌ Ошибка создания HLS трека:`, error);
-      throw new Error(`Ошибка при создании HLS трека: ${error.message}`);
     }
+
+    return uploads;
   }
 
   async getAllTracks({
@@ -338,23 +192,24 @@ class TrackService {
         },
       };
     } catch (error) {
-      throw new Error(`Ошибка при получении треков: ${error.message}`);
+      throw new Error(`Failed to retrieve tracks: ${error.message}`);
     }
   }
 
   async searchTracks(query, { page = 1, limit = 20 }) {
     try {
       const skip = (page - 1) * limit;
+      const searchRegex = new RegExp(query, "i");
 
       const searchCondition = {
         $and: [
           { isPublic: true },
           {
             $or: [
-              { name: { $regex: query, $options: "i" } },
-              { artist: { $regex: query, $options: "i" } },
-              { genre: { $regex: query, $options: "i" } },
-              { tags: { $in: [new RegExp(query, "i")] } },
+              { name: searchRegex },
+              { artist: searchRegex },
+              { genre: searchRegex },
+              { tags: { $in: [searchRegex] } },
             ],
           },
         ],
@@ -368,7 +223,9 @@ class TrackService {
 
       const total = await Track.countDocuments(searchCondition);
       const totalPages = Math.ceil(total / limit);
+
       const tracksWithSignedUrls = await this.addSignedUrlsToTracks(tracks);
+
       return {
         tracks: tracksWithSignedUrls,
         query,
@@ -381,7 +238,24 @@ class TrackService {
         },
       };
     } catch (error) {
-      throw new Error(`Ошибка при поиске треков: ${error.message}`);
+      throw new Error(`Track search failed: ${error.message}`);
+    }
+  }
+
+  async getTrackById(trackId) {
+    try {
+      const track = await Track.findById(trackId).populate(
+        "uploadedBy",
+        "name username avatar"
+      );
+
+      if (!track) {
+        throw new Error("Track not found");
+      }
+
+      return await this.addSignedUrlsToTracks(track);
+    } catch (error) {
+      throw new Error(`Failed to retrieve track: ${error.message}`);
     }
   }
 
@@ -395,30 +269,13 @@ class TrackService {
 
       return track;
     } catch (error) {
-      throw new Error(`Ошибка при обновлении счетчика: ${error.message}`);
+      throw new Error(`Failed to update listen count: ${error.message}`);
     }
   }
 
-  async getTrackById(trackId) {
-    try {
-      const track = await Track.findById(trackId).populate(
-        "uploadedBy",
-        "name username avatar"
-      );
-
-      if (!track) {
-        throw new Error("Трек не найден");
-      }
-      const trackWithSignedUrls = await this.addSignedUrlsToTracks(track);
-      return trackWithSignedUrls;
-    } catch (error) {
-      throw new Error(`Ошибка при получении трека: ${error.message}`);
-    }
-  }
-
+  // Generate signed URLs for private bucket access
   async addSignedUrlsToTracks(tracks) {
     try {
-      // Проверяем, передан ли массив или один объект
       const isArray = Array.isArray(tracks);
       const tracksArray = isArray ? tracks : [tracks];
 
@@ -426,35 +283,35 @@ class TrackService {
         tracksArray.map(async (track) => {
           const trackObj = track.toObject ? track.toObject() : track;
 
-          // Обрабатываем coverUrl (обложку трека)
+          // Generate signed URL for cover image
           if (trackObj.coverUrl) {
             const coverFileName = extractFileName(trackObj.coverUrl);
             if (coverFileName) {
               const signedCoverUrl = await generateSignedUrl(
                 coverFileName,
                 7200
-              ); // 2 часа
+              );
               if (signedCoverUrl) {
                 trackObj.coverUrl = signedCoverUrl;
               }
             }
           }
 
-          // Обрабатываем audioUrl (аудио файл)
+          // Generate signed URL for audio/playlist
           if (trackObj.audioUrl) {
             const audioFileName = extractFileName(trackObj.audioUrl);
             if (audioFileName) {
               const signedAudioUrl = await generateSignedUrl(
                 audioFileName,
                 7200
-              ); // 2 часа
+              );
               if (signedAudioUrl) {
                 trackObj.audioUrl = signedAudioUrl;
               }
             }
           }
 
-          // Если трек содержит данные артиста, обрабатываем и его аватар
+          // Handle nested artist avatar if populated
           if (trackObj.artist && trackObj.artist.avatar) {
             const artistAvatarFileName = extractFileName(
               trackObj.artist.avatar
@@ -474,36 +331,23 @@ class TrackService {
         })
       );
 
-      // Возвращаем в том же формате, что и получили
       return isArray ? tracksWithSignedUrls : tracksWithSignedUrls[0];
     } catch (error) {
-      console.error("Ошибка создания подписанных URL для треков:", error);
-
-      // Обработка ошибок с учетом типа входных данных
+      // Return original tracks without signed URLs on error
       const isArray = Array.isArray(tracks);
-      const fallbackResult = isArray
-        ? tracks.map((track) => ({
-            ...(track.toObject ? track.toObject() : track),
-            coverUrl: null,
-            audioUrl: track.audioUrl, // Оставляем оригинальный audioUrl при ошибке
-          }))
-        : {
-            ...(tracks.toObject ? tracks.toObject() : tracks),
-            coverUrl: null,
-            audioUrl: tracks.audioUrl, // Оставляем оригинальный audioUrl при ошибке
-          };
-
-      return fallbackResult;
+      return isArray
+        ? tracks.map((track) => (track.toObject ? track.toObject() : track))
+        : tracks.toObject
+        ? tracks.toObject()
+        : tracks;
     }
   }
 
+  // Convert existing non-HLS track to HLS format
   async convertExistingTrackToHLS(trackId) {
-    // Проверяем доступность ffmpeg
-    const ffmpegAvailable = await this.checkSystemRequirements();
-    if (!ffmpegAvailable) {
-      throw new Error(
-        "FFmpeg не найден. Проверьте установку @ffmpeg-installer/ffmpeg"
-      );
+    const systemReady = await this.verifySystemRequirements();
+    if (!systemReady) {
+      throw new Error("System requirements not met - FFmpeg unavailable");
     }
 
     let tempDir = null;
@@ -512,12 +356,10 @@ class TrackService {
       const track = await Track.findById(trackId);
 
       if (!track || track.isHLS) {
-        throw new Error("Трек не найден или уже в HLS формате");
+        throw new Error("Track not found or already in HLS format");
       }
 
-      console.log(`🔄 Конвертируем трек в HLS: ${track.name}`);
-
-      // Скачиваем оригинальный аудио файл
+      // Download original audio file
       const audioUrl = await generateSignedUrl(
         extractFileName(track.audioUrl),
         3600
@@ -525,14 +367,13 @@ class TrackService {
       const response = await fetch(audioUrl);
       const audioBuffer = Buffer.from(await response.arrayBuffer());
 
-      // Конвертируем в HLS
+      // Convert to HLS
       const hlsData = await processAudioToHLS(audioBuffer, track.name);
       tempDir = hlsData.tempDir;
 
-      // Загружаем HLS файлы
-      const folderName = `hls/${Date.now()}-${track.name.replace(
-        /[^a-zA-Z0-9]/g,
-        "-"
+      // Upload HLS files
+      const hlsFolder = `hls/${Date.now()}-${this.sanitizeFileName(
+        track.name
       )}-converted`;
 
       const playlistUpload = await uploadToB2(
@@ -541,49 +382,34 @@ class TrackService {
           originalname: "playlist.m3u8",
           mimetype: "application/vnd.apple.mpegurl",
         },
-        folderName
+        hlsFolder
       );
 
-      const segmentUploads = await Promise.all(
-        hlsData.segments.map((segment) =>
-          uploadToB2(
-            {
-              buffer: segment.buffer,
-              originalname: segment.name,
-              mimetype: "video/mp2t",
-            },
-            folderName
-          )
-        )
+      const segmentFiles = hlsData.segments.map((segment) => ({
+        buffer: segment.buffer,
+        originalname: segment.name,
+        mimetype: "video/mp2t",
+      }));
+
+      const segmentUploads = await this.uploadHLSSegments(
+        segmentFiles,
+        hlsFolder
       );
 
-      // Очищаем временные файлы
-      if (tempDir) {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      }
-
-      // Обновляем трек
+      // Update track
       track.audioUrl = playlistUpload.url;
       track.hlsSegments = segmentUploads.map((upload) => upload.url);
       track.isHLS = true;
       track.audioQuality = "128k";
 
       await track.save();
-
-      console.log(`✅ Трек конвертирован в HLS: ${track._id}`);
-
       return await this.addSignedUrlsToTracks(track);
     } catch (error) {
-      // Очищаем временные файлы при ошибке
+      throw new Error(`HLS conversion failed: ${error.message}`);
+    } finally {
       if (tempDir) {
-        try {
-          await fs.rm(tempDir, { recursive: true, force: true });
-        } catch (cleanupError) {
-          console.error("Ошибка очистки временных файлов:", cleanupError);
-        }
+        await this.cleanupTempDirectory(tempDir);
       }
-
-      throw new Error(`Ошибка при конвертации в HLS: ${error.message}`);
     }
   }
 
@@ -592,18 +418,18 @@ class TrackService {
       const track = await Track.findById(trackId);
 
       if (!track) {
-        return null;
+        return false;
       }
 
-      // Проверяем права на удаление
+      // Verify ownership
       if (track.uploadedBy.toString() !== userId) {
-        return null;
+        return false;
       }
 
       await Track.findByIdAndDelete(trackId);
       return true;
     } catch (error) {
-      throw new Error(`Ошибка при удалении трека: ${error.message}`);
+      throw new Error(`Track deletion failed: ${error.message}`);
     }
   }
 
@@ -615,7 +441,7 @@ class TrackService {
         return null;
       }
 
-      // Проверяем права на обновление
+      // Verify ownership
       if (track.uploadedBy.toString() !== userId) {
         return null;
       }
@@ -628,24 +454,40 @@ class TrackService {
 
       return await this.addSignedUrlsToTracks(updatedTrack);
     } catch (error) {
-      throw new Error(`Ошибка при обновлении трека: ${error.message}`);
+      throw new Error(`Track update failed: ${error.message}`);
+    }
+  }
+
+  // Utility methods
+
+  sanitizeFileName(filename) {
+    return filename.replace(/[^a-zA-Z0-9\-_]/g, "-");
+  }
+
+  // Calculate total duration from M3U8 playlist content
+  calculatePlaylistDuration(playlist) {
+    const lines = playlist.split("\n");
+    let totalDuration = 0;
+
+    lines.forEach((line) => {
+      if (line.startsWith("#EXTINF:")) {
+        const duration = parseFloat(line.split(":")[1].split(",")[0]);
+        if (!isNaN(duration)) {
+          totalDuration += duration;
+        }
+      }
+    });
+
+    return totalDuration;
+  }
+
+  async cleanupTempDirectory(dirPath) {
+    try {
+      await fs.rm(dirPath, { recursive: true, force: true });
+    } catch (error) {
+      // Silent cleanup failure
     }
   }
 }
-
-// Функция для расчета длительности из m3u8
-const calculateDurationFromPlaylist = (playlist) => {
-  const lines = playlist.split("\n");
-  let totalDuration = 0;
-
-  lines.forEach((line) => {
-    if (line.startsWith("#EXTINF:")) {
-      const duration = parseFloat(line.split(":")[1].split(",")[0]);
-      totalDuration += duration;
-    }
-  });
-
-  return totalDuration;
-};
 
 export default new TrackService();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../../store";

@@ -4,148 +4,151 @@ import path from "path";
 import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
 
-// Setup FFmpeg path from installed library
-const setupFFmpeg = () => {
+// FFmpeg configuration
+let ffmpegConfigured = false;
+
+const initializeFFmpeg = () => {
   try {
     ffmpeg.setFfmpegPath(ffmpegPath.path);
+    ffmpegConfigured = true;
     return true;
   } catch (error) {
-    console.error("FFmpeg setup error:", error.message);
+    ffmpegConfigured = false;
     return false;
   }
 };
 
-// Initialize ffmpeg on module load
-const ffmpegSetupSuccess = setupFFmpeg();
+initializeFFmpeg();
 
+// Convert audio file to HLS streaming format with 2-second segments
 export const processAudioToHLS = async (audioBuffer, originalName) => {
-  const tempDir = path.join(process.cwd(), "temp", uuidv4());
-  const inputPath = path.join(tempDir, "input.mp3");
-  const outputDir = path.join(tempDir, "output");
+  if (!ffmpegConfigured) {
+    throw new Error("FFmpeg is not properly configured");
+  }
+
+  const workingDir = path.join(process.cwd(), "temp", uuidv4());
+  const inputFile = path.join(workingDir, "input.mp3");
+  const outputDir = path.join(workingDir, "output");
 
   try {
-    // Check FFmpeg setup before processing
-    if (!ffmpegSetupSuccess) {
-      throw new Error(
-        "FFmpeg was not properly configured during module initialization"
-      );
-    }
-
-    // Create temporary directories
-    await fs.mkdir(tempDir, { recursive: true });
+    await fs.mkdir(workingDir, { recursive: true });
     await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(inputFile, audioBuffer);
 
-    // Save input file
-    await fs.writeFile(inputPath, audioBuffer);
+    // Validate input before processing
+    await validateAudioFile(inputFile);
 
-    // Analyze input file through ffprobe
-    try {
-      await new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(inputPath, (err, metadata) => {
-          if (err) {
-            reject(err);
-          } else {
-            // Calculate expected segments for validation
-            const expectedSegments = Math.ceil(metadata.format.duration / 2);
-            resolve(metadata);
-          }
-        });
-      });
-    } catch (probeError) {
-      console.warn("FFprobe unavailable, continuing without analysis");
-    }
+    const result = await convertToHLS(inputFile, outputDir);
 
-    // Convert to HLS
-    return new Promise((resolve, reject) => {
-      const command = ffmpeg(inputPath);
-
-      // Set timeout for operation (5 minutes)
-      const timeout = setTimeout(() => {
-        command.kill("SIGKILL");
-        reject(new Error("Audio processing timeout (5 minutes)"));
-      }, 5 * 60 * 1000);
-
-      command
-        .audioCodec("aac")
-        .audioBitrate("128k")
-        .audioChannels(2)
-        .audioFrequency(44100)
-        .format("hls")
-        .outputOptions([
-          "-hls_time 2", // 2-second segments
-          "-hls_playlist_type vod", // Video On Demand
-          "-hls_segment_filename",
-          path.join(outputDir, "segment_%03d.ts"),
-          "-hls_list_size 0", // Include all segments in playlist
-          "-map 0:a", // Explicitly specify audio stream
-          "-c:a aac", // Explicitly specify audio codec
-          "-b:a 128k", // Explicitly specify bitrate
-          "-ar 44100", // Explicitly specify sample rate
-          "-ac 2", // Explicitly specify number of channels
-          "-movflags +faststart", // Optimize for streaming playback
-          "-f hls", // Explicitly specify format
-        ])
-        .output(path.join(outputDir, "playlist.m3u8"))
-        .on("end", async () => {
-          clearTimeout(timeout);
-          try {
-            const files = await fs.readdir(outputDir);
-            const segments = files.filter((f) => f.endsWith(".ts"));
-
-            if (segments.length === 0) {
-              throw new Error("No .ts segments were created!");
-            }
-
-            // Read playlist
-            const playlistPath = path.join(outputDir, "playlist.m3u8");
-            const playlist = await fs.readFile(playlistPath, "utf8");
-
-            resolve({
-              playlist,
-              segments: await Promise.all(
-                segments.map(async (segment) => ({
-                  name: segment,
-                  buffer: await fs.readFile(path.join(outputDir, segment)),
-                }))
-              ),
-              tempDir,
-            });
-          } catch (error) {
-            console.error("Error reading HLS results:", error);
-            reject(new Error(`Error reading HLS results: ${error.message}`));
-          }
-        })
-        .on("error", (err) => {
-          clearTimeout(timeout);
-          console.error("FFmpeg error:", err);
-          reject(new Error(`FFmpeg error: ${err.message}`));
-        })
-        .run();
-    });
+    return {
+      ...result,
+      tempDir: workingDir,
+    };
   } catch (error) {
-    console.error("General audio processing error:", error);
-    // Cleanup on error
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.error("Error cleaning up temporary files:", cleanupError);
-    }
-    throw error;
+    await cleanupDirectory(workingDir);
+    throw new Error(`Audio processing failed: ${error.message}`);
   }
 };
 
-// Function to check FFmpeg availability
+const validateAudioFile = (filePath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        reject(new Error(`Invalid audio file: ${err.message}`));
+      } else {
+        resolve(metadata);
+      }
+    });
+  });
+};
+
+// Core HLS conversion with optimized settings for web streaming
+const convertToHLS = (inputPath, outputDir) => {
+  return new Promise((resolve, reject) => {
+    const segmentPattern = path.join(outputDir, "segment_%03d.ts");
+    const playlistPath = path.join(outputDir, "playlist.m3u8");
+
+    // 5-minute timeout for large files
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Processing timeout exceeded"));
+    }, 5 * 60 * 1000);
+
+    const command = ffmpeg(inputPath)
+      .audioCodec("aac")
+      .audioBitrate("128k")
+      .audioChannels(2)
+      .audioFrequency(44100)
+      .format("hls")
+      .outputOptions([
+        "-hls_time 2", // 2-second segments for optimal streaming
+        "-hls_playlist_type vod", // Video On Demand playlist
+        "-hls_segment_filename",
+        segmentPattern,
+        "-hls_list_size 0", // Include all segments
+        "-map 0:a", // Map audio stream
+        "-movflags +faststart", // Optimize for streaming
+        "-f hls",
+      ])
+      .output(playlistPath)
+      .on("end", async () => {
+        clearTimeout(timeoutId);
+        try {
+          const result = await collectHLSFiles(outputDir);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      })
+      .on("error", (err) => {
+        clearTimeout(timeoutId);
+        reject(new Error(`FFmpeg conversion failed: ${err.message}`));
+      });
+
+    command.run();
+  });
+};
+
+const collectHLSFiles = async (outputDir) => {
+  const files = await fs.readdir(outputDir);
+  const segments = files.filter((file) => file.endsWith(".ts"));
+
+  if (segments.length === 0) {
+    throw new Error("No HLS segments were generated");
+  }
+
+  const playlistPath = path.join(outputDir, "playlist.m3u8");
+  const playlist = await fs.readFile(playlistPath, "utf8");
+
+  const segmentData = await Promise.all(
+    segments.map(async (filename) => ({
+      name: filename,
+      buffer: await fs.readFile(path.join(outputDir, filename)),
+    }))
+  );
+
+  return {
+    playlist,
+    segments: segmentData,
+  };
+};
+
+const cleanupDirectory = async (dirPath) => {
+  try {
+    await fs.rm(dirPath, { recursive: true, force: true });
+  } catch (error) {
+    // Silent cleanup failure
+  }
+};
+
 export const checkFFmpegAvailability = () => {
   return new Promise((resolve, reject) => {
-    // First check if path setup was successful
-    if (!ffmpegSetupSuccess) {
-      reject(new Error("Failed to setup FFmpeg path"));
+    if (!ffmpegConfigured) {
+      reject(new Error("FFmpeg path not configured"));
       return;
     }
 
     ffmpeg.getAvailableFormats((err, formats) => {
       if (err) {
-        console.error("FFmpeg unavailable:", err.message);
         reject(new Error(`FFmpeg unavailable: ${err.message}`));
       } else {
         resolve(true);
@@ -154,37 +157,23 @@ export const checkFFmpegAvailability = () => {
   });
 };
 
-// Function to get audio file information
 export const getAudioInfo = async (audioBuffer) => {
   const tempDir = path.join(process.cwd(), "temp", uuidv4());
-  const inputPath = path.join(tempDir, "input_info.mp3");
+  const tempFile = path.join(tempDir, "temp_audio.mp3");
 
   try {
     await fs.mkdir(tempDir, { recursive: true });
-    await fs.writeFile(inputPath, audioBuffer);
+    await fs.writeFile(tempFile, audioBuffer);
 
-    return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(inputPath, (err, metadata) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({
-            duration: metadata.format.duration,
-            bitRate: metadata.format.bit_rate,
-            format: metadata.format.format_name,
-            streams: metadata.streams,
-          });
-        }
-      });
-    });
-  } catch (error) {
-    throw error;
+    const metadata = await validateAudioFile(tempFile);
+
+    return {
+      duration: metadata.format.duration,
+      bitRate: metadata.format.bit_rate,
+      format: metadata.format.format_name,
+      streams: metadata.streams,
+    };
   } finally {
-    // Cleanup temporary files
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.error("Error cleaning up temporary files:", cleanupError);
-    }
+    await cleanupDirectory(tempDir);
   }
 };

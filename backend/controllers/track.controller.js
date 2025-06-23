@@ -4,19 +4,30 @@ import { catchAsync } from "../utils/helpers.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import Track from "../models/Track.model.js";
 
-// Создание трека - ВСЕГДА HLS
+/**
+ * Track controller handling HTTP requests for track operations
+ * Manages track creation, streaming, search, and metadata operations
+ */
+
+/**
+ * Create new track with HLS processing
+ * All tracks are created with HLS streaming support
+ */
 export const createTrack = catchAsync(async (req, res) => {
   const track = await TrackService.createTrackWithHLS(
-    // Только HLS!
     req.body,
     req.files,
     req.user?.id
   );
 
-  res.status(201).json(ApiResponse.success("Трек успешно создан", track));
+  res
+    .status(201)
+    .json(ApiResponse.success("Track created successfully", track));
 });
 
-// Получение всех треков
+/**
+ * Get paginated list of public tracks
+ */
 export const getAllTracks = catchAsync(async (req, res) => {
   const { page, limit, sortBy, sortOrder } = req.query;
 
@@ -27,144 +38,155 @@ export const getAllTracks = catchAsync(async (req, res) => {
     sortOrder: parseInt(sortOrder) || -1,
   });
 
-  res.json(ApiResponse.success("Треки получены", result));
+  res.json(ApiResponse.success("Tracks retrieved successfully", result));
 });
 
-// Получение трека по ID
+/**
+ * Get track metadata by ID
+ */
 export const getTrackById = catchAsync(async (req, res) => {
   const { id } = req.params;
   const track = await TrackService.getTrackById(id);
 
   if (!track) {
-    return res.status(404).json(ApiResponse.error("Трек не найден"));
+    return res.status(404).json(ApiResponse.error("Track not found"));
   }
 
-  res.json(ApiResponse.success("Трек получен", track));
+  res.json(ApiResponse.success("Track retrieved successfully", track));
 });
 
-// ЕДИНЫЙ стриминг endpoint - обрабатывает все типы запросов
+/**
+ * Universal streaming endpoint for HLS content
+ * Handles playlist requests and segment streaming with proper proxying
+ */
 export const streamTrack = catchAsync(async (req, res) => {
   const { id, segmentName } = req.params;
+
   const track = await Track.findById(id);
-
   if (!track) {
-    return res.status(404).json(ApiResponse.error("Трек не найден"));
-  }
-
-  // Увеличиваем счетчик только при запросе плейлиста (не сегментов)
-  if (!segmentName) {
-    await Track.findByIdAndUpdate(id, { $inc: { listenCount: 1 } });
+    return res.status(404).json(ApiResponse.error("Track not found"));
   }
 
   try {
-    // Определяем тип запроса по URL
-    const requestPath = req.path;
-
     if (segmentName) {
-      // Запрос сегмента: /api/tracks/:id/segment/:segmentName
-      console.log(`📦 Запрос сегмента: ${segmentName}`);
-
-      const segmentUrl = track.hlsSegments.find((url) =>
-        extractFileName(url).includes(segmentName)
-      );
-
-      if (!segmentUrl) {
-        return res.status(404).json(ApiResponse.error("Сегмент не найден"));
-      }
-
-      // Получаем подписанный URL и проксируем через наш сервер
-      const signedUrl = await generateSignedUrl(
-        extractFileName(segmentUrl),
-        7200
-      );
-
-      console.log(`🔗 Проксируем сегмент: ${segmentUrl}`);
-
-      // Проксируем запрос
-      const response = await fetch(signedUrl);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Устанавливаем правильные заголовки для .ts файлов
-      res.set({
-        "Content-Type": "video/mp2t",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Range",
-        "Cache-Control": "public, max-age=31536000", // Кеш на год для сегментов
-      });
-
-      // Передаем содержимое
-      const buffer = await response.arrayBuffer();
-      res.send(Buffer.from(buffer));
-    } else if (
-      requestPath.includes("playlist.m3u8") ||
-      requestPath.includes("stream")
-    ) {
-      // Запрос плейлиста: /api/tracks/:id/playlist.m3u8 или /api/tracks/:id/stream
-      console.log(`📋 Запрос плейлиста для трека: ${track.name}`);
-
-      const playlistUrl = await generateSignedUrl(
-        extractFileName(track.audioUrl),
-        7200
-      );
-
-      // Получаем плейлист
-      const response = await fetch(playlistUrl);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      let playlist = await response.text();
-
-      // Заменяем относительные пути на URLs нашего сервера
-      const lines = playlist.split("\n");
-      const updatedLines = lines.map((line) => {
-        if (line.endsWith(".ts")) {
-          // Заменяем на URL нашего сервера
-          const segmentName = line.trim();
-          return `${req.protocol}://${req.get(
-            "host"
-          )}/api/tracks/${id}/segment/${segmentName}`;
-        }
-        return line;
-      });
-
-      const updatedPlaylist = updatedLines.join("\n");
-
-      console.log("📄 Обновленный плейлист:");
-      console.log(updatedPlaylist);
-
-      res.set({
-        "Content-Type": "application/vnd.apple.mpegurl",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Range",
-      });
-
-      res.send(updatedPlaylist);
+      // Handle HLS segment request
+      await handleSegmentRequest(req, res, track, segmentName);
     } else {
-      // Неизвестный тип запроса
-      return res.status(400).json(ApiResponse.error("Неизвестный тип запроса"));
+      // Handle playlist request
+      await handlePlaylistRequest(req, res, track, id);
     }
   } catch (error) {
-    console.error("❌ Ошибка стриминга:", error);
     res
       .status(500)
-      .json(ApiResponse.error(`Ошибка стриминга: ${error.message}`));
+      .json(ApiResponse.error(`Streaming error: ${error.message}`));
   }
 });
 
-// Поиск треков
+/**
+ * Handle HLS segment streaming
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Object} track - Track document
+ * @param {string} segmentName - Requested segment filename
+ */
+const handleSegmentRequest = async (req, res, track, segmentName) => {
+  // Find matching segment URL
+  const segmentUrl = track.hlsSegments?.find((url) =>
+    extractFileName(url).includes(segmentName)
+  );
+
+  if (!segmentUrl) {
+    return res.status(404).json(ApiResponse.error("Segment not found"));
+  }
+
+  // Generate signed URL and proxy the content
+  const signedUrl = await generateSignedUrl(extractFileName(segmentUrl), 7200);
+  const response = await fetch(signedUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch segment: ${response.status}`);
+  }
+
+  // Set appropriate headers for MPEG-TS segments
+  res.set({
+    "Content-Type": "video/mp2t",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Range",
+    "Cache-Control": "public, max-age=31536000", // 1 year cache for segments
+  });
+
+  // Stream the segment content
+  const buffer = await response.arrayBuffer();
+  res.send(Buffer.from(buffer));
+};
+
+/**
+ * Handle HLS playlist streaming
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Object} track - Track document
+ * @param {string} trackId - Track ID
+ */
+const handlePlaylistRequest = async (req, res, track, trackId) => {
+  // Increment listen count for playlist requests
+  await Track.findByIdAndUpdate(trackId, { $inc: { listenCount: 1 } });
+
+  // Generate signed URL for playlist
+  const playlistUrl = await generateSignedUrl(
+    extractFileName(track.audioUrl),
+    7200
+  );
+
+  const response = await fetch(playlistUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch playlist: ${response.status}`);
+  }
+
+  // Modify playlist to use our server endpoints
+  const playlist = await response.text();
+  const modifiedPlaylist = updatePlaylistUrls(playlist, req, trackId);
+
+  // Set appropriate headers for M3U8 playlists
+  res.set({
+    "Content-Type": "application/vnd.apple.mpegurl",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Range",
+  });
+
+  res.send(modifiedPlaylist);
+};
+
+/**
+ * Update playlist URLs to point to our streaming endpoints
+ * @param {string} playlist - Original M3U8 content
+ * @param {Object} req - Express request object
+ * @param {string} trackId - Track ID
+ * @returns {string} Modified playlist content
+ */
+const updatePlaylistUrls = (playlist, req, trackId) => {
+  const lines = playlist.split("\n");
+  const baseUrl = `${req.protocol}://${req.get("host")}/api/tracks/${trackId}`;
+
+  return lines
+    .map((line) => {
+      if (line.endsWith(".ts")) {
+        const segmentName = line.trim();
+        return `${baseUrl}/segment/${segmentName}`;
+      }
+      return line;
+    })
+    .join("\n");
+};
+
+/**
+ * Search tracks by query string
+ */
 export const searchTracks = catchAsync(async (req, res) => {
   const { q, page, limit } = req.query;
 
   if (!q) {
-    return res
-      .status(400)
-      .json(ApiResponse.error("Параметр поиска обязателен"));
+    return res.status(400).json(ApiResponse.error("Search query is required"));
   }
 
   const result = await TrackService.searchTracks(q, {
@@ -172,22 +194,27 @@ export const searchTracks = catchAsync(async (req, res) => {
     limit: parseInt(limit) || 20,
   });
 
-  res.json(ApiResponse.success("Поиск выполнен", result));
+  res.json(ApiResponse.success("Search completed successfully", result));
 });
 
-// Увеличение счетчика (можно убрать, так как уже в streamTrack)
+/**
+ * Increment track listen count
+ * Note: This is also handled automatically in playlist requests
+ */
 export const incrementListenCount = catchAsync(async (req, res) => {
   const { id } = req.params;
   const track = await TrackService.incrementListenCount(id);
 
   if (!track) {
-    return res.status(404).json(ApiResponse.error("Трек не найден"));
+    return res.status(404).json(ApiResponse.error("Track not found"));
   }
 
-  res.json(ApiResponse.success("Счетчик прослушиваний обновлен", track));
+  res.json(ApiResponse.success("Listen count updated", track));
 });
 
-// Удаление трека
+/**
+ * Delete track (requires ownership)
+ */
 export const deleteTrack = catchAsync(async (req, res) => {
   const { id } = req.params;
   const result = await TrackService.deleteTrack(id, req.user?.id);
@@ -195,13 +222,15 @@ export const deleteTrack = catchAsync(async (req, res) => {
   if (!result) {
     return res
       .status(404)
-      .json(ApiResponse.error("Трек не найден или нет прав"));
+      .json(ApiResponse.error("Track not found or insufficient permissions"));
   }
 
-  res.json(ApiResponse.success("Трек успешно удален"));
+  res.json(ApiResponse.success("Track deleted successfully"));
 });
 
-// Обновление трека
+/**
+ * Update track metadata (requires ownership)
+ */
 export const updateTrack = catchAsync(async (req, res) => {
   const { id } = req.params;
   const track = await TrackService.updateTrack(id, req.body, req.user?.id);
@@ -209,8 +238,8 @@ export const updateTrack = catchAsync(async (req, res) => {
   if (!track) {
     return res
       .status(404)
-      .json(ApiResponse.error("Трек не найден или нет прав"));
+      .json(ApiResponse.error("Track not found or insufficient permissions"));
   }
 
-  res.json(ApiResponse.success("Трек успешно обновлен", track));
+  res.json(ApiResponse.success("Track updated successfully", track));
 });

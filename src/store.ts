@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import queueOpenReducer from "./state/QueseOpen.slice";
+import queueReducer from "./state/Queue.slice";
 import dashboardMenuSliceReducer from "./state/DashboardMenu.slice";
 import tokenReducer from "./state/Token.slice";
 import { userApiSlice } from "./state/UserApi.slice";
@@ -10,14 +10,14 @@ import currentTabSliceRedicer from "./state/CurrentTab.slice";
 
 export const store = configureStore({
   reducer: {
-    queueOpen: queueOpenReducer,
+    queue: queueReducer,
     dashboardMenu: dashboardMenuSliceReducer,
     token: tokenReducer,
     userApi: userApiSlice.reducer,
     audioQueue: audioQueueSliceReducer,
     currentTrack: currentTrackSliceReducer,
     isGenreSelectOpen: isGenreSelectOpenSliceReducer,
-    currentTab: currentTabSliceRedicer
+    currentTab: currentTabSliceRedicer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

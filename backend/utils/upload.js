@@ -6,63 +6,53 @@ const b2 = new B2({
   applicationKey: config.b2.secretKey,
 });
 
-// Кеширование авторизации
+// Authorization caching (23-hour expiry)
 let authData = null;
 let authExpiry = null;
 
-// Функция для авторизации с кешированием
 const ensureAuthorized = async () => {
-  if (!authData || (authExpiry && Date.now() > authExpiry)) {
-    try {
-      console.log("🔐 Авторизация в B2...");
-      authData = await b2.authorize();
-      // Кешируем авторизацию на 23 часа (токен живет 24 часа)
-      authExpiry = Date.now() + 23 * 60 * 60 * 1000;
-      console.log("✅ Авторизация в B2 успешна");
-    } catch (error) {
-      console.error("❌ Ошибка авторизации B2:", error);
-      throw error;
-    }
+  if (authData && authExpiry && Date.now() < authExpiry) {
+    return authData;
   }
-  return authData;
+
+  try {
+    authData = await b2.authorize();
+    authExpiry = Date.now() + 23 * 60 * 60 * 1000; // 23 hours
+    return authData;
+  } catch (error) {
+    authData = null;
+    authExpiry = null;
+    throw new Error(`B2 authorization failed: ${error.message}`);
+  }
 };
 
-// Функция задержки для retry
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Основная функция загрузки с retry механизмом
+// Exponential backoff with special handling for 503 errors
+const calculateRetryDelay = (attempt, statusCode = null) => {
+  const baseDelay = Math.pow(2, attempt) * 1000;
+
+  // Longer delays for service unavailable
+  if (statusCode === 503) {
+    return Math.min(Math.pow(3, attempt) * 1000, 30000);
+  }
+
+  return Math.min(baseDelay, 15000);
+};
+
+// Upload file with retry logic for reliability
 export const uploadToB2 = async (file, folder, maxRetries = 5) => {
   let lastError;
+  const fileName = `${folder}/${Date.now()}-${file.originalname}`;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      if (attempt > 1) {
-        console.log(
-          `📤 Попытка загрузки ${attempt}/${maxRetries}: ${file.originalname}`
-        );
-      }
-
-      // Авторизуемся перед каждой попыткой (используем кеширование)
       await ensureAuthorized();
 
-      const fileName = `${folder}/${Date.now()}-${file.originalname}`;
-
-      // Получаем URL для загрузки
       const uploadUrl = await b2.getUploadUrl({
         bucketId: config.b2.bucketId,
       });
 
-      if (attempt === 1) {
-        console.log(
-          `⬆️ Загружаем файл: ${fileName} (${(
-            file.buffer.length /
-            1024 /
-            1024
-          ).toFixed(2)} MB)`
-        );
-      }
-
-      // Загружаем файл
       const response = await b2.uploadFile({
         uploadUrl: uploadUrl.data.uploadUrl,
         uploadAuthToken: uploadUrl.data.authorizationToken,
@@ -70,13 +60,6 @@ export const uploadToB2 = async (file, folder, maxRetries = 5) => {
         data: file.buffer,
       });
 
-      if (attempt === 1) {
-        console.log(`✅ Файл успешно загружен: ${fileName}`);
-      } else {
-        console.log(`✅ Файл загружен с попытки ${attempt}: ${fileName}`);
-      }
-
-      // Возвращаем объект с URL и fileId
       return {
         url:
           response.data.fileUrl ||
@@ -87,109 +70,75 @@ export const uploadToB2 = async (file, folder, maxRetries = 5) => {
     } catch (error) {
       lastError = error;
 
-      if (attempt === 1) {
-        console.error(
-          `❌ Ошибка загрузки ${file.originalname}:`,
-          error.message
-        );
-      } else {
-        console.error(`❌ Попытка ${attempt} неудачна:`, error.message);
-      }
-
-      // Анализируем тип ошибки
       if (error.response) {
-        const status = error.response.status;
+        const { status } = error.response;
 
         switch (status) {
-          case 503:
-            console.warn("⚠️ Сервис временно недоступен (503)");
-            break;
-          case 429:
-            console.warn("⚠️ Превышен лимит запросов (429)");
-            break;
-          case 401:
-            console.warn("⚠️ Ошибка авторизации (401), сбрасываем токен");
+          case 400: // Bad Request - don't retry
+            throw new Error(`Upload failed: ${error.message}`);
+
+          case 401: // Unauthorized - clear auth cache and retry
             authData = null;
             authExpiry = null;
             break;
-          case 400:
-            console.error("❌ Неверный запрос (400), не повторяем");
-            throw new Error(`Ошибка загрузки в B2: ${error.message}`);
+
+          case 429: // Rate limited
+          case 503: // Service unavailable
+            break;
+
           default:
-            console.error(`❌ HTTP ошибка: ${status}`);
+            break;
         }
       }
 
-      // Если это последняя попытка, выбрасываем ошибку
       if (attempt === maxRetries) {
-        throw new Error(`Ошибка загрузки в B2: ${lastError.message}`);
+        throw new Error(
+          `Upload failed after ${maxRetries} attempts: ${lastError.message}`
+        );
       }
 
-      // Увеличенная экспоненциальная задержка для 503 ошибок
-      let delayMs;
-      if (error.response && error.response.status === 503) {
-        // Для 503 ошибок - более длительная задержка
-        delayMs = Math.min(Math.pow(3, attempt) * 1000, 30000); // до 30 секунд
-      } else {
-        delayMs = Math.pow(2, attempt) * 1000;
-      }
+      const delayMs = calculateRetryDelay(attempt, error.response?.status);
       await delay(delayMs);
     }
   }
 };
 
-// Функция для пакетной загрузки с ограничением параллельных загрузок
+// Batch upload with controlled concurrency to prevent B2 rate limiting
 export const uploadMultipleToB2 = async (files, folder, concurrency = 3) => {
-
   const results = [];
 
-  // Разбиваем файлы на батчи
   for (let i = 0; i < files.length; i += concurrency) {
     const batch = files.slice(i, i + concurrency);
-    const batchNumber = Math.floor(i / concurrency) + 1;
 
     try {
       const batchResults = await Promise.all(
         batch.map((file) => uploadToB2(file, folder))
       );
       results.push(...batchResults);
-    } catch (error) {
-      console.error(`❌ Ошибка в батче ${batchNumber}:`, error.message);
-      throw error;
-    }
 
-    // Небольшая пауза между батчами для снижения нагрузки на B2
-    if (i + concurrency < files.length) {
-      await delay(500);
+      // Small delay between batches
+      if (i + concurrency < files.length) {
+        await delay(500);
+      }
+    } catch (error) {
+      throw new Error(`Batch upload failed: ${error.message}`);
     }
   }
 
   return results;
 };
 
-// Функция для проверки статуса B2
 export const checkB2Status = async () => {
   try {
     await ensureAuthorized();
 
-    // Пробуем получить информацию о bucket
     const buckets = await b2.listBuckets();
     const targetBucket = buckets.data.buckets.find(
       (bucket) => bucket.bucketId === config.b2.bucketId
     );
 
-    if (!targetBucket) {
-      throw new Error("Bucket не найден");
-    }
-    return true;
+    return !!targetBucket;
   } catch (error) {
-    console.error("❌ Проблема с доступом к B2:", error.message);
     return false;
   }
-};
-
-// Для обратной совместимости (если где-то используется старый формат)
-export const uploadToB2Legacy = async (file, folder) => {
-  const result = await uploadToB2(file, folder);
-  return result.url; // возвращаем только URL как раньше
 };

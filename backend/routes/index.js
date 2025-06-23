@@ -4,15 +4,20 @@ import trackRoutes from "./track.routes.js";
 import playlistRoutes from "./playlist.routes.js";
 import artistRoutes from "./artist.routes.js";
 
+/**
+ * Main API routes configuration
+ * Combines all feature-specific route modules
+ */
+
 const router = express.Router();
 
-// Основные маршруты API
-router.use("/auth", authRoutes);
-router.use("/tracks", trackRoutes);
-router.use("/playlists", playlistRoutes);
-router.use("/artists", artistRoutes);
+// Feature-specific route modules
+router.use("/auth", authRoutes);                   // Authentication & user management
+router.use("/tracks", trackRoutes);                // Track management & streaming
+router.use("/playlists", playlistRoutes);          // Playlist operations
+router.use("/artists", artistRoutes);              // Artist management & discovery
 
-// Базовый маршрут для проверки API
+// API health check endpoint
 router.get("/", (req, res) => {
   res.json({
     success: true,
