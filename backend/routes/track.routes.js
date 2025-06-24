@@ -20,16 +20,16 @@ import { uploadTrackFiles } from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
-// Public routes - no authentication required
-router.get("/", optionalAuth, getAllTracks);           // Get all tracks with optional user context
-router.get("/search", searchTracks);                   // Search tracks by query
-router.get("/:id", getTrackById);                      // Get track metadata by ID
-
 // Streaming routes - CRITICAL: Order matters for proper route matching
 // These must be defined before generic /:id routes to avoid conflicts
 router.get("/:id/segment/:segmentName", streamTrack);  // HLS segment streaming (highest priority)
 router.get("/:id/playlist.m3u8", streamTrack);         // HLS playlist endpoint
 router.get("/:id/stream", streamTrack);                // General streaming endpoint
+
+// Public routes - no authentication required
+router.get("/", optionalAuth, getAllTracks);           // Get all tracks with optional user context
+router.get("/search", searchTracks);                   // Search tracks by query
+router.get("/:id", getTrackById);                      // Get track metadata by ID
 
 // Interaction routes
 router.patch("/:id/listen", incrementListenCount);     // Manual listen count increment

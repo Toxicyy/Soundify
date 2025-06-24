@@ -15,11 +15,13 @@ import {
 } from "@ant-design/icons";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
+  handleTrackEnd,
   playNextTrack,
   playPreviousTrack,
   setQueueOpen,
   toggleRepeat,
   toggleShuffle,
+  setCurrentTrackInQueue,
 } from "../../../../../state/Queue.slice";
 import type { AppDispatch, AppState } from "../../../../../store";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,73 +30,61 @@ import { useFormatTime } from "../../../../../hooks/useFormatTime";
 import { setIsPlaying } from "../../../../../state/CurrentTrack.slice";
 import Hls from "hls.js";
 
-type RepeatMode = "off" | "playlist" | "track";
-
+/**
+ * Main audio player component with HLS streaming support
+ * Fixed version with proper track loading and request management
+ */
 export const Player = () => {
   // UI states
   const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
-  const [isShuffling, setIsShuffling] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isQueue, setIsQueue] = useState(false);
   const [isShare, setIsShare] = useState(false);
 
   // Audio states
   const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
-  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
   const [bufferProgress, setBufferProgress] = useState(0);
-  const [isTrackLoaded, setIsTrackLoaded] = useState(false);
 
+  // Redux state
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const lastTrackId = useRef<string | number | null>(null);
+  const queueState = useSelector((state: AppState) => state.queue);
+  const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
 
+  // Refs
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const loadedTrackIdRef = useRef<string | number | null>(null);
+  const isInitializingRef = useRef(false);
+
+  // Formatted time strings
   const currentStr = useFormatTime(currentTime);
   const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
 
-  // Generate correct URL for HLS streaming through our API
+  // Generate streaming URL for current track
   const streamUrl = useMemo(() => {
-    if (!currentTrack.currentTrack) return { streamUrl: "", isHLSTrack: false };
+    if (!currentTrack.currentTrack) return null;
 
     const isHLS =
       currentTrack.currentTrack.audioUrl?.includes(".m3u8") ||
       currentTrack.currentTrack.audioUrl?.includes("playlist.m3u8");
 
-    const url = isHLS
-      ? `http://localhost:5000/api/tracks/${currentTrack.currentTrack._id}/playlist.m3u8`
-      : currentTrack.currentTrack.audioUrl;
-
-    return { streamUrl: url, isHLSTrack: isHLS };
-  }, [currentTrack.currentTrack?._id, currentTrack.currentTrack?.audioUrl]);
+    return {
+      url: isHLS
+        ? `http://localhost:5000/api/tracks/${currentTrack.currentTrack._id}/playlist.m3u8`
+        : currentTrack.currentTrack.audioUrl,
+      isHLS,
+    };
+  }, [currentTrack.currentTrack]);
 
   // Event handlers
   const togglePlayPause = useCallback(() => {
+    if (!audioRef.current || isLoading) return;
     dispatch(setIsPlaying(!currentTrack.isPlaying));
-  }, [dispatch, currentTrack.isPlaying]);
-
-  const handleRepeatClick = useCallback(() => {
-    const modes: RepeatMode[] = ["off", "playlist", "track"];
-    const currentIndex = modes.indexOf(repeatMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    setRepeatMode(modes[nextIndex]);
-  }, [repeatMode]);
-
-  const handleEnded = () => {
-    dispatch(playNextTrack());
-  };
-
-  // Navigation buttons:
-  const handleNext = () => dispatch(playNextTrack());
-  const handlePrevious = () => dispatch(playPreviousTrack());
-
-  // Toggle functions:
-  const handleShuffle = () => dispatch(toggleShuffle());
-  const handleRepeat = () => dispatch(toggleRepeat());
+  }, [dispatch, currentTrack.isPlaying, isLoading]);
 
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = Number(e.target.value);
@@ -118,197 +108,285 @@ export const Player = () => {
   }, [isMuted]);
 
   const toggleQueue = useCallback(() => {
-    setIsQueue(!isQueue);
-    dispatch(setQueueOpen(!isQueue));
-  }, [isQueue, dispatch]);
+    dispatch(setQueueOpen(!isQueueOpen));
+  }, [isQueueOpen, dispatch]);
 
-  // HLS cleanup function
+  // Queue navigation handlers
+  const handleNext = useCallback(() => {
+    if (queue.length === 0 && audioRef.current) {
+      // If no queue, just stop playback
+      console.log("No queue, stopping playback");
+      dispatch(setIsPlaying(false));
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+    } else {
+      dispatch(playNextTrack());
+    }
+  }, [dispatch, queue.length]);
+
+  const handlePrevious = useCallback(() => {
+    if (queue.length === 0 && audioRef.current) {
+      // If no queue, restart current track
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+      if (currentTrack.isPlaying) {
+        audioRef.current.play().catch(() => dispatch(setIsPlaying(false)));
+      }
+    } else if (audioRef.current && audioRef.current.currentTime > 3) {
+      // If more than 3 seconds played, restart current track
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+    } else {
+      dispatch(playPreviousTrack());
+    }
+  }, [dispatch, queue.length, currentTrack.isPlaying]);
+
+  const handleShuffle = useCallback(() => {
+    dispatch(toggleShuffle());
+  }, [dispatch]);
+
+  const handleRepeat = useCallback(() => {
+    dispatch(toggleRepeat());
+  }, [dispatch]);
+
+  // Get repeat icon color based on current repeat mode
+  const getRepeatColor = useCallback(() => {
+    switch (repeat) {
+      case "one":
+      case "all":
+        return "white";
+      default:
+        return "rgba(255, 255, 255, 0.3)";
+    }
+  }, [repeat]);
+
+  // Cleanup function for HLS
   const cleanupHLS = useCallback(() => {
-    if (hlsInstance) {
-      hlsInstance.destroy();
-      setHlsInstance(null);
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
-  }, [hlsInstance]);
+  }, []);
 
-  // Main track loading effect
-  useEffect(() => {
-    if (!audioRef.current || !currentTrack.currentTrack?.audioUrl) {
-      cleanupHLS();
-      setIsTrackLoaded(false);
-      lastTrackId.current = null;
-      return;
-    }
-
-    const currentTrackId = currentTrack.currentTrack._id;
-
-    // Skip reload if same track is already loaded
-    if (lastTrackId.current === currentTrackId && isTrackLoaded) {
-      return;
-    }
-
-    lastTrackId.current = currentTrackId;
-
+  // Initialize track loading
+  const initializeTrack = useCallback(async () => {
     const audio = audioRef.current;
-    const trackUrl = streamUrl.streamUrl;
+    if (!audio || !streamUrl || !currentTrack.currentTrack) return;
 
+    const trackId = currentTrack.currentTrack._id;
+
+    // Prevent multiple simultaneous initializations
+    if (isInitializingRef.current) return;
+
+    // Skip if same track is already loaded
+    if (loadedTrackIdRef.current === trackId) {
+      console.log("Track already loaded, managing playback state");
+      // Just update play state if needed
+      if (currentTrack.isPlaying && audio.paused) {
+        console.log("Resuming playback for already loaded track");
+        audio.play().catch(() => dispatch(setIsPlaying(false)));
+      } else if (!currentTrack.isPlaying && !audio.paused) {
+        console.log("Pausing already loaded track");
+        audio.pause();
+      }
+      return;
+    }
+
+    console.log("Initializing new track:", trackId);
+    isInitializingRef.current = true;
     setIsLoading(true);
     setCurrentTime(0);
-    setIsTrackLoaded(false);
+    setBufferProgress(0);
 
-    if (streamUrl.isHLSTrack) {
-      // HLS track handling
-      if (Hls.isSupported()) {
-        // Cleanup previous instance
-        if (hlsInstance) {
-          hlsInstance.destroy();
-        }
+    // Cleanup previous track
+    cleanupHLS();
+    audio.pause();
+    audio.src = "";
+    audio.load();
 
-        const hls = new Hls({
-          debug: false,
-          enableWorker: true,
-          lowLatencyMode: false,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-          maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 0.5,
-        });
+    try {
+      if (streamUrl.isHLS) {
+        // HLS track handling
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            debug: false,
+            enableWorker: true,
+            lowLatencyMode: false,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferHole: 0.5,
+            // Reduce aggressive loading
+            startLevel: -1,
+            autoStartLoad: true,
+            startPosition: -1,
+            // Prevent excessive fragment loading
+            maxLoadingDelay: 4,
+          });
 
-        // HLS events
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setIsLoading(false);
-          setIsTrackLoaded(true);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log("HLS manifest parsed, track ready");
+            setIsLoading(false);
+            loadedTrackIdRef.current = trackId;
 
-          // Auto-start playback for HLS
-          dispatch(setIsPlaying(true));
-          setTimeout(() => {
-            audio.play().catch(() => {
-              dispatch(setIsPlaying(false));
-            });
-          }, 200);
-        });
-
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                hls.destroy();
-                setIsLoading(false);
-                setIsTrackLoaded(false);
-                dispatch(setIsPlaying(false));
-                break;
+            // Auto-play if needed
+            if (currentTrack.isPlaying) {
+              console.log("Auto-playing HLS track");
+              audio.play().catch(() => dispatch(setIsPlaying(false)));
             }
-          }
-        });
+          });
 
-        hls.on(Hls.Events.BUFFER_APPENDED, () => {
-          if (audio.buffered.length > 0) {
-            const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
-            const duration = audio.duration || 1;
-            setBufferProgress((bufferedEnd / duration) * 100);
-          }
-        });
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            console.error("HLS error:", data);
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.error("Network error");
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.error("Media error");
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  cleanupHLS();
+                  setIsLoading(false);
+                  dispatch(setIsPlaying(false));
+                  break;
+              }
+            }
+          });
 
-        hls.loadSource(trackUrl);
-        hls.attachMedia(audio);
-        setHlsInstance(hls);
+          hls.on(Hls.Events.FRAG_BUFFERED, () => {
+            if (audio.buffered.length > 0) {
+              const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+              const duration = audio.duration || 1;
+              setBufferProgress((bufferedEnd / duration) * 100);
+            }
+          });
 
-        return () => {
-          hls.destroy();
-        };
-      } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
-        // Safari native HLS support
-        audio.src = trackUrl;
+          hls.loadSource(streamUrl.url);
+          hls.attachMedia(audio);
+          hlsRef.current = hls;
+        } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+          // Safari native HLS support
+          audio.src = streamUrl.url;
+
+          const handleCanPlay = () => {
+            console.log("Safari HLS track ready");
+            setIsLoading(false);
+            loadedTrackIdRef.current = trackId;
+
+            if (currentTrack.isPlaying) {
+              console.log("Auto-playing Safari HLS track");
+              audio.play().catch(() => dispatch(setIsPlaying(false)));
+            }
+          };
+
+          audio.addEventListener("canplaythrough", handleCanPlay, {
+            once: true,
+          });
+        }
+      } else {
+        // Regular MP3 track
+        audio.src = streamUrl.url;
 
         const handleCanPlay = () => {
+          console.log("Regular audio track ready");
           setIsLoading(false);
-          setIsTrackLoaded(true);
+          loadedTrackIdRef.current = trackId;
 
-          // Auto-start playback for Safari HLS
-          dispatch(setIsPlaying(true));
-          setTimeout(() => {
-            audio.play().catch(() => {
-              dispatch(setIsPlaying(false));
-            });
-          }, 200);
+          if (currentTrack.isPlaying) {
+            console.log("Auto-playing regular track");
+            audio.play().catch(() => dispatch(setIsPlaying(false)));
+          }
         };
 
-        const handleError = () => {
-          setIsLoading(false);
-          setIsTrackLoaded(false);
-          dispatch(setIsPlaying(false));
-        };
-
-        audio.addEventListener("canplaythrough", handleCanPlay);
-        audio.addEventListener("error", handleError);
-
-        return () => {
-          audio.removeEventListener("canplaythrough", handleCanPlay);
-          audio.removeEventListener("error", handleError);
-        };
-      } else {
-        setIsLoading(false);
-        setIsTrackLoaded(false);
-        dispatch(setIsPlaying(false));
+        audio.addEventListener("canplaythrough", handleCanPlay, { once: true });
       }
-    } else {
-      // Regular MP3 track
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        setHlsInstance(null);
-      }
-
-      audio.src = trackUrl;
-
-      const handleCanPlay = () => {
-        setIsLoading(false);
-        setIsTrackLoaded(true);
-
-        // Auto-start playback for MP3
-        dispatch(setIsPlaying(true));
-        setTimeout(() => {
-          audio.play().catch(() => {
-            dispatch(setIsPlaying(false));
-          });
-        }, 200);
-      };
-
-      const handleError = () => {
-        setIsLoading(false);
-        setIsTrackLoaded(false);
-        dispatch(setIsPlaying(false));
-      };
-
-      audio.addEventListener("canplaythrough", handleCanPlay);
-      audio.addEventListener("error", handleError);
-
-      return () => {
-        audio.removeEventListener("canplaythrough", handleCanPlay);
-        audio.removeEventListener("error", handleError);
-      };
+    } catch (error) {
+      console.error("Track initialization error:", error);
+      setIsLoading(false);
+      dispatch(setIsPlaying(false));
+    } finally {
+      isInitializingRef.current = false;
     }
-  }, [currentTrack.currentTrack?._id]);
+  }, [
+    streamUrl,
+    currentTrack.currentTrack,
+    currentTrack.isPlaying,
+    dispatch,
+    cleanupHLS,
+  ]);
 
-  // Playback control effect
+  // Синхронизация currentTrack между слайсами
+  useEffect(() => {
+    // Автоматически обновляем currentTrack в queue при изменении currentTrack в currentTrack slice
+    if (
+      currentTrack.currentTrack &&
+      currentTrack.currentTrack !== queueState.currentTrack
+    ) {
+      console.log(
+        "Syncing currentTrack to queue:",
+        currentTrack.currentTrack.name
+      );
+      dispatch(setCurrentTrackInQueue(currentTrack.currentTrack));
+    }
+  }, [currentTrack.currentTrack, queueState.currentTrack, dispatch]);
+
+  // Main effect for track changes
+  useEffect(() => {
+    if (!currentTrack.currentTrack || !streamUrl) return;
+
+    console.log("Track change detected:", currentTrack.currentTrack.name);
+    initializeTrack();
+
+    // Cleanup on unmount or track change
+    return () => {
+      isInitializingRef.current = false;
+    };
+  }, [currentTrack.currentTrack?._id]); // Only depend on track ID
+
+  // Separate effect for play/pause control
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !isTrackLoaded) return;
+    if (!audio || isLoading) return;
 
-    if (currentTrack.isPlaying) {
-      if (audio.paused && audio.readyState >= 2) {
-        audio.play().catch(() => {
-          dispatch(setIsPlaying(false));
-        });
+    console.log(
+      "Play state changed:",
+      currentTrack.isPlaying,
+      "Track loaded:",
+      loadedTrackIdRef.current === currentTrack.currentTrack?._id
+    );
+
+    // Normal play/pause control
+    if (loadedTrackIdRef.current === currentTrack.currentTrack?._id) {
+      if (currentTrack.isPlaying) {
+        if (audio.paused) {
+          console.log("Starting playback");
+          audio.play().catch((err) => {
+            console.error("Play error:", err);
+            dispatch(setIsPlaying(false));
+          });
+        }
+      } else {
+        if (!audio.paused) {
+          console.log("Pausing playback");
+          audio.pause();
+        }
       }
-    } else if (!audio.paused) {
-      audio.pause();
+    } else if (currentTrack.isPlaying && currentTrack.currentTrack) {
+      // Track changed, need to initialize new track
+      console.log("Track changed while playing, reinitializing");
+      initializeTrack();
     }
-  }, [currentTrack.isPlaying, isTrackLoaded, dispatch]);
+  }, [
+    currentTrack.isPlaying,
+    currentTrack.currentTrack?._id,
+    isLoading,
+    dispatch,
+    initializeTrack,
+  ]);
 
   // Progress update effect
   useEffect(() => {
@@ -318,8 +396,8 @@ export const Player = () => {
       if (audioRef.current && !audioRef.current.paused) {
         setCurrentTime(audioRef.current.currentTime);
 
-        // Update buffer progress for regular tracks
-        if (!streamUrl.isHLSTrack && audioRef.current.buffered.length > 0) {
+        // Update buffer progress for non-HLS tracks
+        if (!streamUrl?.isHLS && audioRef.current.buffered.length > 0) {
           const bufferedEnd = audioRef.current.buffered.end(
             audioRef.current.buffered.length - 1
           );
@@ -330,43 +408,83 @@ export const Player = () => {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [currentTrack.isPlaying, streamUrl.isHLSTrack]);
+  }, [currentTrack.isPlaying, streamUrl?.isHLS]);
 
-  // Audio events effect
+  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleEnded = () => {
+      console.log("Track ended, current repeat mode:", repeat);
+
+      // Important: Reset time immediately in UI
       setCurrentTime(0);
-      if (repeatMode === "track") {
-        audio.currentTime = 0;
-        audio.play().catch(() => {
-          dispatch(setIsPlaying(false));
-        });
-      } else {
-        dispatch(setIsPlaying(false));
-      }
+
+      // Reset audio element time to 0
+      audio.currentTime = 0;
+
+      // Dispatch Redux action for state management
+      dispatch(handleTrackEnd());
     };
 
-    const handleLoadedMetadata = () => {
-      // Track metadata loaded
+    const handleError = (e: Event) => {
+      console.error("Audio error:", e);
+      setIsLoading(false);
+      dispatch(setIsPlaying(false));
+    };
+
+    const handleLoadStart = () => {
+      console.log("Load start");
+      setIsLoading(true);
+    };
+
+    const handleLoadedData = () => {
+      console.log("Loaded data");
+    };
+
+    const handleCanPlay = () => {
+      console.log("Can play");
     };
 
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
+      if (audio.currentTime && !isNaN(audio.currentTime)) {
+        setCurrentTime(audio.currentTime);
+      }
     };
 
+    const handleWaiting = () => {
+      console.log("Waiting for data");
+      setIsLoading(true);
+    };
+
+    const handlePlaying = () => {
+      console.log("Playing event fired");
+      setIsLoading(false);
+    };
+
+    // Добавляем все обработчики
     audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("error", handleError);
+    audio.addEventListener("loadstart", handleLoadStart);
+    audio.addEventListener("loadeddata", handleLoadedData);
+    audio.addEventListener("canplay", handleCanPlay);
     audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("waiting", handleWaiting);
+    audio.addEventListener("playing", handlePlaying);
 
     return () => {
+      // Убираем все обработчики
       audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("error", handleError);
+      audio.removeEventListener("loadstart", handleLoadStart);
+      audio.removeEventListener("loadeddata", handleLoadedData);
+      audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("playing", handlePlaying);
     };
-  }, [repeatMode, dispatch]);
+  }, [dispatch, repeat]); // Добавил repeat в зависимости
 
   // Volume control effect
   useEffect(() => {
@@ -378,22 +496,14 @@ export const Player = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (hlsInstance) {
-        hlsInstance.destroy();
+      cleanupHLS();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
       }
+      loadedTrackIdRef.current = null;
     };
-  }, []);
-
-  // Helper functions
-  const getRepeatColor = useCallback(() => {
-    switch (repeatMode) {
-      case "track":
-      case "playlist":
-        return "white";
-      default:
-        return "rgba(255, 255, 255, 0.3)";
-    }
-  }, [repeatMode]);
+  }, [cleanupHLS]);
 
   // No track selected state
   if (!currentTrack.currentTrack) {
@@ -416,7 +526,7 @@ export const Player = () => {
 
   return (
     <div className="flex flex-col">
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="metadata" crossOrigin="anonymous" />
 
       {/* Album cover */}
       <motion.div
@@ -533,12 +643,12 @@ export const Player = () => {
       >
         <div
           className="relative cursor-pointer hover:scale-110 transition-all duration-200"
-          onClick={handleRepeatClick}
+          onClick={handleRepeat}
         >
           <RetweetOutlined
             style={{ color: getRepeatColor(), fontSize: "24px" }}
           />
-          {repeatMode === "track" && (
+          {repeat === "one" && (
             <div className="absolute inset-0 flex items-center justify-center mb-1">
               <span className="text-[8px] text-white font-bold">1</span>
             </div>
@@ -575,14 +685,11 @@ export const Player = () => {
 
         <SwapOutlined
           style={{
-            color: isShuffling ? "white" : "rgba(255, 255, 255, 0.3)",
+            color: shuffle ? "white" : "rgba(255, 255, 255, 0.3)",
             fontSize: "24px",
           }}
           className="cursor-pointer hover:scale-110 transition-all duration-200"
-          onClick={() => {
-            setIsShuffling(!isShuffling)
-            handleShuffle()
-          }}
+          onClick={handleShuffle}
         />
       </motion.div>
 
@@ -629,7 +736,7 @@ export const Player = () => {
         <MenuUnfoldOutlined
           style={{
             fontSize: "24px",
-            color: isQueue ? "white" : "rgba(255, 255, 255, 0.3)",
+            color: isQueueOpen ? "white" : "rgba(255, 255, 255, 0.3)",
           }}
           className="cursor-pointer hover:scale-110 transition-all duration-200"
           onClick={toggleQueue}

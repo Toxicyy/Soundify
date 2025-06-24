@@ -9,28 +9,128 @@ import { setCurrentTrack, setIsPlaying } from "./CurrentTrack.slice";
 
 const initialState: QueueState = {
   isOpen: false,
-  queue: [],
+  queue: [], // Теперь это "Next up" - треки после текущего
   currentIndex: 0,
   history: [],
   shuffle: false,
   repeat: "off",
   shuffledIndexes: [],
+  // Новые поля для системы как в Spotify
+  currentTrack: null, // Текущий играющий трек (отдельно от очереди)
+  originalQueue: [], // Оригинальная очередь до shuffle
 };
 
-// Async thunks for complex operations that need to dispatch multiple actions
-export const playTrackFromQueue = createAsyncThunk(
-  "queue/playTrackFromQueue",
-  async (index: number, { dispatch, getState }) => {
-    dispatch(setCurrentIndex(index));
-    const state = getState() as { queue: QueueState };
-    const track = state.queue.queue[index];
+// Новый thunk для воспроизведения трека (как в Spotify)
+export const playTrackAndQueue = createAsyncThunk(
+  "queue/playTrackAndQueue",
+  async (
+    {
+      track,
+      contextTracks,
+      startIndex,
+    }: {
+      track?: Track;
+      contextTracks?: Track[];
+      startIndex?: number;
+    },
+    { dispatch }
+  ) => {
+    if (contextTracks && contextTracks.length > 0) {
+      // Если есть контекст и startIndex, используем setQueue
+      if (
+        startIndex !== undefined &&
+        startIndex >= 0 &&
+        startIndex < contextTracks.length
+      ) {
+        dispatch(setQueue({ tracks: contextTracks, startIndex }));
+        const selectedTrack = contextTracks[startIndex];
+        dispatch(setCurrentTrack(selectedTrack));
+        dispatch(setIsPlaying(true));
+        return selectedTrack;
+      }
 
-    if (track) {
+      // Если есть конкретный трек для воспроизведения
+      if (track) {
+        dispatch(setCurrentTrackInQueue(track));
+        dispatch(setCurrentTrack(track));
+
+        // Добавляем остальные треки в очередь (исключая текущий)
+        const remainingTracks = contextTracks.filter(
+          (t) => t._id !== track._id
+        );
+        dispatch(setQueue({ tracks: remainingTracks }));
+      } else {
+        // Если трек не указан, берем первый из контекста
+        const firstTrack = contextTracks[0];
+        dispatch(setCurrentTrackInQueue(firstTrack));
+        dispatch(setCurrentTrack(firstTrack));
+
+        const remainingTracks = contextTracks.slice(1);
+        dispatch(setQueue({ tracks: remainingTracks }));
+      }
+    } else if (track) {
+      // Если контекста нет, но есть трек
+      dispatch(setCurrentTrackInQueue(track));
       dispatch(setCurrentTrack(track));
-      dispatch(setIsPlaying(true));
+      dispatch(clearQueue());
+    } else {
+      // Нет ни трека, ни контекста
+      console.warn("playTrackAndQueue called without track or context");
+      return null;
     }
 
-    return index;
+    dispatch(setIsPlaying(true));
+    return track || (contextTracks && contextTracks[startIndex || 0]) || null;
+  }
+);
+
+// Новый thunk для обработки окончания трека
+export const handleTrackEnd = createAsyncThunk(
+  "queue/handleTrackEnd",
+  async (_, { dispatch, getState }) => {
+    const state = getState() as { queue: QueueState };
+    const { queue, repeat, currentTrack } = state.queue;
+
+    console.log(
+      "Track ended in Redux, repeat mode:",
+      repeat,
+      "Queue length:",
+      queue.length
+    );
+
+    // Если повтор одного трека - сначала останавливаем, потом перезапускаем с delay
+    if (repeat === "one") {
+      console.log("Repeating current track with delay");
+      dispatch(setIsPlaying(false));
+
+      setTimeout(() => {
+        dispatch(setIsPlaying(true));
+      }, 50);
+
+      return "repeat_one";
+    }
+
+    // Если есть треки в очереди - переходим к следующему
+    if (queue.length > 0) {
+      console.log("Playing next track from queue");
+      dispatch(playNextTrack());
+      return "next_track";
+    }
+
+    // Если repeat === "all" и есть история
+    if (repeat === "all" && currentTrack) {
+      console.log("Repeat all: restarting from current track");
+      dispatch(setIsPlaying(false));
+      setTimeout(() => {
+        dispatch(setIsPlaying(true));
+      }, 50);
+      return "repeat_all";
+    }
+
+    // Нет очереди или repeat === "off" - останавливаем
+    console.log("No queue or repeat off, stopping playback");
+    dispatch(setIsPlaying(false));
+    return "stop";
   }
 );
 
@@ -38,56 +138,49 @@ export const playNextTrack = createAsyncThunk(
   "queue/playNextTrack",
   async (_, { dispatch, getState }) => {
     const state = getState() as { queue: QueueState };
-    const { queue, currentIndex, shuffle, repeat, shuffledIndexes } =
+    const { queue, shuffle, repeat, shuffledIndexes, currentTrack } =
       state.queue;
 
-    if (queue.length === 0) return;
-
-    let nextIndex = currentIndex;
-
-    if (repeat === "one") {
-      // Repeat current track - don't change index
-      const currentTrack = queue[currentIndex];
-      if (currentTrack) {
+    if (queue.length === 0) {
+      // Нет следующих треков
+      if (repeat === "all" && currentTrack) {
+        // При repeat all возвращаемся к текущему треку
         dispatch(setCurrentTrack(currentTrack));
         dispatch(setIsPlaying(true));
+        return "repeat_current";
       }
-      return currentIndex;
+      dispatch(setIsPlaying(false));
+      return null;
     }
+
+    let nextTrack: Track;
 
     if (shuffle && shuffledIndexes.length > 0) {
-      // Find current position in shuffled array
-      const currentShuffledIndex = shuffledIndexes.indexOf(currentIndex);
-      if (currentShuffledIndex < shuffledIndexes.length - 1) {
-        nextIndex = shuffledIndexes[currentShuffledIndex + 1];
-      } else if (repeat === "all") {
-        nextIndex = shuffledIndexes[0];
-      } else {
-        // End of shuffled queue and repeat is off
-        dispatch(setIsPlaying(false));
-        return currentIndex;
-      }
+      // Воспроизводим первый трек из shuffled очереди
+      const shuffledIndex = shuffledIndexes[0];
+      nextTrack = queue[shuffledIndex];
+
+      // Удаляем этот индекс из shuffled массива
+      dispatch(removeShuffledIndex(0));
+      // Удаляем трек из очереди
+      dispatch(removeFromQueueByIndex(shuffledIndex));
     } else {
-      // Normal sequential playback
-      if (currentIndex < queue.length - 1) {
-        nextIndex = currentIndex + 1;
-      } else if (repeat === "all") {
-        nextIndex = 0;
-      } else {
-        // End of queue and repeat is off
-        dispatch(setIsPlaying(false));
-        return currentIndex;
-      }
+      // Обычное последовательное воспроизведение - берем первый трек
+      nextTrack = queue[0];
+      dispatch(removeFromQueueByIndex(0));
     }
 
-    dispatch(setCurrentIndex(nextIndex));
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) {
-      dispatch(setCurrentTrack(nextTrack));
-      dispatch(setIsPlaying(true));
+    // Добавляем текущий трек в историю
+    if (currentTrack) {
+      dispatch(addToHistory(currentTrack));
     }
 
-    return nextIndex;
+    // Устанавливаем новый текущий трек
+    dispatch(setCurrentTrackInQueue(nextTrack));
+    dispatch(setCurrentTrack(nextTrack));
+    dispatch(setIsPlaying(true));
+
+    return nextTrack;
   }
 );
 
@@ -95,45 +188,51 @@ export const playPreviousTrack = createAsyncThunk(
   "queue/playPreviousTrack",
   async (_, { dispatch, getState }) => {
     const state = getState() as { queue: QueueState };
-    const { queue, currentIndex, shuffle, shuffledIndexes, history } =
-      state.queue;
+    const { history, currentTrack } = state.queue;
 
-    if (queue.length === 0) return;
-
-    let prevIndex = currentIndex;
-
-    if (shuffle && shuffledIndexes.length > 0) {
-      // In shuffle mode, use history if available
-      if (history.length > 0) {
-        const lastTrack = history[history.length - 1];
-        prevIndex = queue.findIndex((track) => track._id === lastTrack._id);
-        dispatch(removeFromHistory());
-      } else {
-        // Fallback to previous in shuffled array
-        const currentShuffledIndex = shuffledIndexes.indexOf(currentIndex);
-        if (currentShuffledIndex > 0) {
-          prevIndex = shuffledIndexes[currentShuffledIndex - 1];
-        } else {
-          prevIndex = shuffledIndexes[shuffledIndexes.length - 1];
-        }
+    if (history.length === 0) {
+      // Нет предыдущих треков - перезапускаем текущий
+      if (currentTrack) {
+        dispatch(setCurrentTrack(currentTrack));
+        dispatch(setIsPlaying(true));
       }
-    } else {
-      // Normal sequential playback
-      if (currentIndex > 0) {
-        prevIndex = currentIndex - 1;
-      } else {
-        prevIndex = queue.length - 1;
-      }
+      return null;
     }
 
-    dispatch(setCurrentIndex(prevIndex));
-    const prevTrack = queue[prevIndex];
-    if (prevTrack) {
-      dispatch(setCurrentTrack(prevTrack));
-      dispatch(setIsPlaying(true));
+    // Берем последний трек из истории
+    const previousTrack = history[history.length - 1];
+
+    // Добавляем текущий трек в начало очереди
+    if (currentTrack) {
+      dispatch(addToQueueFirst(currentTrack));
     }
 
-    return prevIndex;
+    // Устанавливаем предыдущий трек как текущий
+    dispatch(setCurrentTrackInQueue(previousTrack));
+    dispatch(setCurrentTrack(previousTrack));
+    dispatch(removeFromHistory());
+    dispatch(setIsPlaying(true));
+
+    return previousTrack;
+  }
+);
+
+// Старые thunk'и для совместимости
+export const playTrackFromQueue = createAsyncThunk(
+  "queue/playTrackFromQueue",
+  async (index: number, { dispatch, getState }) => {
+    const state = getState() as { queue: QueueState };
+    const { queue } = state.queue;
+
+    if (index >= 0 && index < queue.length) {
+      const track = queue[index];
+      // Используем новую систему
+      dispatch(
+        playTrackAndQueue({ track, contextTracks: queue, startIndex: index })
+      );
+      return track;
+    }
+    return null;
   }
 );
 
@@ -143,14 +242,8 @@ export const setQueueAndPlay = createAsyncThunk(
     { tracks, startIndex = 0 }: { tracks: Track[]; startIndex?: number },
     { dispatch }
   ) => {
-    dispatch(setQueue({ tracks, startIndex }));
-
-    if (tracks.length > 0 && startIndex < tracks.length) {
-      const trackToPlay = tracks[startIndex];
-      dispatch(setCurrentTrack(trackToPlay));
-      dispatch(setIsPlaying(true));
-    }
-
+    // Используем новую систему
+    dispatch(playTrackAndQueue({ contextTracks: tracks, startIndex }));
     return { tracks, startIndex };
   }
 );
@@ -163,16 +256,46 @@ export const queueSlice = createSlice({
       state.isOpen = action.payload;
     },
 
+    // Новый редьюсер для установки текущего трека в очереди
+    setCurrentTrackInQueue: (state, action: PayloadAction<Track>) => {
+      state.currentTrack = action.payload;
+    },
+
+    // Добавить трек в начало очереди (Play Next функциональность)
+    addToQueueFirst: (state, action: PayloadAction<Track>) => {
+      const exists = state.queue.some(
+        (track) => track._id === action.payload._id
+      );
+      if (!exists) {
+        state.queue.unshift(action.payload);
+        // Обновляем shuffled indexes если нужно
+        if (state.shuffle) {
+          state.shuffledIndexes = generateShuffledIndexes(
+            state.queue.length,
+            0
+          );
+        }
+      }
+    },
+
+    // Добавить трек в конец очереди
     addToQueue: (state, action: PayloadAction<Track>) => {
-      // Prevent duplicates
       const exists = state.queue.some(
         (track) => track._id === action.payload._id
       );
       if (!exists) {
         state.queue.push(action.payload);
+        // Обновляем shuffled indexes если нужно
+        if (state.shuffle) {
+          state.shuffledIndexes = generateShuffledIndexes(
+            state.queue.length,
+            0
+          );
+        }
       }
     },
 
+    // Удалить трек из очереди по ID
     removeFromQueue: (state, action: PayloadAction<{ _id: number }>) => {
       const indexToRemove = state.queue.findIndex(
         (track) => track._id === action.payload._id
@@ -181,17 +304,7 @@ export const queueSlice = createSlice({
       if (indexToRemove !== -1) {
         state.queue.splice(indexToRemove, 1);
 
-        // Adjust currentIndex if necessary
-        if (indexToRemove < state.currentIndex) {
-          state.currentIndex--;
-        } else if (indexToRemove === state.currentIndex) {
-          // If we removed the current track, adjust accordingly
-          if (state.currentIndex >= state.queue.length) {
-            state.currentIndex = Math.max(0, state.queue.length - 1);
-          }
-        }
-
-        // Update shuffled indexes if shuffle is enabled
+        // Обновляем shuffled indexes
         if (state.shuffle) {
           state.shuffledIndexes = state.shuffledIndexes
             .filter((index) => index !== indexToRemove)
@@ -200,107 +313,118 @@ export const queueSlice = createSlice({
       }
     },
 
-    insertInQueue: (
-      state,
-      action: PayloadAction<{ track: Track; position: number }>
-    ) => {
-      const { track, position } = action.payload;
-      const safePosition = Math.max(0, Math.min(position, state.queue.length));
+    // Новый редьюсер для удаления по индексу
+    removeFromQueueByIndex: (state, action: PayloadAction<number>) => {
+      const indexToRemove = action.payload;
+      if (indexToRemove >= 0 && indexToRemove < state.queue.length) {
+        state.queue.splice(indexToRemove, 1);
 
-      state.queue.splice(safePosition, 0, track);
-
-      // Adjust currentIndex if insertion affects it
-      if (safePosition <= state.currentIndex) {
-        state.currentIndex++;
-      }
-
-      // Regenerate shuffled indexes if shuffle is enabled
-      if (state.shuffle) {
-        state.shuffledIndexes = generateShuffledIndexes(
-          state.queue.length,
-          state.currentIndex
-        );
+        // Обновляем shuffled indexes
+        if (state.shuffle) {
+          state.shuffledIndexes = state.shuffledIndexes
+            .filter((index) => index !== indexToRemove)
+            .map((index) => (index > indexToRemove ? index - 1 : index));
+        }
       }
     },
 
-    playNext: (state, action: PayloadAction<Track>) => {
-      // Insert track right after current track
-      const insertPosition = state.currentIndex + 1;
-      state.queue.splice(insertPosition, 0, action.payload);
-
-      // Regenerate shuffled indexes if shuffle is enabled
-      if (state.shuffle) {
-        state.shuffledIndexes = generateShuffledIndexes(
-          state.queue.length,
-          state.currentIndex
-        );
-      }
-    },
-
+    // Установить всю очередь
     setQueue: (
       state,
       action: PayloadAction<{ tracks: Track[]; startIndex?: number }>
     ) => {
       const { tracks, startIndex = 0 } = action.payload;
-      state.queue = tracks;
+
+      // Если startIndex указан, то трек по этому индексу становится текущим
+      if (startIndex >= 0 && startIndex < tracks.length) {
+        // Устанавливаем текущий трек
+        state.currentTrack = tracks[startIndex];
+
+        // Остальные треки идут в очередь (исключая текущий)
+        state.queue = tracks.filter((_, index) => index !== startIndex);
+      } else {
+        // Если startIndex не указан или неверный, просто устанавливаем очередь
+        state.queue = tracks;
+        state.currentTrack = null;
+      }
+
       state.currentIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
-      state.history = [];
 
-      // Generate shuffled indexes if shuffle is enabled
-      if (state.shuffle && tracks.length > 0) {
-        state.shuffledIndexes = generateShuffledIndexes(
-          tracks.length,
-          state.currentIndex
-        );
-      }
-    },
+      // Сохраняем оригинальную очередь (без текущего трека)
+      state.originalQueue = [...state.queue];
 
-    setCurrentIndex: (state, action: PayloadAction<number>) => {
-      if (action.payload >= 0 && action.payload < state.queue.length) {
-        // Add current track to history before changing
-        if (state.queue[state.currentIndex]) {
-          state.history.push(state.queue[state.currentIndex]);
-          // Keep history manageable (last 50 tracks)
-          if (state.history.length > 50) {
-            state.history.shift();
-          }
-        }
-
-        state.currentIndex = action.payload;
-      }
-    },
-
-    clearQueue: (state) => {
-      state.queue = [];
-      state.currentIndex = 0;
-      state.history = [];
-      state.shuffledIndexes = [];
-    },
-
-    toggleShuffle: (state) => {
-      state.shuffle = !state.shuffle;
-
+      // Генерируем shuffled indexes если нужно
       if (state.shuffle && state.queue.length > 0) {
-        // Generate shuffled indexes
-        state.shuffledIndexes = generateShuffledIndexes(
-          state.queue.length,
-          state.currentIndex
-        );
+        state.shuffledIndexes = generateShuffledIndexes(state.queue.length, 0);
       } else {
         state.shuffledIndexes = [];
       }
     },
 
+    // Очистить очередь
+    clearQueue: (state) => {
+      state.queue = [];
+      state.currentIndex = 0;
+      state.shuffledIndexes = [];
+      state.originalQueue = [];
+    },
+
+    // Добавить трек в историю
+    addToHistory: (state, action: PayloadAction<Track>) => {
+      state.history.push(action.payload);
+      // Ограничиваем историю 50 треками
+      if (state.history.length > 50) {
+        state.history.shift();
+      }
+    },
+
+    // Удалить последний трек из истории
+    removeFromHistory: (state) => {
+      state.history.pop();
+    },
+
+    // Очистить историю
+    clearHistory: (state) => {
+      state.history = [];
+    },
+
+    // Переключить shuffle
+    toggleShuffle: (state) => {
+      state.shuffle = !state.shuffle;
+
+      if (state.shuffle && state.queue.length > 0) {
+        // Включаем shuffle - генерируем случайные индексы
+        state.shuffledIndexes = generateShuffledIndexes(state.queue.length, 0);
+      } else {
+        // Выключаем shuffle - восстанавливаем оригинальную очередь
+        state.shuffledIndexes = [];
+        if (state.originalQueue.length > 0) {
+          state.queue = [...state.originalQueue];
+        }
+      }
+    },
+
+    // Переключить repeat
     toggleRepeat: (state) => {
       const modes: Array<"off" | "all" | "one"> = ["off", "all", "one"];
       const currentIndex = modes.indexOf(state.repeat);
       state.repeat = modes[(currentIndex + 1) % modes.length];
     },
 
+    // Установить режим repeat
     setRepeat: (state, action: PayloadAction<"off" | "all" | "one">) => {
       state.repeat = action.payload;
     },
 
+    // Удалить индекс из shuffled массива
+    removeShuffledIndex: (state, action: PayloadAction<number>) => {
+      const indexToRemove = action.payload;
+      if (indexToRemove >= 0 && indexToRemove < state.shuffledIndexes.length) {
+        state.shuffledIndexes.splice(indexToRemove, 1);
+      }
+    },
+
+    // Переместить треки в очереди (drag & drop)
     reorderQueue: (
       state,
       action: PayloadAction<{ fromIndex: number; toIndex: number }>
@@ -316,33 +440,49 @@ export const queueSlice = createSlice({
         const [movedTrack] = state.queue.splice(fromIndex, 1);
         state.queue.splice(toIndex, 0, movedTrack);
 
-        // Adjust currentIndex
-        if (fromIndex === state.currentIndex) {
-          state.currentIndex = toIndex;
-        } else if (
-          fromIndex < state.currentIndex &&
-          toIndex >= state.currentIndex
-        ) {
-          state.currentIndex--;
-        } else if (
-          fromIndex > state.currentIndex &&
-          toIndex <= state.currentIndex
-        ) {
-          state.currentIndex++;
-        }
-
-        // Regenerate shuffled indexes if shuffle is enabled
+        // Обновляем shuffled indexes если нужно
         if (state.shuffle) {
           state.shuffledIndexes = generateShuffledIndexes(
             state.queue.length,
-            state.currentIndex
+            0
           );
         }
       }
     },
 
-    removeFromHistory: (state) => {
-      state.history.pop();
+    // Сохранить текущий индекс (для совместимости)
+    setCurrentIndex: (state, action: PayloadAction<number>) => {
+      state.currentIndex = action.payload;
+    },
+
+    // Старые редьюсеры для совместимости
+    insertInQueue: (
+      state,
+      action: PayloadAction<{ track: Track; position: number }>
+    ) => {
+      const { track, position } = action.payload;
+      const safePosition = Math.max(0, Math.min(position, state.queue.length));
+      state.queue.splice(safePosition, 0, track);
+
+      if (state.shuffle) {
+        state.shuffledIndexes = generateShuffledIndexes(state.queue.length, 0);
+      }
+    },
+
+    playNext: (state, action: PayloadAction<Track>) => {
+      // Добавляем трек в начало очереди
+      const exists = state.queue.some(
+        (track) => track._id === action.payload._id
+      );
+      if (!exists) {
+        state.queue.unshift(action.payload);
+        if (state.shuffle) {
+          state.shuffledIndexes = generateShuffledIndexes(
+            state.queue.length,
+            0
+          );
+        }
+      }
     },
   },
 });
@@ -368,18 +508,24 @@ function generateShuffledIndexes(
 // Export actions
 export const {
   setQueueOpen,
+  setCurrentTrackInQueue,
   addToQueue,
+  addToQueueFirst,
   removeFromQueue,
-  insertInQueue,
-  playNext,
+  removeFromQueueByIndex,
   setQueue,
-  setCurrentIndex,
   clearQueue,
+  addToHistory,
+  removeFromHistory,
+  clearHistory,
   toggleShuffle,
   toggleRepeat,
   setRepeat,
+  removeShuffledIndex,
   reorderQueue,
-  removeFromHistory,
+  setCurrentIndex,
+  insertInQueue,
+  playNext,
 } = queueSlice.actions;
 
 export default queueSlice.reducer;

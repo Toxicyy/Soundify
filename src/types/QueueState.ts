@@ -8,4 +8,6 @@ export type QueueState = {
   shuffle: boolean;
   repeat: "off" | "all" | "one";
   shuffledIndexes: number[];
+  currentTrack: Track | null;
+  originalQueue: Track[];
 };

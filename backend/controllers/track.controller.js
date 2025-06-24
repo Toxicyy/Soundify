@@ -59,8 +59,40 @@ export const getTrackById = catchAsync(async (req, res) => {
  * Universal streaming endpoint for HLS content
  * Handles playlist requests and segment streaming with proper proxying
  */
+
+const rateLimiter = new Map();
+
 export const streamTrack = catchAsync(async (req, res) => {
   const { id, segmentName } = req.params;
+  const clientIP = req.ip;
+  const now = Date.now();
+
+  // Rate limiting logic
+  const clientRequests = rateLimiter.get(clientIP) || [];
+
+  // Remove requests older than 1 minute
+  const recentRequests = clientRequests.filter((time) => time > now - 60000);
+
+  // Check if limit exceeded (100 requests per minute)
+  if (recentRequests.length >= 100) {
+    return res.status(429).json(ApiResponse.error("Too many requests"));
+  }
+
+  // Add current request timestamp
+  recentRequests.push(now);
+  rateLimiter.set(clientIP, recentRequests);
+
+  // Cleanup old entries occasionally (10% chance)
+  if (Math.random() < 0.1) {
+    for (const [ip, requests] of rateLimiter) {
+      const validRequests = requests.filter((time) => time > now - 300000); // Keep 5 minutes
+      if (validRequests.length === 0) {
+        rateLimiter.delete(ip);
+      } else {
+        rateLimiter.set(ip, validRequests);
+      }
+    }
+  }
 
   const track = await Track.findById(id);
   if (!track) {

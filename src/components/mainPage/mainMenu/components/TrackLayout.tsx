@@ -5,7 +5,7 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { Track } from "../../../../types/TrackData";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import type { AppDispatch, AppState } from "../../../../store";
@@ -14,6 +14,8 @@ import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
+import ContextMenu from "./ContextMenu";
+import { addToQueue } from "../../../../state/Queue.slice";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -27,13 +29,15 @@ export default function TrackLayout({
   const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
   const [hover, setHover] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const ellipsisRef = useRef<HTMLDivElement>(null);
 
   const duration = useFormatTime(track?.duration || 0);
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
 
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
-
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
 
   const togglePlayPause = () => {
@@ -47,6 +51,62 @@ export default function TrackLayout({
         dispatch(setIsPlaying(true));
       }, 50);
     }
+  };
+
+  const handleEllipsisClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(!menuOpen);
+  };
+
+  const handleLikeClick = () => {
+    console.log("Like clicked");
+  };
+
+  const handleAddToQueue = () => {
+    if(!track) return
+    dispatch(addToQueue(track));
+  };
+
+  const handleHideTrack = () => {
+    console.log("Hide track clicked");
+  };
+
+  const handleArtistClick = () => {
+    console.log("Artist clicked");
+  };
+
+  const handleAlbumClick = () => {
+    console.log("Album clicked");
+  };
+
+  const handleInfoClick = () => {
+    console.log("Info clicked");
+  };
+
+  const handleShareClick = () => {
+    console.log("Share clicked");
+  };
+
+  const handleMenuItemClick = (index: number) => {
+    const menuActions = [
+      handleLikeClick,
+      handleAddToQueue,
+      handleHideTrack,
+      handleArtistClick,
+      handleAlbumClick,
+      handleInfoClick,
+      handleShareClick,
+    ];
+
+    if (index >= menuActions.length) return;
+
+    menuActions[index]();
+
+    console.log(`Clicked: ${menuActions[index]} for track: ${track?.name}`);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuOpen(false);
   };
 
   return (
@@ -139,7 +199,7 @@ export default function TrackLayout({
         </div>
       </div>
 
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center relative">
         {isLoading ? (
           <div className="h-4 w-12 mr-20 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
@@ -183,10 +243,20 @@ export default function TrackLayout({
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
           </div>
         ) : (
-          <EllipsisOutlined
-            style={{ color: "white" }}
-            className="cursor-pointer transition-all duration-200 hover:scale-110"
-          />
+          <div className="relative" ref={ellipsisRef}>
+            <EllipsisOutlined
+              style={{ color: "white" }}
+              className="cursor-pointer transition-all duration-200 hover:scale-110"
+              onClick={handleEllipsisClick}
+            />
+
+            <ContextMenu
+              isOpen={menuOpen}
+              onClose={handleCloseMenu}
+              onMenuItemClick={handleMenuItemClick}
+              anchorRef={ellipsisRef}
+            />
+          </div>
         )}
       </div>
     </div>
