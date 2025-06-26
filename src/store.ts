@@ -6,7 +6,7 @@ import { userApiSlice } from "./state/UserApi.slice";
 import audioQueueSliceReducer from "./state/AudioQueue.slice";
 import currentTrackSliceReducer from "./state/CurrentTrack.slice";
 import isGenreSelectOpenSliceReducer from "./state/isGenreSelectOpen.slice";
-import currentTabSliceRedicer from "./state/CurrentTab.slice";
+import likeUpdateSliceReducer from "./state/LikeUpdate.slice";
 
 export const store = configureStore({
   reducer: {
@@ -17,7 +17,7 @@ export const store = configureStore({
     audioQueue: audioQueueSliceReducer,
     currentTrack: currentTrackSliceReducer,
     isGenreSelectOpen: isGenreSelectOpenSliceReducer,
-    currentTab: currentTabSliceRedicer,
+    likeUpdate: likeUpdateSliceReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

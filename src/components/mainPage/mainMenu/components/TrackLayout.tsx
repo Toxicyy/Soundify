@@ -5,7 +5,7 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Track } from "../../../../types/TrackData";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import type { AppDispatch, AppState } from "../../../../store";
@@ -16,6 +16,8 @@ import {
 } from "../../../../state/CurrentTrack.slice";
 import ContextMenu from "./ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
+import { toggleLike } from "../../../../state/LikeUpdate.slice";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -30,12 +32,14 @@ export default function TrackLayout({
   const [likeHover, setLikeHover] = useState(false);
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: user, isFetching } = useGetUserQuery();
 
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
   const duration = useFormatTime(track?.duration || 0);
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
+  const likeUpdated = useSelector((state: AppState) => state.likeUpdate);
 
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
@@ -53,17 +57,61 @@ export default function TrackLayout({
     }
   };
 
+  useEffect(() => {
+    console.log("Like effect:", {
+      isFetching,
+      user,
+      currentTrack,
+      likeUpdated,
+    });
+    if (!isFetching && user && track) {
+      const isLiked =
+        user.likedSongs.includes(track._id) ||
+        likeUpdated.trackId.includes(track._id);
+      setLiked(isLiked);
+    }
+  }, [isFetching, track, likeUpdated.isLiked]);
+
   const handleEllipsisClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(!menuOpen);
   };
 
-  const handleLikeClick = () => {
-    console.log("Like clicked");
+  const handleLikeClick = async () => {
+    if (isFetching || !user?._id || !track?._id) return; // Защита от пустых ID
+    try {
+      const url = `http://localhost:5000/api/users/${user._id}/${
+        liked ? "unlike" : "like"
+      }/${track._id}`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        setLiked(!liked); // Инвертируем состояние
+        dispatch(
+          toggleLike({
+            isLiked: !liked,
+            trackId: !liked
+              ? [...likeUpdated.trackId, track._id]
+              : likeUpdated.trackId.filter((id) => id !== track._id),
+          })
+        );
+      } else {
+        console.error("Ошибка:", await response.json());
+      }
+    } catch (error) {
+      console.error("Ошибка сети:", error);
+    }
   };
 
   const handleAddToQueue = () => {
-    if(!track) return
+    if (!track) return;
     dispatch(addToQueue(track));
   };
 
@@ -223,7 +271,7 @@ export default function TrackLayout({
             className="pb-1 cursor-pointer transition-all duration-200"
             onMouseEnter={() => setLikeHover(true)}
             onMouseLeave={() => setLikeHover(false)}
-            onClick={() => setLiked(false)}
+            onClick={handleLikeClick}
           />
         ) : (
           <HeartOutlined
@@ -234,7 +282,7 @@ export default function TrackLayout({
             className="pb-1 cursor-pointer transition-all duration-200"
             onMouseEnter={() => setLikeHover(true)}
             onMouseLeave={() => setLikeHover(false)}
-            onClick={() => setLiked(true)}
+            onClick={handleLikeClick}
           />
         )}
 
@@ -255,6 +303,8 @@ export default function TrackLayout({
               onClose={handleCloseMenu}
               onMenuItemClick={handleMenuItemClick}
               anchorRef={ellipsisRef}
+              isPlaying={isCurrentTrack}
+              isLiked={liked}
             />
           </div>
         )}

@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.js";
 import trackRoutes from "./track.routes.js";
 import playlistRoutes from "./playlist.routes.js";
 import artistRoutes from "./artist.routes.js";
+import userRoutes from "./user.routes.js";
 
 /**
  * Main API routes configuration
@@ -16,6 +17,7 @@ router.use("/auth", authRoutes);                   // Authentication & user mana
 router.use("/tracks", trackRoutes);                // Track management & streaming
 router.use("/playlists", playlistRoutes);          // Playlist operations
 router.use("/artists", artistRoutes);              // Artist management & discovery
+router.use("/users", userRoutes);
 
 // API health check endpoint
 router.get("/", (req, res) => {

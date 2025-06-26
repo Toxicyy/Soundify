@@ -9,7 +9,7 @@ import { setCurrentTrack, setIsPlaying } from "./CurrentTrack.slice";
 
 const initialState: QueueState = {
   isOpen: false,
-  queue: [], // Теперь это "Next up" - треки после текущего
+  queue: [], //"Next up" - треки после текущего
   currentIndex: 0,
   history: [],
   shuffle: false,
@@ -143,7 +143,7 @@ export const playNextTrack = createAsyncThunk(
 
     if (queue.length === 0) {
       // Нет следующих треков
-      if (repeat === "all" && currentTrack) {
+      if (repeat === "all" || repeat === "one" && currentTrack) {
         // При repeat all возвращаемся к текущему треку
         dispatch(setCurrentTrack(currentTrack));
         dispatch(setIsPlaying(true));
@@ -164,7 +164,9 @@ export const playNextTrack = createAsyncThunk(
       dispatch(removeShuffledIndex(0));
       // Удаляем трек из очереди
       dispatch(removeFromQueueByIndex(shuffledIndex));
-    } else {
+
+    } 
+    else {
       // Обычное последовательное воспроизведение - берем первый трек
       nextTrack = queue[0];
       dispatch(removeFromQueueByIndex(0));
@@ -296,7 +298,7 @@ export const queueSlice = createSlice({
     },
 
     // Удалить трек из очереди по ID
-    removeFromQueue: (state, action: PayloadAction<{ _id: number }>) => {
+    removeFromQueue: (state, action: PayloadAction<{ _id: string }>) => {
       const indexToRemove = state.queue.findIndex(
         (track) => track._id === action.payload._id
       );

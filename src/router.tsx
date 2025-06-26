@@ -7,6 +7,7 @@ import AddTrackPage from "./Pages/Dashboard/FileManage/AddTrackPage";
 import AddAlbumPage from "./Pages/Dashboard/FileManage/AddAlbumPage";
 import AddArtistPage from "./Pages/Dashboard/FileManage/AddArtistPage";
 import MainMenu from "./components/mainPage/mainMenu/MainMenu";
+import LikedSongs from "./Pages/LikedSongs";
 
 export const router = createBrowserRouter([
   {
@@ -31,7 +32,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/liked",
-            element: <div>liked</div>,
+            element: <LikedSongs />,
           },
           {
             path: "/recently",

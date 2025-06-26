@@ -3,13 +3,16 @@ import {
   CaretRightOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, type FC } from "react";
+import { useState, useRef, type FC, useEffect } from "react";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useDispatch, useSelector } from "react-redux";
 import { type AppDispatch, type AppState } from "../../../../store";
 import { setIsPlaying } from "../../../../state/CurrentTrack.slice";
 import type { Track } from "../../../../types/TrackData";
 import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
+import { addToQueue } from "../../../../state/Queue.slice";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
+import { toggleLike } from "../../../../state/LikeUpdate.slice";
 
 interface CurrentTrackTemplateProps {
   track: Track;
@@ -19,13 +22,17 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
   track,
 }) => {
   const [hover, setHover] = useState<boolean>(false);
+  const [liked, setLiked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const ellipsisRef = useRef<HTMLDivElement>(null);
+  const likeUpdated = useSelector((state: AppState) => state.likeUpdate);
+
+  const { data: user, isFetching } = useGetUserQuery();
 
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
-  const isPlaying =
-    currentTrack.isPlaying && currentTrack.currentTrack?._id === track._id;
+  const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
+  const isPlaying = currentTrack.isPlaying && isCurrentTrack;
 
   const togglePlayPause = () => {
     dispatch(setIsPlaying(!isPlaying));
@@ -36,19 +43,95 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     setMenuOpen(!menuOpen);
   };
 
+  useEffect(() => {
+    console.log("Like effect:", {
+      isFetching,
+      user,
+      currentTrack,
+      likeUpdated,
+    });
+    if (!isFetching && user && track) {
+      const isLiked =
+        user.likedSongs.includes(track._id) ||
+        likeUpdated.trackId.includes(track._id);
+      setLiked(isLiked);
+    }
+  }, [isFetching, track, likeUpdated.isLiked]);
+
+  const handleLikeClick = async () => {
+    if (isFetching || !user?._id || !track?._id) return; // Защита от пустых ID
+    try {
+      const url = `http://localhost:5000/api/users/${user._id}/${
+        liked ? "unlike" : "like"
+      }/${track._id}`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        setLiked(!liked); // Инвертируем состояние
+        dispatch(
+          toggleLike({
+            isLiked: !liked,
+            trackId: !liked
+              ? [...likeUpdated.trackId, track._id]
+              : likeUpdated.trackId.filter((id) => id !== track._id),
+          })
+        );
+      } else {
+        console.error("Ошибка:", await response.json());
+      }
+    } catch (error) {
+      console.error("Ошибка сети:", error);
+    }
+  };
+
+  const handleAddToQueue = () => {
+    if (!track) return;
+    dispatch(addToQueue(track));
+  };
+
+  const handleHideTrack = () => {
+    console.log("Hide track clicked");
+  };
+
+  const handleArtistClick = () => {
+    console.log("Artist clicked");
+  };
+
+  const handleAlbumClick = () => {
+    console.log("Album clicked");
+  };
+
+  const handleInfoClick = () => {
+    console.log("Info clicked");
+  };
+
+  const handleShareClick = () => {
+    console.log("Share clicked");
+  };
+
   const handleMenuItemClick = (index: number) => {
     const menuActions = [
-      "Добавить в любимые треки",
-      "Добавить в очередь",
-      "Скрыть трек",
-      "К исполнителю",
-      "К альбому",
-      "Посмотреть сведения",
-      "Поделиться",
+      handleLikeClick,
+      handleAddToQueue,
+      handleHideTrack,
+      handleArtistClick,
+      handleAlbumClick,
+      handleInfoClick,
+      handleShareClick,
     ];
-    console.log(
-      `Clicked: ${menuActions[index]} for current track: ${track.name}`
-    );
+
+    if (index >= menuActions.length) return;
+
+    menuActions[index]();
+
+    console.log(`Clicked: ${menuActions[index]} for track: ${track?.name}`);
   };
 
   const handleCloseMenu = () => {
@@ -122,7 +205,8 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
               onClose={handleCloseMenu}
               onMenuItemClick={handleMenuItemClick}
               anchorRef={ellipsisRef}
-              isFromQueue
+              isPlaying={isCurrentTrack}
+              isLiked={liked}
             />
           </div>
         </div>

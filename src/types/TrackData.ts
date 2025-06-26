@@ -1,5 +1,5 @@
 export type TrackData = {
-  id: number;
+  id: string;
   name: string;
   artist: { _id: string; name: string };
   cover: File | null;
@@ -11,7 +11,7 @@ export type TrackData = {
 };
 
 export type Track = {
-  _id: number;
+  _id: string;
   name: string;
   artist: { _id: string; name: string };
   coverUrl: string;

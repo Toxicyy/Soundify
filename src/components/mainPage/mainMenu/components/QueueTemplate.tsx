@@ -2,9 +2,8 @@ import {
   CaretRightOutlined,
   CloseOutlined,
   PauseOutlined,
-  EllipsisOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, type FC } from "react";
+import { useState, type FC } from "react";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useDispatch, useSelector } from "react-redux";
 import { type AppDispatch, type AppState } from "../../../../store";
@@ -12,9 +11,7 @@ import type { Track } from "../../../../types/TrackData";
 import {
   removeFromQueue,
   playTrackAndQueue,
-  addToQueueFirst,
 } from "../../../../state/Queue.slice";
-import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
 
 interface QueueTemplateProps {
   track: Track;
@@ -29,8 +26,6 @@ export const QueueTemplate: FC<QueueTemplateProps> = ({
 }) => {
   const [hover, setHover] = useState<boolean>(false);
   const [closeHover, setCloseHover] = useState<boolean>(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const ellipsisRef = useRef<HTMLDivElement>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
@@ -80,50 +75,6 @@ export const QueueTemplate: FC<QueueTemplateProps> = ({
 
   const handleTrackClose = () => {
     dispatch(removeFromQueue({ _id: track._id }));
-  };
-
-  const handleEllipsisClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMenuOpen(!menuOpen);
-  };
-
-  const handleMenuItemClick = (index: number) => {
-
-    switch (index) {
-      case 0: // Добавить в любимые
-        console.log(`Added ${track.name} to favorites`);
-        break;
-      case 1: // Добавить в очередь
-        if (isInQueue) {
-          // Если трек уже в очереди, добавляем его следующим
-          dispatch(addToQueueFirst(track));
-        } else {
-          dispatch(addToQueueFirst(track));
-        }
-        console.log(`Added ${track.name} to queue`);
-        break;
-      case 2: // Скрыть трек
-        console.log(`Hidden ${track.name}`);
-        break;
-      case 3: // К исполнителю
-        console.log(`Go to artist: ${track.artist.name}`);
-        break;
-      case 4: // К альбому
-        console.log(`Go to album`);
-        break;
-      case 5: // Посмотреть сведения
-        console.log(`Show details for ${track.name}`);
-        break;
-      case 6: // Поделиться
-        console.log(`Share ${track.name}`);
-        break;
-      default:
-        console.log(`Unknown action for ${track.name}`);
-    }
-  };
-
-  const handleCloseMenu = () => {
-    setMenuOpen(false);
   };
 
   return (
@@ -183,24 +134,6 @@ export const QueueTemplate: FC<QueueTemplateProps> = ({
           </span>
 
           <div className="flex items-center gap-2">
-            <div className="relative" ref={ellipsisRef}>
-              <EllipsisOutlined
-                style={{
-                  color: hover ? "white" : "rgba(255, 255, 255, 0.4)",
-                  fontSize: "14px",
-                }}
-                className="cursor-pointer transition-all duration-200 hover:scale-110"
-                onClick={handleEllipsisClick}
-              />
-
-              <ContextMenu
-                isOpen={menuOpen}
-                onClose={handleCloseMenu}
-                onMenuItemClick={handleMenuItemClick}
-                anchorRef={ellipsisRef}
-              />
-            </div>
-
             {isInQueue && (
               <CloseOutlined
                 style={{

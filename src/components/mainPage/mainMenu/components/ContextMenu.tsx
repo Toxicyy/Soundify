@@ -14,50 +14,52 @@ interface ContextMenuProps {
   onClose: () => void;
   onMenuItemClick: (index: number) => void;
   anchorRef: React.RefObject<HTMLDivElement | null>;
-  isFromQueue?: boolean;
+  isPlaying: boolean;
+  isLiked: boolean;
 }
 
-const menuItems = [
-  {
-    icon: <HeartOutlined />,
-    label: "Добавить в любимые треки",
-  },
-  {
-    icon: <UnorderedListOutlined />,
-    label: "Добавить в очередь",
-  },
-  {
-    icon: <EyeInvisibleOutlined />,
-    label: "Скрыть трек",
-  },
-  {
-    icon: <UserOutlined />,
-    label: "К исполнителю",
-  },
-  {
-    icon: <PlaySquareOutlined />,
-    label: "К альбому",
-  },
-  {
-    icon: <InfoCircleOutlined />,
-    label: "Посмотреть сведения",
-  },
-  {
-    icon: <ShareAltOutlined />,
-    label: "Поделиться",
-  },
-];
 
 export default function ContextMenu({
   isOpen,
   onClose,
   onMenuItemClick,
   anchorRef,
-  isFromQueue,
+  isPlaying,
+  isLiked
 }: ContextMenuProps) {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
+  const menuItems = [
+    {
+      icon: <HeartOutlined />,
+      label: isLiked ? "Убрать из любимых треков" : "Добавить в любимые треки",
+    },
+    {
+      icon: <UnorderedListOutlined />,
+      label: "Добавить в очередь",
+    },
+    {
+      icon: <EyeInvisibleOutlined />,
+      label: "Скрыть трек",
+    },
+    {
+      icon: <UserOutlined />,
+      label: "К исполнителю",
+    },
+    {
+      icon: <PlaySquareOutlined />,
+      label: "К альбому",
+    },
+    {
+      icon: <InfoCircleOutlined />,
+      label: "Посмотреть сведения",
+    },
+    {
+      icon: <ShareAltOutlined />,
+      label: "Поделиться",
+    },
+  ];
+  
   // Закрытие меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,7 +99,7 @@ export default function ContextMenu({
       }}
     >
       {menuItems
-        .filter((item) => !isFromQueue || item.label !== "Добавить в очередь")
+        .filter((item) => !isPlaying || item.label !== "Добавить в очередь")
         .map((item, index) => (
           <div
             key={index}

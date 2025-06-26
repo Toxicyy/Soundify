@@ -29,6 +29,8 @@ import { motion } from "framer-motion";
 import { useFormatTime } from "../../../../../hooks/useFormatTime";
 import { setIsPlaying } from "../../../../../state/CurrentTrack.slice";
 import Hls from "hls.js";
+import { useGetUserQuery } from "../../../../../state/UserApi.slice";
+import { toggleLike } from "../../../../../state/LikeUpdate.slice";
 
 /**
  * Main audio player component with HLS streaming support
@@ -52,13 +54,16 @@ export const Player = () => {
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const queueState = useSelector((state: AppState) => state.queue);
+  const { data: user, isFetching } = useGetUserQuery();
   const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
+  const likeUpdated = useSelector((state: AppState) => state.likeUpdate);
 
   // Refs
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const loadedTrackIdRef = useRef<string | number | null>(null);
   const isInitializingRef = useRef(false);
+  const isStoppingAtEndRef = useRef(false);
 
   // Formatted time strings
   const currentStr = useFormatTime(currentTime);
@@ -111,18 +116,40 @@ export const Player = () => {
     dispatch(setQueueOpen(!isQueueOpen));
   }, [isQueueOpen, dispatch]);
 
-  // Queue navigation handlers
+  // Queue navigation handlers - FIXED with repeat dependency
   const handleNext = useCallback(() => {
     if (queue.length === 0 && audioRef.current) {
-      // If no queue, just stop playback
-      console.log("No queue, stopping playback");
-      dispatch(setIsPlaying(false));
-      audioRef.current.currentTime = 0;
-      setCurrentTime(0);
+      console.log(queue);
+      console.log(repeat);
+
+      if (repeat === "one" || repeat === "all") {
+        // При repeat сбрасываем время и продолжаем играть
+        audioRef.current.currentTime = 0;
+        setCurrentTime(0);
+        console.log(2);
+        dispatch(setIsPlaying(true));
+      } else {
+        // При repeat = off просто останавливаемся, НЕ сбрасывая время
+        isStoppingAtEndRef.current = true;
+        dispatch(setIsPlaying(false));
+
+        // Явно останавливаем воспроизведение
+        audioRef.current.pause();
+
+        // Опционально: сбрасываем время после паузы
+        setTimeout(() => {
+          if (audioRef.current && !currentTrack.isPlaying) {
+            audioRef.current.currentTime = 0;
+            setCurrentTime(0);
+          }
+          isStoppingAtEndRef.current = false;
+        }, 200);
+      }
     } else {
+      console.log(1, queue);
       dispatch(playNextTrack());
     }
-  }, [dispatch, queue.length]);
+  }, [dispatch, queue.length, repeat, currentTrack.isPlaying]); // Added dependencies
 
   const handlePrevious = useCallback(() => {
     if (queue.length === 0 && audioRef.current) {
@@ -148,6 +175,39 @@ export const Player = () => {
   const handleRepeat = useCallback(() => {
     dispatch(toggleRepeat());
   }, [dispatch]);
+
+  const handleLikeClick = async () => {
+    if (isFetching || !user?._id || !track?._id) return; // Защита от пустых ID
+    try {
+      const url = `http://localhost:5000/api/users/${user._id}/${
+        liked ? "unlike" : "like"
+      }/${track._id}`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (response.ok) {
+        setLiked(!liked); // Инвертируем состояние
+        dispatch(
+          toggleLike({
+            isLiked: !liked,
+            trackId: !liked
+              ? [...likeUpdated.trackId, track._id]
+              : likeUpdated.trackId.filter((id) => id !== track._id),
+          })
+        );
+      } else {
+        console.error("Ошибка:", await response.json());
+      }
+    } catch (error) {
+      console.error("Ошибка сети:", error);
+    }
+  };
 
   // Get repeat icon color based on current repeat mode
   const getRepeatColor = useCallback(() => {
@@ -175,8 +235,18 @@ export const Player = () => {
 
     const trackId = currentTrack.currentTrack._id;
 
+    console.log("initializeTrack called:", {
+      trackId,
+      loadedTrackId: loadedTrackIdRef.current,
+      isInitializing: isInitializingRef.current,
+      isPlaying: currentTrack.isPlaying,
+    });
+
     // Prevent multiple simultaneous initializations
-    if (isInitializingRef.current) return;
+    if (isInitializingRef.current) {
+      console.log("Already initializing, skipping");
+      return;
+    }
 
     // Skip if same track is already loaded
     if (loadedTrackIdRef.current === trackId) {
@@ -201,6 +271,10 @@ export const Player = () => {
     // Cleanup previous track
     cleanupHLS();
     audio.pause();
+
+    // ВАЖНО: НЕ сбрасываем loadedTrackIdRef здесь
+    // loadedTrackIdRef.current = null;
+
     audio.src = "";
     audio.load();
 
@@ -336,7 +410,23 @@ export const Player = () => {
 
   // Main effect for track changes
   useEffect(() => {
-    if (!currentTrack.currentTrack || !streamUrl) return;
+    if (!currentTrack.currentTrack || !streamUrl) {
+      console.log("Track change effect - no track or URL");
+      return;
+    }
+
+    // Skip initialization if we're just stopping at the end
+    if (isStoppingAtEndRef.current) {
+      console.log("Skipping track init - stopping at end");
+      return;
+    }
+
+    // Check if this is actually a new track
+    const trackId = currentTrack.currentTrack._id;
+    if (loadedTrackIdRef.current === trackId && !currentTrack.isPlaying) {
+      console.log("Same track, not playing - skipping init");
+      return;
+    }
 
     console.log("Track change detected:", currentTrack.currentTrack.name);
     initializeTrack();
@@ -345,47 +435,65 @@ export const Player = () => {
     return () => {
       isInitializingRef.current = false;
     };
-  }, [currentTrack.currentTrack?._id]); // Only depend on track ID
+  }, [currentTrack.currentTrack?._id, initializeTrack, streamUrl]); // Added missing dependencies
 
-  // Separate effect for play/pause control
+  useEffect(() => {
+    console.log("Like effect:", {
+      isFetching,
+      user,
+      currentTrack,
+      likeUpdated,
+    });
+    if (!isFetching && user && currentTrack.currentTrack) {
+      const isLiked =
+        user.likedSongs.includes(currentTrack.currentTrack._id) ||
+        likeUpdated.trackId.includes(currentTrack.currentTrack._id);
+      setLiked(isLiked);
+    }
+  }, [isFetching, user, currentTrack.currentTrack, likeUpdated]);
+
+  // FIXED - Separate effect for play/pause control
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || isLoading) return;
+    if (!audio) return;
 
-    console.log(
-      "Play state changed:",
-      currentTrack.isPlaying,
-      "Track loaded:",
-      loadedTrackIdRef.current === currentTrack.currentTrack?._id
-    );
-
-    // Normal play/pause control
-    if (loadedTrackIdRef.current === currentTrack.currentTrack?._id) {
-      if (currentTrack.isPlaying) {
-        if (audio.paused) {
-          console.log("Starting playback");
-          audio.play().catch((err) => {
-            console.error("Play error:", err);
-            dispatch(setIsPlaying(false));
-          });
-        }
-      } else {
-        if (!audio.paused) {
-          console.log("Pausing playback");
-          audio.pause();
-        }
-      }
-    } else if (currentTrack.isPlaying && currentTrack.currentTrack) {
-      // Track changed, need to initialize new track
-      console.log("Track changed while playing, reinitializing");
-      initializeTrack();
+    // Skip if we're in the middle of loading
+    if (isLoading || isInitializingRef.current) {
+      console.log("Skipping play/pause - loading in progress");
+      return;
     }
+
+    const currentTrackId = currentTrack.currentTrack?._id;
+    const isTrackLoaded = loadedTrackIdRef.current === currentTrackId;
+
+    console.log("Play/pause effect:", {
+      isPlaying: currentTrack.isPlaying,
+      trackLoaded: isTrackLoaded,
+      currentTrackId,
+      loadedTrackId: loadedTrackIdRef.current,
+      isLoading,
+      audioPaused: audio.paused,
+    });
+
+    // Only handle play/pause for already loaded tracks
+    if (isTrackLoaded && currentTrackId) {
+      if (currentTrack.isPlaying && audio.paused) {
+        console.log("Starting playback");
+        audio.play().catch((err) => {
+          console.error("Play error:", err);
+          dispatch(setIsPlaying(false));
+        });
+      } else if (!currentTrack.isPlaying && !audio.paused) {
+        console.log("Pausing playback");
+        audio.pause();
+      }
+    }
+    // If track is not loaded and should be playing, it will be handled by track change effect
   }, [
     currentTrack.isPlaying,
     currentTrack.currentTrack?._id,
     isLoading,
     dispatch,
-    initializeTrack,
   ]);
 
   // Progress update effect
@@ -424,6 +532,14 @@ export const Player = () => {
       // Reset audio element time to 0
       audio.currentTime = 0;
 
+      // Mark that we might be stopping at the end
+      if (repeat === "off" && queue.length === 0) {
+        isStoppingAtEndRef.current = true;
+        setTimeout(() => {
+          isStoppingAtEndRef.current = false;
+        }, 100);
+      }
+
       // Dispatch Redux action for state management
       dispatch(handleTrackEnd());
     };
@@ -454,8 +570,16 @@ export const Player = () => {
     };
 
     const handleWaiting = () => {
-      console.log("Waiting for data");
-      setIsLoading(true);
+      console.log("Waiting for data - checking state:", {
+        isPlaying: currentTrack.isPlaying,
+        isStoppingAtEnd: isStoppingAtEndRef.current,
+        currentTime: audio.currentTime,
+      });
+
+      // Не показываем загрузку если мы остановились в конце
+      if (!isStoppingAtEndRef.current && currentTrack.isPlaying) {
+        setIsLoading(true);
+      }
     };
 
     const handlePlaying = () => {
@@ -567,7 +691,7 @@ export const Player = () => {
               className="pb-1 cursor-pointer transition-colors duration-200"
               onMouseEnter={() => setLikeHover(true)}
               onMouseLeave={() => setLikeHover(false)}
-              onClick={() => setLiked(false)}
+              onClick={handleLikeClick}
             />
           ) : (
             <HeartOutlined
@@ -578,7 +702,7 @@ export const Player = () => {
               className="pb-1 cursor-pointer transition-colors duration-200"
               onMouseEnter={() => setLikeHover(true)}
               onMouseLeave={() => setLikeHover(false)}
-              onClick={() => setLiked(true)}
+              onClick={handleLikeClick}
             />
           )}
         </div>
