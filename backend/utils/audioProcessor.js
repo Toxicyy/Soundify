@@ -1,5 +1,6 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
+import ffprobePath from "@ffprobe-installer/ffprobe"; // Добавляем ffprobe
 import path from "path";
 import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
@@ -10,9 +11,14 @@ let ffmpegConfigured = false;
 const initializeFFmpeg = () => {
   try {
     ffmpeg.setFfmpegPath(ffmpegPath.path);
+    ffmpeg.setFfprobePath(ffprobePath.path); // Устанавливаем путь к ffprobe
     ffmpegConfigured = true;
+    console.log("FFmpeg configured successfully:");
+    console.log("FFmpeg path:", ffmpegPath.path);
+    console.log("FFprobe path:", ffprobePath.path);
     return true;
   } catch (error) {
+    console.error("FFmpeg configuration failed:", error);
     ffmpegConfigured = false;
     return false;
   }
@@ -54,8 +60,13 @@ const validateAudioFile = (filePath) => {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
       if (err) {
+        console.error("FFprobe error:", err);
         reject(new Error(`Invalid audio file: ${err.message}`));
       } else {
+        console.log(
+          "Audio validation successful, duration:",
+          metadata.format.duration
+        );
         resolve(metadata);
       }
     });
@@ -90,7 +101,14 @@ const convertToHLS = (inputPath, outputDir) => {
         "-f hls",
       ])
       .output(playlistPath)
+      .on("start", (commandLine) => {
+        console.log("FFmpeg command:", commandLine);
+      })
+      .on("progress", (progress) => {
+        console.log("Processing: " + progress.percent + "% done");
+      })
       .on("end", async () => {
+        console.log("FFmpeg processing completed");
         clearTimeout(timeoutId);
         try {
           const result = await collectHLSFiles(outputDir);
@@ -100,6 +118,7 @@ const convertToHLS = (inputPath, outputDir) => {
         }
       })
       .on("error", (err) => {
+        console.error("FFmpeg error:", err);
         clearTimeout(timeoutId);
         reject(new Error(`FFmpeg conversion failed: ${err.message}`));
       });
@@ -111,6 +130,8 @@ const convertToHLS = (inputPath, outputDir) => {
 const collectHLSFiles = async (outputDir) => {
   const files = await fs.readdir(outputDir);
   const segments = files.filter((file) => file.endsWith(".ts"));
+
+  console.log("Generated segments:", segments);
 
   if (segments.length === 0) {
     throw new Error("No HLS segments were generated");
@@ -136,6 +157,7 @@ const cleanupDirectory = async (dirPath) => {
   try {
     await fs.rm(dirPath, { recursive: true, force: true });
   } catch (error) {
+    console.error("Cleanup error:", error);
     // Silent cleanup failure
   }
 };
@@ -149,8 +171,14 @@ export const checkFFmpegAvailability = () => {
 
     ffmpeg.getAvailableFormats((err, formats) => {
       if (err) {
+        console.error("FFmpeg formats check failed:", err);
         reject(new Error(`FFmpeg unavailable: ${err.message}`));
       } else {
+        console.log(
+          "FFmpeg is available with",
+          Object.keys(formats).length,
+          "formats"
+        );
         resolve(true);
       }
     });

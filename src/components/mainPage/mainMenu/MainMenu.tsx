@@ -31,7 +31,7 @@ export default function MainMenu() {
   }, []);
 
   return (
-    <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10">
+    <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10 overflow-hidden">
       <div className="min-w-[65%] flex flex-col">
         <div className="flex items-center justify-end">
           <motion.div
