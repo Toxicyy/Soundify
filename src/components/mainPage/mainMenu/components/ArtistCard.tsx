@@ -1,6 +1,7 @@
 import TrackLayout from "./TrackLayout";
 import type { Artist } from "../../../../types/ArtistData";
 import type { Track } from "../../../../types/TrackData";
+import { Link } from "react-router-dom";
 
 interface ArtistCardProps {
   artist: { artist: Artist; tracks: Track[] } | null;
@@ -40,9 +41,11 @@ export default function ArtistCard({
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
           </div>
         ) : (
-          <h1 className="text-black text-lg font-bold tracking-wider">
-            {artist?.artist.name}
-          </h1>
+          <Link to={`/artist/${artist?.artist._id}`}>
+            <h1 className="text-black text-lg font-bold tracking-wider hover:underline cursor-pointer">
+              {artist?.artist.name}
+            </h1>
+          </Link>
         )}
       </div>
 

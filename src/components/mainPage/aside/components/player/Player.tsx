@@ -28,9 +28,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { useFormatTime } from "../../../../../hooks/useFormatTime";
 import { setIsPlaying } from "../../../../../state/CurrentTrack.slice";
-import Hls from "hls.js";
+import { initializeLikes } from "../../../../../state/LikeUpdate.slice";
+import { useLike } from "../../../../../hooks/useLike";
 import { useGetUserQuery } from "../../../../../state/UserApi.slice";
-import { toggleLike } from "../../../../../state/LikeUpdate.slice";
+import Hls from "hls.js";
 
 /**
  * Main audio player component with HLS streaming support
@@ -38,7 +39,6 @@ import { toggleLike } from "../../../../../state/LikeUpdate.slice";
  */
 export const Player = () => {
   // UI states
-  const [liked, setLiked] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -56,7 +56,21 @@ export const Player = () => {
   const queueState = useSelector((state: AppState) => state.queue);
   const { data: user, isFetching } = useGetUserQuery();
   const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
-  const likeUpdated = useSelector((state: AppState) => state.likeUpdate);
+
+  // Like functionality
+  const currentTrackId = currentTrack.currentTrack?._id || "";
+  const {
+    isLiked,
+    isPending: likePending,
+    toggleLike,
+  } = useLike(currentTrackId);
+
+  // Initialize likes when user data is available
+  useEffect(() => {
+    if (!isFetching && user?.likedSongs) {
+      dispatch(initializeLikes(user.likedSongs));
+    }
+  }, [isFetching, user?.likedSongs, dispatch]);
 
   // Refs
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -170,39 +184,6 @@ export const Player = () => {
     dispatch(toggleRepeat());
   }, [dispatch]);
 
-  const handleLikeClick = async () => {
-    if (isFetching || !user?._id || !track?._id) return; // Защита от пустых ID
-    try {
-      const url = `http://localhost:5000/api/users/${user._id}/${
-        liked ? "unlike" : "like"
-      }/${track._id}`;
-
-      const response = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.ok) {
-        setLiked(!liked); // Инвертируем состояние
-        dispatch(
-          toggleLike({
-            isLiked: !liked,
-            trackId: !liked
-              ? [...likeUpdated.trackId, track._id]
-              : likeUpdated.trackId.filter((id) => id !== track._id),
-          })
-        );
-      } else {
-        console.error("Ошибка:", await response.json());
-      }
-    } catch (error) {
-      console.error("Ошибка сети:", error);
-    }
-  };
-
   // Get repeat icon color based on current repeat mode
   const getRepeatColor = useCallback(() => {
     switch (repeat) {
@@ -266,9 +247,6 @@ export const Player = () => {
     cleanupHLS();
     audio.pause();
 
-    // ВАЖНО: НЕ сбрасываем loadedTrackIdRef здесь
-    // loadedTrackIdRef.current = null;
-
     audio.src = "";
     audio.load();
 
@@ -284,11 +262,9 @@ export const Player = () => {
             maxMaxBufferLength: 60,
             maxBufferSize: 60 * 1000 * 1000,
             maxBufferHole: 0.5,
-            // Reduce aggressive loading
             startLevel: -1,
             autoStartLoad: true,
             startPosition: -1,
-            // Prevent excessive fragment loading
             maxLoadingDelay: 4,
           });
 
@@ -429,22 +405,7 @@ export const Player = () => {
     return () => {
       isInitializingRef.current = false;
     };
-  }, [currentTrack.currentTrack?._id, initializeTrack, streamUrl]); // Added missing dependencies
-
-  useEffect(() => {
-    console.log("Like effect:", {
-      isFetching,
-      user,
-      currentTrack,
-      likeUpdated,
-    });
-    if (!isFetching && user && currentTrack.currentTrack) {
-      const isLiked =
-        user.likedSongs.includes(currentTrack.currentTrack._id) ||
-        likeUpdated.trackId.includes(currentTrack.currentTrack._id);
-      setLiked(isLiked);
-    }
-  }, [isFetching, user, currentTrack.currentTrack, likeUpdated]);
+  }, [currentTrack.currentTrack?._id, initializeTrack, streamUrl]);
 
   // FIXED - Separate effect for play/pause control
   useEffect(() => {
@@ -602,7 +563,7 @@ export const Player = () => {
       audio.removeEventListener("waiting", handleWaiting);
       audio.removeEventListener("playing", handlePlaying);
     };
-  }, [dispatch, repeat]); // Добавил repeat в зависимости
+  }, [dispatch, repeat]);
 
   // Volume control effect
   useEffect(() => {
@@ -640,7 +601,7 @@ export const Player = () => {
     );
   }
 
-  const track = currentTrack.currentTrack;
+  const currentTrackData = currentTrack.currentTrack;
 
   return (
     <div className="flex flex-col">
@@ -654,7 +615,7 @@ export const Player = () => {
         className="w-[13vw] h-[13vw] mb-7 self-center relative"
       >
         <img
-          src={track.coverUrl}
+          src={currentTrackData.coverUrl}
           alt="Album Cover"
           className="rounded-2xl drop-shadow-[0_7px_7px_rgba(0,0,0,0.4)] w-full h-full object-cover"
         />
@@ -674,9 +635,11 @@ export const Player = () => {
       >
         <div className="flex items-center justify-between">
           <h1 className="text-white/90 font-semibold tracking-wider self-start mb-1 truncate flex-1 mr-4">
-            {track.name}
+            {currentTrackData.name}
           </h1>
-          {liked ? (
+          {likePending ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mb-1" />
+          ) : isLiked ? (
             <HeartFilled
               style={{
                 color: likeHover ? "#F93822" : "red",
@@ -685,7 +648,7 @@ export const Player = () => {
               className="pb-1 cursor-pointer transition-colors duration-200"
               onMouseEnter={() => setLikeHover(true)}
               onMouseLeave={() => setLikeHover(false)}
-              onClick={handleLikeClick}
+              onClick={toggleLike}
             />
           ) : (
             <HeartOutlined
@@ -696,12 +659,12 @@ export const Player = () => {
               className="pb-1 cursor-pointer transition-colors duration-200"
               onMouseEnter={() => setLikeHover(true)}
               onMouseLeave={() => setLikeHover(false)}
-              onClick={handleLikeClick}
+              onClick={toggleLike}
             />
           )}
         </div>
         <h2 className="text-white/60 mb-2 truncate">
-          {track.artist?.name || "Unknown Artist"}
+          {currentTrackData.artist?.name || "Unknown Artist"}
         </h2>
       </motion.div>
 
@@ -727,7 +690,9 @@ export const Player = () => {
             className="absolute left-0 top-[2px] -translate-y-1/2 h-[3px] rounded-lg bg-white pointer-events-none transition-all duration-100"
             style={{
               width: `${
-                track.duration ? (currentTime / track.duration) * 100 : 0
+                currentTrackData.duration
+                  ? (currentTime / currentTrackData.duration) * 100
+                  : 0
               }%`,
             }}
           />
@@ -735,7 +700,7 @@ export const Player = () => {
           <input
             type="range"
             min={0}
-            max={track.duration || 0}
+            max={currentTrackData.duration || 0}
             value={currentTime}
             onChange={handleSeek}
             disabled={isLoading}

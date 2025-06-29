@@ -8,6 +8,7 @@ import AddAlbumPage from "./Pages/Dashboard/FileManage/AddAlbumPage";
 import AddArtistPage from "./Pages/Dashboard/FileManage/AddArtistPage";
 import MainMenu from "./components/mainPage/mainMenu/MainMenu";
 import LikedSongs from "./Pages/LikedSongs";
+import Artist from "./Pages/Artist";
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
           {
             path: "/playlist",
             element: <div>playlist</div>,
+          },
+          {
+            path: "/artist/:id",
+            element: <Artist />,
           },
         ]
       },

@@ -17,14 +17,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../../state/UserApi.slice";
 import { useEffect } from "react";
-import { useArtistsDataLoader } from "../../../hooks/useArtistDataLoader";
+import { useDailyArtistsDataLoader } from "../../../hooks/useDailyArtistDataLoader";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
   const { data: user, isFetching } = useGetUserQuery();
 
   // Используем новый хук
-  const { dailyTracks, isLoading, loadArtistsData } = useArtistsDataLoader();
+  const { dailyTracks, isLoading, loadArtistsData } = useDailyArtistsDataLoader();
 
   useEffect(() => {
     loadArtistsData();

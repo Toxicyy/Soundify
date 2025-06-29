@@ -3,7 +3,7 @@ import { useImagePreloader } from "./useImagePreloader";
 import type { Artist } from "../types/ArtistData";
 import type { Track } from "../types/TrackData";
 
-export const useArtistsDataLoader = () => {
+export const useDailyArtistsDataLoader = () => {
   const [dailyTracks, setDailyTracks] = useState<
     { artist: Artist; tracks: Track[] }[]
   >([]);

@@ -1,4 +1,4 @@
-import { useRef, useState, type FC } from "react";
+import { useRef, useState, useEffect, type FC } from "react";
 import type { Track } from "../../../types/TrackData";
 import { useFormatTime } from "../../../hooks/useFormatTime";
 import { useLike } from "../../../hooks/useLike";
@@ -22,26 +22,22 @@ type TrackTemplateProps = {
   track: Track;
   index: number;
   isLoading?: boolean;
-  allTracks?: Track[]; // Массив всех треков для создания очереди
+  allTracks?: Track[];
 };
-
-function formatDate(dateStr: Date): string {
-  const date = new Date(dateStr);
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
 
 const TrackTemplate: FC<TrackTemplateProps> = ({
   track,
   index,
-  isLoading,
+  isLoading = false,
   allTracks = [],
 }) => {
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
+
+  // Состояния изображения
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const duration = useFormatTime(track?.duration || 0);
   const dispatch = useDispatch<AppDispatch>();
@@ -50,32 +46,54 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
-  // Используем кастомный хук для лайков
-  const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
+  // Загрузка изображения
+  useEffect(() => {
+    if (!track?.coverUrl || isLoading) {
+      setImageError(true);
+      setImageLoaded(false);
+      return;
+    }
 
-  // Функция для воспроизведения трека с созданием очереди
+    setImageLoaded(false);
+    setImageError(false);
+
+    const img = new Image();
+
+    img.onload = () => {
+      console.log(`✅ Image loaded: ${track.name}`);
+      setImageLoaded(true);
+      setImageError(false);
+    };
+
+    img.onerror = (error) => {
+      console.error(`❌ Image failed: ${track.name}`, error);
+      setImageLoaded(false);
+      setImageError(true);
+    };
+
+    img.src = track.coverUrl;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [track?.coverUrl, isLoading]);
+
+  // Используем кастомный хук для лайков
+  const {
+    isLiked,
+    isPending: likePending,
+    toggleLike,
+  } = useLike(isLoading ? "" : track._id);
+
+  // Остальные функции...
   const playTrackWithContext = () => {
     if (!track || isLoading) return;
-
     if (allTracks && allTracks.length > 0) {
-      console.log("Creating queue from context:", {
-        trackName: track.name,
-        startIndex: index,
-        totalTracks: allTracks.length,
-      });
-
-      // Используем playTrackAndQueue для создания правильной очереди
-      // Треки с индексом startIndex и дальше идут в очередь
-      // Треки с индексом меньше startIndex автоматически попадают в историю
       dispatch(
-        playTrackAndQueue({
-          contextTracks: allTracks,
-          startIndex: index,
-        })
+        playTrackAndQueue({ contextTracks: allTracks, startIndex: index })
       );
     } else {
-      // Fallback: если нет контекста, просто играем трек
-      console.log("No context tracks, playing single track");
       dispatch(setCurrentTrack(track));
       dispatch(setIsPlaying(true));
     }
@@ -83,12 +101,9 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
   const togglePlayPause = () => {
     if (!track || isLoading) return;
-
     if (isCurrentTrack) {
-      // Если это текущий трек - просто переключаем play/pause
       dispatch(setIsPlaying(!currentTrack.isPlaying));
     } else {
-      // Если это другой трек - запускаем с контекстом очереди
       playTrackWithContext();
     }
   };
@@ -100,63 +115,39 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await toggleLike();
+    if (!isLoading) {
+      await toggleLike();
+    }
   };
 
   const handleAddToQueue = () => {
-    if (!track) return;
+    if (!track || isLoading) return;
     dispatch(addToQueue(track));
-  };
-
-  const handleHideTrack = () => {
-    console.log("Hide track clicked");
-  };
-
-  const handleArtistClick = () => {
-    console.log("Artist clicked");
-  };
-
-  const handleAlbumClick = () => {
-    console.log("Album clicked");
-  };
-
-  const handleInfoClick = () => {
-    console.log("Info clicked");
-  };
-
-  const handleShareClick = () => {
-    console.log("Share clicked");
   };
 
   const handleMenuItemClick = (index: number) => {
     const menuActions = [
       () => handleLikeClick({} as React.MouseEvent),
       handleAddToQueue,
-      handleHideTrack,
-      handleArtistClick,
-      handleAlbumClick,
-      handleInfoClick,
-      handleShareClick,
+      () => console.log("Hide track clicked"),
+      () => console.log("Artist clicked"),
+      () => console.log("Album clicked"),
+      () => console.log("Info clicked"),
+      () => console.log("Share clicked"),
     ];
-
-    if (index >= menuActions.length) return;
-    menuActions[index]();
-    setMenuOpen(false);
+    if (index < menuActions.length) {
+      menuActions[index]();
+      setMenuOpen(false);
+    }
   };
 
-  const handleCloseMenu = () => {
-    setMenuOpen(false);
-  };
-
+  // Скелетон состояние
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 py-3 rounded-lg">
-        {/* Номер трека - скелетон */}
+      <div className="grid grid-cols-[50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-4 items-center px-4 py-3 rounded-lg">
         <div className="h-6 w-6 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden mx-auto">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
-
-        {/* Информация о треке - скелетон */}
         <div className="flex items-center gap-4 min-w-0">
           <div className="w-[65px] h-[65px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
@@ -170,36 +161,21 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Альбом - скелетон */}
         <div className="flex justify-center">
-          <div className="h-4 w-20 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+          <div className="h-4 w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         </div>
-
-        {/* Дата - скелетон */}
-        <div className="flex justify-center">
-          <div className="h-4 w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
-          </div>
-        </div>
-
-        {/* Сердечко - скелетон */}
         <div className="flex justify-center">
           <div className="w-5 h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
           </div>
         </div>
-
-        {/* Длительность - скелетон */}
         <div className="flex justify-center">
           <div className="h-4 w-8 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         </div>
-
-        {/* Троеточие - скелетон */}
         <div className="flex justify-center">
           <div className="w-5 h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
@@ -209,12 +185,13 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     );
   }
 
+  // Основное состояние с данными
   return (
     <div
-      className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer "
+      className="grid grid-cols-[50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={playTrackWithContext} // Используем новую функцию вместо togglePlayPause
+      onClick={playTrackWithContext}
     >
       {/* Номер трека */}
       <div
@@ -227,12 +204,39 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
       {/* Информация о треке */}
       <div className="flex items-center gap-4 min-w-0">
-        <div className="w-[65px] h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden group">
+        <div className="w-[65px] h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden">
+          {/* ВСЕГДА показываем заглушку как базовый слой */}
           <div
-            className="absolute inset-0 bg-cover bg-center rounded-lg"
-            style={{ backgroundImage: `url(${track?.coverUrl})` }}
-          />
+            className="absolute inset-0 bg-gradient-to-br from-purple-500/70 via-blue-500/70 to-pink-500/70 rounded-lg flex items-center justify-center"
+            style={{ zIndex: 1 }}
+          >
+            <svg
+              className="w-8 h-8 text-white/80"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+              />
+            </svg>
+          </div>
 
+          {/* Реальное изображение ПОВЕРХ заглушки (если загружено) */}
+          {imageLoaded && !imageError && (
+            <div
+              className="absolute inset-0 bg-cover bg-center rounded-lg"
+              style={{
+                backgroundImage: `url(${track?.coverUrl})`,
+                zIndex: 2,
+              }}
+            />
+          )}
+
+          {/* Overlay при hover - поверх изображения (z-index: 20) */}
           <div
             className={`absolute inset-0 transition bg-black rounded-lg ${
               hover ? "opacity-50" : "opacity-0"
@@ -240,8 +244,12 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             style={{ zIndex: 20 }}
           />
 
+          {/* Кнопка play/pause - самый верхний слой (z-index: 30) */}
           {hover && (
-            <div className="flex items-center justify-center absolute inset-0 z-30">
+            <div
+              className="flex items-center justify-center absolute inset-0"
+              style={{ zIndex: 30 }}
+            >
               {isThisTrackPlaying ? (
                 <PauseOutlined
                   style={{
@@ -278,22 +286,17 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             {track.name}
           </h1>
           <h1 className="text-lg text-white/60 truncate">
-            {track.artist.name}
+            {track.artist?.name}
           </h1>
         </div>
       </div>
 
-      {/* Альбом */}
+      {/* Прослушивания */}
       <div className="text-lg text-white/60 truncate text-center">
-        {track.album || track.name}
+        {track.listenCount?.toLocaleString()}
       </div>
 
-      {/* Дата добавления */}
-      <div className="text-lg text-white/60 text-center">
-        {formatDate(track.createdAt)}
-      </div>
-
-      {/* Сердечко - показываем состояние лайка */}
+      {/* Сердечко */}
       <div
         className="flex justify-center transition-all duration-300"
         style={{ opacity: hover ? 1 : 0 }}
@@ -332,20 +335,19 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       {/* Длительность */}
       <div className="text-lg text-white/60 text-center">{duration}</div>
 
-      {/* Троеточие - всегда занимает место, появляется при hover */}
+      {/* Троеточие */}
       <div className="flex justify-center relative" ref={ellipsisRef}>
         <EllipsisOutlined
           style={{
-            color: hover ? "rgba(255, 255, 255, 0.6)" : "transparent",
+            color: hover ? "rgba(255, 255, 255, 1)" : "transparent",
             fontSize: "18px",
           }}
           className="cursor-pointer transition-all duration-200"
           onClick={handleEllipsisClick}
         />
-
         <ContextMenu
           isOpen={menuOpen}
-          onClose={handleCloseMenu}
+          onClose={() => setMenuOpen(false)}
           onMenuItemClick={handleMenuItemClick}
           anchorRef={ellipsisRef}
           isPlaying={isCurrentTrack}
