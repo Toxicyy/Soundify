@@ -18,14 +18,13 @@ interface ContextMenuProps {
   isLiked: boolean;
 }
 
-
 export default function ContextMenu({
   isOpen,
   onClose,
   onMenuItemClick,
   anchorRef,
   isPlaying,
-  isLiked
+  isLiked,
 }: ContextMenuProps) {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,7 +58,7 @@ export default function ContextMenu({
       label: "Поделиться",
     },
   ];
-  
+
   // Закрытие меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,22 +98,25 @@ export default function ContextMenu({
       }}
     >
       {menuItems
+        .map((item, originalIndex) => ({ ...item, originalIndex })) // Сохраняем оригинальный индекс
         .filter((item) => !isPlaying || item.label !== "Добавить в очередь")
-        .map((item, index) => (
+        .map((item, filteredIndex) => (
           <div
-            key={index}
+            key={item.originalIndex} // Используем оригинальный индекс для key
             className={`px-4 py-3 text-white text-sm cursor-pointer flex items-center gap-3 ${
-              hoveredMenuItem === index
+              hoveredMenuItem === filteredIndex
                 ? "bg-white/10 backdrop-blur-sm"
                 : "hover:bg-white/5"
             }`}
-            onMouseEnter={() => setHoveredMenuItem(index)}
+            onMouseEnter={() => setHoveredMenuItem(filteredIndex)}
             onMouseLeave={() => setHoveredMenuItem(null)}
-            onClick={() => handleMenuItemClick(index)}
+            onClick={() => handleMenuItemClick(item.originalIndex)} // Передаем оригинальный индекс!
           >
             <span
               className={`text-base transition-all duration-200 ${
-                hoveredMenuItem === index ? "text-white" : "text-white/70"
+                hoveredMenuItem === filteredIndex
+                  ? "text-white"
+                  : "text-white/70"
               }`}
             >
               {item.icon}

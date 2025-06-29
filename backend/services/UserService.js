@@ -35,8 +35,12 @@ class UserService {
           select: "name",
         },
       });
+
+      // Переворачиваем массив любимых треков
+      const reversedLikedSongs = user.likedSongs.reverse();
+
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
-        user.likedSongs
+        reversedLikedSongs
       );
       return tracksWithSignedUrls;
     } catch (err) {

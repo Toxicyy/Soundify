@@ -13,7 +13,7 @@ import type { AppDispatch, AppState } from "../../../store";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetUserQuery } from "../../../state/UserApi.slice";
 import { toggleLike } from "../../../state/LikeUpdate.slice";
-import { addToQueue } from "../../../state/Queue.slice";
+import { addToQueue, playTrackAndQueue } from "../../../state/Queue.slice"; // Импортируем playTrackAndQueue
 import {
   setCurrentTrack,
   setIsPlaying,
@@ -23,6 +23,7 @@ type TrackTemplateProps = {
   track: Track;
   index: number;
   isLoading?: boolean;
+  allTracks?: Track[]; // Массив всех треков для создания очереди
 };
 
 function formatDate(dateStr: Date): string {
@@ -33,7 +34,12 @@ function formatDate(dateStr: Date): string {
   return `${day}/${month}/${year}`;
 }
 
-const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
+const TrackTemplate: FC<TrackTemplateProps> = ({
+  track,
+  index,
+  isLoading,
+  allTracks = [],
+}) => {
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -58,16 +64,43 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
     }
   }, [isFetching, track, likeUpdated.isLiked, user]);
 
+  // Функция для воспроизведения трека с созданием очереди
+  const playTrackWithContext = () => {
+    if (!track || isLoading) return;
+
+    if (allTracks && allTracks.length > 0) {
+      console.log("Creating queue from context:", {
+        trackName: track.name,
+        startIndex: index,
+        totalTracks: allTracks.length,
+      });
+
+      // Используем playTrackAndQueue для создания правильной очереди
+      // Треки с индексом startIndex и дальше идут в очередь
+      // Треки с индексом меньше startIndex автоматически попадают в историю
+      dispatch(
+        playTrackAndQueue({
+          contextTracks: allTracks,
+          startIndex: index,
+        })
+      );
+    } else {
+      // Fallback: если нет контекста, просто играем трек
+      console.log("No context tracks, playing single track");
+      dispatch(setCurrentTrack(track));
+      dispatch(setIsPlaying(true));
+    }
+  };
+
   const togglePlayPause = () => {
     if (!track || isLoading) return;
 
     if (isCurrentTrack) {
+      // Если это текущий трек - просто переключаем play/pause
       dispatch(setIsPlaying(!currentTrack.isPlaying));
     } else {
-      dispatch(setCurrentTrack(track));
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
+      // Если это другой трек - запускаем с контекстом очереди
+      playTrackWithContext();
     }
   };
 
@@ -110,6 +143,8 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
       console.error("Ошибка сети:", error);
     }
   };
+
+  
 
   const handleAddToQueue = () => {
     if (!track) return;
@@ -219,13 +254,13 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
 
   return (
     <div
-      className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 py-3 hover:bg-white/5 rounded-lg transition-colors duration-200 group"
+      className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer "
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={menuOpen ? () => {} : togglePlayPause}
+      onClick={playTrackWithContext} // Используем новую функцию вместо togglePlayPause
     >
       {/* Номер трека */}
-      <div className="text-2xl text-white/60 text-center">{index + 1}</div>
+      <div className={`text-2xl text-${isThisTrackPlaying ? "white" : "white/50"} text-center`}>{index + 1}</div>
 
       {/* Информация о треке */}
       <div className="flex items-center gap-4 min-w-0">
@@ -250,7 +285,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
                 <PauseOutlined
                   style={{
                     color: "white",
-                    fontSize: "30px",
+                    fontSize: "36px",
                     filter: "drop-shadow(0 2px 8px #222)",
                     cursor: "pointer",
                   }}
@@ -263,7 +298,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
                 <CaretRightOutlined
                   style={{
                     color: "white",
-                    fontSize: "34px",
+                    fontSize: "40px",
                     filter: "drop-shadow(0 2px 8px #222)",
                     cursor: "pointer",
                   }}
@@ -279,9 +314,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
 
         <div className="flex flex-col justify-center min-w-0">
           <h1
-            className={
-              "text-lg font-medium truncate transition-colors text-white group-hover:text-white/90"
-            }
+            className="text-lg font-medium truncate transition-colors text-white group-hover:text-white/90"
           >
             {track.name}
           </h1>
@@ -302,15 +335,14 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
       </div>
 
       {/* Сердечко - показываем состояние лайка */}
-      <div className="flex justify-center">
+      <div className="flex justify-center transition-all duration-300" style={{ opacity: hover ? 1 : 0 }}>
         {liked ? (
           <HeartFilled
             style={{
               color: likeHover ? "#F93822" : "red",
               fontSize: "18px",
-              opacity: hover ? 1 : 0,
             }}
-            className="cursor-pointer transition-all duration-300"
+            className="cursor-pointer transition-all duration-200"
             onMouseEnter={() => setLikeHover(true)}
             onMouseLeave={() => setLikeHover(false)}
             onClick={handleLikeClick}
@@ -340,7 +372,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({ track, index, isLoading }) => {
       <div className="flex justify-center relative" ref={ellipsisRef}>
         <EllipsisOutlined
           style={{
-            color: hover ? "rgba(255, 255, 255, 1)" : "transparent",
+            color: hover ? "rgba(255, 255, 255, 0.6)" : "transparent",
             fontSize: "18px",
           }}
           className="cursor-pointer transition-all duration-200"

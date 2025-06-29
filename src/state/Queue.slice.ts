@@ -33,8 +33,16 @@ export const playTrackAndQueue = createAsyncThunk(
       contextTracks?: Track[];
       startIndex?: number;
     },
-    { dispatch }
+    { dispatch, getState }
   ) => {
+    const state = getState() as { queue: QueueState };
+    const { currentTrack } = state.queue;
+
+    // Добавляем текущий трек в историю ПЕРЕД переключением
+    if (currentTrack) {
+      dispatch(addToHistory(currentTrack));
+    }
+
     if (contextTracks && contextTracks.length > 0) {
       // Если есть контекст и startIndex, используем setQueue
       if (
@@ -98,7 +106,7 @@ export const handleTrackEnd = createAsyncThunk(
       queue.length
     );
 
-    // Если повтор одного трека - сначала останавливаем, потом перезапускаем с delay
+    // Если повтор одного трека - НЕ добавляем в историю, просто перезапускаем
     if (repeat === "one") {
       console.log("Repeating current track with delay");
       dispatch(setIsPlaying(false));
@@ -117,7 +125,7 @@ export const handleTrackEnd = createAsyncThunk(
       return "next_track";
     }
 
-    // Если repeat === "all" и есть история
+    // Если repeat === "all" и есть текущий трек - НЕ добавляем в историю при repeat
     if (repeat === "all" && currentTrack) {
       console.log("Repeat all: restarting from current track");
       dispatch(setIsPlaying(false));
@@ -141,10 +149,16 @@ export const playNextTrack = createAsyncThunk(
     const { queue, shuffle, repeat, shuffledIndexes, currentTrack } =
       state.queue;
 
+    console.log("playNextTrack called:", {
+      queueLength: queue.length,
+      currentTrack: currentTrack?.name,
+      repeat,
+    });
+
     if (queue.length === 0) {
       // Нет следующих треков
-      if (repeat === "all" || repeat === "one" && currentTrack) {
-        // При repeat all возвращаемся к текущему треку
+      if (repeat === "all" && currentTrack) {
+        // При repeat all НЕ добавляем в историю, просто перезапускаем
         dispatch(setCurrentTrack(currentTrack));
         dispatch(setIsPlaying(true));
         return "repeat_current";
@@ -164,16 +178,15 @@ export const playNextTrack = createAsyncThunk(
       dispatch(removeShuffledIndex(0));
       // Удаляем трек из очереди
       dispatch(removeFromQueueByIndex(shuffledIndex));
-
-    } 
-    else {
+    } else {
       // Обычное последовательное воспроизведение - берем первый трек
       nextTrack = queue[0];
       dispatch(removeFromQueueByIndex(0));
     }
 
-    // Добавляем текущий трек в историю
+    // ВАЖНО: Добавляем текущий трек в историю ПЕРЕД переключением
     if (currentTrack) {
+      console.log("Adding to history:", currentTrack.name);
       dispatch(addToHistory(currentTrack));
     }
 
@@ -182,6 +195,7 @@ export const playNextTrack = createAsyncThunk(
     dispatch(setCurrentTrack(nextTrack));
     dispatch(setIsPlaying(true));
 
+    console.log("Switched to next track:", nextTrack.name);
     return nextTrack;
   }
 );
@@ -190,11 +204,18 @@ export const playPreviousTrack = createAsyncThunk(
   "queue/playPreviousTrack",
   async (_, { dispatch, getState }) => {
     const state = getState() as { queue: QueueState };
-    const { history, currentTrack } = state.queue;
+    const { history, currentTrack, queue } = state.queue;
+
+    console.log("playPreviousTrack called:", {
+      historyLength: history.length,
+      currentTrack: currentTrack?.name,
+      queueLength: queue.length,
+    });
 
     if (history.length === 0) {
       // Нет предыдущих треков - перезапускаем текущий
       if (currentTrack) {
+        console.log("No history, restarting current track");
         dispatch(setCurrentTrack(currentTrack));
         dispatch(setIsPlaying(true));
       }
@@ -203,18 +224,24 @@ export const playPreviousTrack = createAsyncThunk(
 
     // Берем последний трек из истории
     const previousTrack = history[history.length - 1];
+    console.log("Going back to:", previousTrack.name);
 
-    // Добавляем текущий трек в начало очереди
+    // ВАЖНО: Добавляем текущий трек в НАЧАЛО очереди (не в историю!)
+    // Это работает независимо от того, пуста очередь или нет
     if (currentTrack) {
+      console.log("Adding current track to front of queue:", currentTrack.name);
       dispatch(addToQueueFirst(currentTrack));
     }
 
     // Устанавливаем предыдущий трек как текущий
     dispatch(setCurrentTrackInQueue(previousTrack));
     dispatch(setCurrentTrack(previousTrack));
+
+    // Удаляем трек из истории
     dispatch(removeFromHistory());
     dispatch(setIsPlaying(true));
 
+    console.log("Successfully moved to previous track:", previousTrack.name);
     return previousTrack;
   }
 );
@@ -342,8 +369,23 @@ export const queueSlice = createSlice({
         // Устанавливаем текущий трек
         state.currentTrack = tracks[startIndex];
 
-        // Остальные треки идут в очередь (исключая текущий)
-        state.queue = tracks.filter((_, index) => index !== startIndex);
+        // ИСПРАВЛЕНИЕ: В очередь идут только треки ПОСЛЕ startIndex
+        state.queue = tracks.slice(startIndex + 1);
+
+        // НОВОЕ: Треки ПЕРЕД startIndex добавляем в историю
+        const tracksBeforeStart = tracks.slice(0, startIndex);
+        tracksBeforeStart.forEach((track) => {
+          // Проверяем, что трек не дублируется в истории
+          const lastTrack = state.history[state.history.length - 1];
+          if (!lastTrack || lastTrack._id !== track._id) {
+            state.history.push(track);
+          }
+        });
+
+        // Ограничиваем историю 50 треками
+        if (state.history.length > 50) {
+          state.history = state.history.slice(-50);
+        }
       } else {
         // Если startIndex не указан или неверный, просто устанавливаем очередь
         state.queue = tracks;
@@ -352,7 +394,7 @@ export const queueSlice = createSlice({
 
       state.currentIndex = Math.max(0, Math.min(startIndex, tracks.length - 1));
 
-      // Сохраняем оригинальную очередь (без текущего трека)
+      // Сохраняем оригинальную очередь (только треки после текущего)
       state.originalQueue = [...state.queue];
 
       // Генерируем shuffled indexes если нужно
@@ -373,7 +415,18 @@ export const queueSlice = createSlice({
 
     // Добавить трек в историю
     addToHistory: (state, action: PayloadAction<Track>) => {
-      state.history.push(action.payload);
+      // Проверяем, что трек не дублируется в конце истории
+      const lastTrack = state.history[state.history.length - 1];
+      if (!lastTrack || lastTrack._id !== action.payload._id) {
+        state.history.push(action.payload);
+        console.log(
+          "Added to history:",
+          action.payload.name,
+          "Total history:",
+          state.history.length
+        );
+      }
+
       // Ограничиваем историю 50 треками
       if (state.history.length > 50) {
         state.history.shift();
@@ -382,12 +435,19 @@ export const queueSlice = createSlice({
 
     // Удалить последний трек из истории
     removeFromHistory: (state) => {
-      state.history.pop();
+      const removed = state.history.pop();
+      console.log(
+        "Removed from history:",
+        removed?.name,
+        "Remaining:",
+        state.history.length
+      );
     },
 
     // Очистить историю
     clearHistory: (state) => {
       state.history = [];
+      console.log("History cleared");
     },
 
     // Переключить shuffle

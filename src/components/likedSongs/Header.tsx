@@ -21,7 +21,7 @@ const Header:FC<HeaderProps> = ({tracks}) => {
         />
         <div>
           <p className="text-lg font-medium text-white">Playlist</p>
-          <h1 className="text-[5rem] font-bold bg-gradient-to-br from-white via-pink-300 to-purple-400 bg-clip-text text-transparent">Liked Songs</h1>
+          <h1 className="text-[5rem] font-bold bg-gradient-to-br from-white via-pink-300 to-purple-400 bg-clip-text text-transparent">Liked tracks</h1>
           <div className="flex items-center gap-2">
             <p className="text-white text-lg">{user?.username}</p>
             <div className="w-[5px] h-[5px] rounded-full bg-white/60"></div>

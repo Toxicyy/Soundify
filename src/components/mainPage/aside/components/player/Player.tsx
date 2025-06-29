@@ -116,17 +116,15 @@ export const Player = () => {
     dispatch(setQueueOpen(!isQueueOpen));
   }, [isQueueOpen, dispatch]);
 
-  // Queue navigation handlers - FIXED with repeat dependency
   const handleNext = useCallback(() => {
     if (queue.length === 0 && audioRef.current) {
-      console.log(queue);
-      console.log(repeat);
+      console.log("No queue, handling repeat mode:", repeat);
 
       if (repeat === "one" || repeat === "all") {
         // При repeat сбрасываем время и продолжаем играть
         audioRef.current.currentTime = 0;
         setCurrentTime(0);
-        console.log(2);
+        console.log("Repeating current track");
         dispatch(setIsPlaying(true));
       } else {
         // При repeat = off просто останавливаемся, НЕ сбрасывая время
@@ -146,27 +144,23 @@ export const Player = () => {
         }, 200);
       }
     } else {
-      console.log(1, queue);
+      console.log("Playing next track from queue, queue length:", queue.length);
       dispatch(playNextTrack());
     }
-  }, [dispatch, queue.length, repeat, currentTrack.isPlaying]); // Added dependencies
+  }, [dispatch, queue.length, repeat, currentTrack.isPlaying]);
 
   const handlePrevious = useCallback(() => {
-    if (queue.length === 0 && audioRef.current) {
-      // If no queue, restart current track
-      audioRef.current.currentTime = 0;
-      setCurrentTime(0);
-      if (currentTrack.isPlaying) {
-        audioRef.current.play().catch(() => dispatch(setIsPlaying(false)));
-      }
-    } else if (audioRef.current && audioRef.current.currentTime > 3) {
+    if (audioRef.current && audioRef.current.currentTime > 3) {
       // If more than 3 seconds played, restart current track
       audioRef.current.currentTime = 0;
       setCurrentTime(0);
     } else {
+      // УБИРАЕМ ПРОВЕРКУ НА queue.length === 0
+      // Всегда пытаемся перейти к предыдущему треку
+      console.log("Attempting to play previous track");
       dispatch(playPreviousTrack());
     }
-  }, [dispatch, queue.length, currentTrack.isPlaying]);
+  }, [dispatch]);
 
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
