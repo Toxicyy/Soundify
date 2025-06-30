@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type FC } from "react";
+import { useRef, useState, type FC } from "react";
 import type { Track } from "../../../types/TrackData";
 import { useFormatTime } from "../../../hooks/useFormatTime";
 import { useLike } from "../../../hooks/useLike";
@@ -35,49 +35,12 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
 
-  // Состояния изображения
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
   const duration = useFormatTime(track?.duration || 0);
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
   const ellipsisRef = useRef<HTMLDivElement>(null);
-
-  // Загрузка изображения
-  useEffect(() => {
-    if (!track?.coverUrl || isLoading) {
-      setImageError(true);
-      setImageLoaded(false);
-      return;
-    }
-
-    setImageLoaded(false);
-    setImageError(false);
-
-    const img = new Image();
-
-    img.onload = () => {
-      console.log(`✅ Image loaded: ${track.name}`);
-      setImageLoaded(true);
-      setImageError(false);
-    };
-
-    img.onerror = (error) => {
-      console.error(`❌ Image failed: ${track.name}`, error);
-      setImageLoaded(false);
-      setImageError(true);
-    };
-
-    img.src = track.coverUrl;
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [track?.coverUrl, isLoading]);
 
   // Используем кастомный хук для лайков
   const {
@@ -86,7 +49,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     toggleLike,
   } = useLike(isLoading ? "" : track._id);
 
-  // Остальные функции...
+  // Функции управления воспроизведением
   const playTrackWithContext = () => {
     if (!track || isLoading) return;
     if (allTracks && allTracks.length > 0) {
@@ -188,7 +151,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   // Основное состояние с данными
   return (
     <div
-      className="grid grid-cols-[50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
+      className="grid grid-cols-[50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-4 items-center px-4 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={playTrackWithContext}
@@ -205,38 +168,18 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       {/* Информация о треке */}
       <div className="flex items-center gap-4 min-w-0">
         <div className="w-[65px] h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden">
-          {/* ВСЕГДА показываем заглушку как базовый слой */}
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-purple-500/70 via-blue-500/70 to-pink-500/70 rounded-lg flex items-center justify-center"
-            style={{ zIndex: 1 }}
-          >
-            <svg
-              className="w-8 h-8 text-white/80"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-              />
-            </svg>
-          </div>
+          {/* Простое изображение с обработкой ошибок */}
+          <img
+            src={track?.coverUrl}
+            alt={track?.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => {
+              // Скрываем изображение при ошибке
+              e.currentTarget.style.display = "none";
+            }}
+          />
 
-          {/* Реальное изображение ПОВЕРХ заглушки (если загружено) */}
-          {imageLoaded && !imageError && (
-            <div
-              className="absolute inset-0 bg-cover bg-center rounded-lg"
-              style={{
-                backgroundImage: `url(${track?.coverUrl})`,
-                zIndex: 2,
-              }}
-            />
-          )}
-
-          {/* Overlay при hover - поверх изображения (z-index: 20) */}
+          {/* Overlay при hover */}
           <div
             className={`absolute inset-0 transition bg-black rounded-lg ${
               hover ? "opacity-50" : "opacity-0"
@@ -244,7 +187,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             style={{ zIndex: 20 }}
           />
 
-          {/* Кнопка play/pause - самый верхний слой (z-index: 30) */}
+          {/* Кнопка play/pause при hover */}
           {hover && (
             <div
               className="flex items-center justify-center absolute inset-0"
@@ -352,6 +295,8 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
           anchorRef={ellipsisRef}
           isPlaying={isCurrentTrack}
           isLiked={isLiked}
+          isPending={likePending}
+          usePortal={true}
         />
       </div>
     </div>

@@ -136,11 +136,17 @@ export default function TrackLayout({
             </div>
           ) : (
             <>
-              <div
-                className="absolute inset-0 bg-cover bg-center rounded-[10px]"
-                style={{ backgroundImage: `url(${track?.coverUrl})` }}
+              {/* Изображение обложки */}
+              <img
+                src={track?.coverUrl}
+                alt={track?.name}
+                className="w-full h-full object-cover rounded-[10px]"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
               />
 
+              {/* Overlay при hover */}
               <div
                 className={`absolute inset-0 transition bg-black rounded-[10px] ${
                   hover ? "opacity-50" : "opacity-0"
@@ -148,6 +154,7 @@ export default function TrackLayout({
                 style={{ zIndex: 20 }}
               />
 
+              {/* Кнопки play/pause при hover */}
               {hover && (
                 <div className="flex items-center justify-center absolute inset-0 z-30">
                   {isThisTrackPlaying ? (

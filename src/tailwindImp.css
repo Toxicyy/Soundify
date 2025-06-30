@@ -188,3 +188,85 @@
     transform: scale(1.02);
   }
 }
+
+.tracks-scroll-light {
+  max-height: 42vh; /* или другая высота под ваш дизайн */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Для Chrome, Edge, Safari - светлый вариант */
+.tracks-scroll-light::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+  border-radius: 8px;
+}
+
+.tracks-scroll-light::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.tracks-scroll-light::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tracks-scroll-light::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}
+
+@keyframes fadeInUpMenu {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUpMenu 0.15s ease-out forwards;
+}
+
+/* Горизонтальный скролл для альбомов/синглов */
+.albums-scroll-light {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden; /* Убираем вертикальный скролл */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+
+  /* Плавный скролл */
+  scroll-behavior: smooth;
+
+  /* Убираем горизонтальную прокрутку на мобильных */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Для Chrome, Edge, Safari - горизонтальный скролл */
+.albums-scroll-light::-webkit-scrollbar {
+  height: 8px; /* Высота для горизонтального скролла */
+  width: 8px; /* На случай если будет вертикальный */
+  background: transparent;
+  border-radius: 8px;
+}
+
+.albums-scroll-light::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.albums-scroll-light::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.albums-scroll-light::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 8px;
+}

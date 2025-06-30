@@ -32,6 +32,7 @@ import { initializeLikes } from "../../../../../state/LikeUpdate.slice";
 import { useLike } from "../../../../../hooks/useLike";
 import { useGetUserQuery } from "../../../../../state/UserApi.slice";
 import Hls from "hls.js";
+import { Link } from "react-router-dom";
 
 /**
  * Main audio player component with HLS streaming support
@@ -663,8 +664,11 @@ export const Player = () => {
             />
           )}
         </div>
+
         <h2 className="text-white/60 mb-2 truncate">
-          {currentTrackData.artist?.name || "Unknown Artist"}
+          <Link to={`/artist/${currentTrackData.artist?._id}`} className=" hover:underline cursor-pointer">
+            {currentTrackData.artist?.name || "Unknown Artist"}
+          </Link>
         </h2>
       </motion.div>
 

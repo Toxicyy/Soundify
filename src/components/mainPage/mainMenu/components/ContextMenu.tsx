@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import {
   HeartOutlined,
   HeartFilled,
@@ -17,7 +18,8 @@ interface ContextMenuProps {
   anchorRef: React.RefObject<HTMLDivElement | null>;
   isPlaying: boolean;
   isLiked: boolean;
-  isPending?: boolean; // Добавляем prop для состояния загрузки лайка
+  isPending?: boolean;
+  usePortal?: boolean;
 }
 
 export default function ContextMenu({
@@ -28,10 +30,12 @@ export default function ContextMenu({
   isPlaying,
   isLiked,
   isPending = false,
+  usePortal = true,
 }: ContextMenuProps) {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
-  
+
   const menuItems = [
     {
       icon: isPending ? (
@@ -42,7 +46,7 @@ export default function ContextMenu({
         <HeartOutlined />
       ),
       label: isLiked ? "Убрать из любимых треков" : "Добавить в любимые треки",
-      disabled: isPending, // Отключаем элемент во время загрузки
+      disabled: isPending,
     },
     {
       icon: <UnorderedListOutlined />,
@@ -76,6 +80,34 @@ export default function ContextMenu({
     },
   ];
 
+  // Вычисляем позицию меню (только для портала)
+  useEffect(() => {
+    if (isOpen && usePortal && anchorRef.current) {
+      const visibleItems = menuItems.filter(
+        (item) => !isPlaying || item.label !== "Добавить в очередь"
+      );
+      const menuHeight = visibleItems.length * 48 + 16;
+      const menuWidth = 220;
+
+      const anchorRect = anchorRef.current.getBoundingClientRect();
+
+      let top = anchorRect.top - menuHeight - 12;
+      let left = anchorRect.left - menuWidth + anchorRect.width;
+
+      if (top < 12) {
+        top = anchorRect.bottom + 12;
+      }
+
+      if (left < 12) {
+        left = anchorRect.left;
+      } else if (left + menuWidth > window.innerWidth - 12) {
+        left = anchorRect.right - menuWidth;
+      }
+
+      setPosition({ top, left });
+    }
+  }, [isOpen, usePortal, anchorRef, isPlaying]);
+
   // Закрытие меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,39 +121,73 @@ export default function ContextMenu({
       }
     };
 
+    const handleScroll = () => {
+      if (usePortal) {
+        onClose(); // Закрываем меню при скролле только для портала
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      if (usePortal) {
+        document.addEventListener("scroll", handleScroll, true);
+      }
+      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      if (usePortal) {
+        document.removeEventListener("scroll", handleScroll, true);
+      }
+      document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose, anchorRef]);
+  }, [isOpen, onClose, anchorRef, usePortal]);
 
   const handleMenuItemClick = (index: number, disabled: boolean) => {
-    if (disabled) return; // Не выполняем действие если элемент отключен
-    
+    if (disabled) return;
+
     onMenuItemClick(index);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  return (
+  // Основной JSX меню
+  const menuContent = (
     <div
       ref={menuRef}
-      className="absolute bottom-full right-0 mb-2 min-w-[220px] bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl z-50 overflow-hidden"
-      style={{
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-      }}
+      className={`min-w-[220px] bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl overflow-hidden animate-fade-in-up ${
+        usePortal ? "fixed" : "absolute bottom-full right-0 mb-2"
+      }`}
+      style={
+        usePortal
+          ? {
+              top: position.top,
+              left: position.left,
+              zIndex: 9999,
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+            }
+          : {
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              zIndex: 50,
+            }
+      }
     >
       {menuItems
-        .map((item, originalIndex) => ({ ...item, originalIndex })) // Сохраняем оригинальный индекс
+        .map((item, originalIndex) => ({ ...item, originalIndex }))
         .filter((item) => !isPlaying || item.label !== "Добавить в очередь")
         .map((item, filteredIndex) => (
           <div
-            key={item.originalIndex} // Используем оригинальный индекс для key
+            key={item.originalIndex}
             className={`px-4 py-3 text-white text-sm flex items-center gap-3 transition-all duration-200 ${
               item.disabled
                 ? "opacity-50 cursor-not-allowed"
@@ -131,9 +197,13 @@ export default function ContextMenu({
                 ? "bg-white/10 backdrop-blur-sm"
                 : ""
             }`}
-            onMouseEnter={() => !item.disabled && setHoveredMenuItem(filteredIndex)}
+            onMouseEnter={() =>
+              !item.disabled && setHoveredMenuItem(filteredIndex)
+            }
             onMouseLeave={() => setHoveredMenuItem(null)}
-            onClick={() => handleMenuItemClick(item.originalIndex, item.disabled)} // Передаем оригинальный индекс и состояние disabled
+            onClick={() =>
+              handleMenuItemClick(item.originalIndex, item.disabled)
+            }
           >
             <span
               className={`text-base transition-all duration-200 ${
@@ -151,4 +221,7 @@ export default function ContextMenu({
         ))}
     </div>
   );
-};
+
+  // Возвращаем либо через портал, либо обычным способом
+  return usePortal ? createPortal(menuContent, document.body) : menuContent;
+}

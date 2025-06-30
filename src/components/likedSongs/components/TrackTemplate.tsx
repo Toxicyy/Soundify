@@ -17,6 +17,7 @@ import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../state/CurrentTrack.slice";
+import { Link } from "react-router-dom";
 
 type TrackTemplateProps = {
   track: Track;
@@ -42,6 +43,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [likeHover, setLikeHover] = useState(false);
+  const [noClickHover, setNoClickHover] = useState(false);
 
   const duration = useFormatTime(track?.duration || 0);
   const dispatch = useDispatch<AppDispatch>();
@@ -64,9 +66,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         totalTracks: allTracks.length,
       });
 
-      // Используем playTrackAndQueue для создания правильной очереди
-      // Треки с индексом startIndex и дальше идут в очередь
-      // Треки с индексом меньше startIndex автоматически попадают в историю
       dispatch(
         playTrackAndQueue({
           contextTracks: allTracks,
@@ -74,7 +73,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         })
       );
     } else {
-      // Fallback: если нет контекста, просто играем трек
       console.log("No context tracks, playing single track");
       dispatch(setCurrentTrack(track));
       dispatch(setIsPlaying(true));
@@ -85,10 +83,8 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     if (!track || isLoading) return;
 
     if (isCurrentTrack) {
-      // Если это текущий трек - просто переключаем play/pause
       dispatch(setIsPlaying(!currentTrack.isPlaying));
     } else {
-      // Если это другой трек - запускаем с контекстом очереди
       playTrackWithContext();
     }
   };
@@ -214,7 +210,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer "
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={playTrackWithContext} // Используем новую функцию вместо togglePlayPause
+      onClick={noClickHover ? () => {} : playTrackWithContext}
     >
       {/* Номер трека */}
       <div
@@ -228,11 +224,17 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       {/* Информация о треке */}
       <div className="flex items-center gap-4 min-w-0">
         <div className="w-[65px] h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden group">
-          <div
-            className="absolute inset-0 bg-cover bg-center rounded-lg"
-            style={{ backgroundImage: `url(${track?.coverUrl})` }}
+          {/* Изображение обложки */}
+          <img
+            src={track?.coverUrl}
+            alt={track?.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
 
+          {/* Overlay при hover */}
           <div
             className={`absolute inset-0 transition bg-black rounded-lg ${
               hover ? "opacity-50" : "opacity-0"
@@ -240,6 +242,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             style={{ zIndex: 20 }}
           />
 
+          {/* Кнопки play/pause при hover */}
           {hover && (
             <div className="flex items-center justify-center absolute inset-0 z-30">
               {isThisTrackPlaying ? (
@@ -277,9 +280,15 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
           <h1 className="text-lg font-medium truncate transition-colors text-white group-hover:text-white/90">
             {track.name}
           </h1>
-          <h1 className="text-lg text-white/60 truncate">
-            {track.artist.name}
-          </h1>
+          <Link to={`/artist/${track.artist._id}`} className="mt-1">
+            <h1
+              className="text-lg text-white/60 truncate hover:underline cursor-pointer"
+              onMouseEnter={() => setNoClickHover(true)}
+              onMouseLeave={() => setNoClickHover(false)}
+            >
+              {track.artist.name}
+            </h1>
+          </Link>
         </div>
       </div>
 

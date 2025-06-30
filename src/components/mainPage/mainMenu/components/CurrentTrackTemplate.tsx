@@ -12,6 +12,7 @@ import { setIsPlaying } from "../../../../state/CurrentTrack.slice";
 import type { Track } from "../../../../types/TrackData";
 import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
+import { Link } from "react-router-dom";
 
 interface CurrentTrackTemplateProps {
   track: Track;
@@ -137,9 +138,11 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
           {/* Track Info */}
           <div className="flex flex-col min-w-0 flex-1">
             <h1 className="text-white font-medium truncate">{track.name}</h1>
-            <h2 className="text-white/60 text-sm truncate">
-              {track.artist.name}
-            </h2>
+            <Link to={`/artist/${track.artist._id}`}>
+              <h2 className="text-white/60 text-sm truncate hover:underline cursor-pointer">
+                {track.artist.name}
+              </h2>
+            </Link>
           </div>
         </div>
 

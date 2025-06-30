@@ -12,6 +12,7 @@ import {
   removeFromQueue,
   playTrackAndQueue,
 } from "../../../../state/Queue.slice";
+import { Link } from "react-router-dom";
 
 interface QueueTemplateProps {
   track: Track;
@@ -122,9 +123,11 @@ export const QueueTemplate: FC<QueueTemplateProps> = ({
             >
               {track.name}
             </h1>
-            <h2 className="text-white/60 text-sm truncate">
-              {track.artist.name}
-            </h2>
+            <Link to={`/artist/${track.artist._id}`}>
+              <h2 className="text-white/60 text-sm truncate hover:underline cursor-pointer">
+                {track.artist.name}
+              </h2>
+            </Link>
           </div>
         </div>
 

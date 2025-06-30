@@ -35,22 +35,12 @@ export default function Artist() {
   const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
   const isOverallLoading = isDataLoading || isImagesLoading;
 
-  console.log("Artist Loading States:", {
-    artistLoading,
-    tracksLoading,
-    isDataLoading,
-    isImagesLoading,
-    isOverallLoading,
-    imagesToPreload: imagesToPreload.length,
-    allImagesLoaded,
-  });
-
   // ВАЖНО: Показываем скелетоны если ЧТО-ТО еще загружается
   if (isOverallLoading) {
     return (
       <div className="h-screen w-full mainMenu pl-[22vw] pr-[2vw] flex flex-col gap-5">
         <Header artist={{} as Artist} isLoading={true} />
-        <MainMenu isLoading={true} />
+        <MainMenu isLoading={true} artist={{} as Artist} />
       </div>
     );
   }
@@ -145,12 +135,13 @@ export default function Artist() {
 
   // Основное содержимое - ВСЁ загружено (данные + изображения)
   return (
-    <div className="w-full mainMenu pl-[22vw] pr-[2vw] flex flex-col gap-5">
+    <div className="w-full pl-[22vw] pr-[2vw] flex flex-col gap-5">
       <Header artist={artist} isLoading={false} />
       <MainMenu
         isLoading={false}
         tracks={tracks}
         tracksError={tracksError}
+        artist={artist}
       />
     </div>
   );

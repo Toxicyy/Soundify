@@ -40,7 +40,7 @@ const Header: FC<HeaderProps> = ({ artist, isLoading }) => {
               <div className="flex items-center gap-2 mb-2">
                 <VerifiedBadge size={30} />
                 <p className="text-lg font-medium text-white">
-                  Подтвержденный исполнитель
+                  Confirmed artist
                 </p>
               </div>
             )
@@ -66,7 +66,7 @@ const Header: FC<HeaderProps> = ({ artist, isLoading }) => {
             </div>
           ) : (
             <h1 className="text-lg font-medium text-white">
-              {artist.followerCount?.toLocaleString()} подписчиков
+              {artist.followerCount?.toLocaleString()} followers
             </h1>
           )}
         </div>
