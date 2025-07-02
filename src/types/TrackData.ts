@@ -4,6 +4,7 @@ export type TrackData = {
   artist: { _id: string; name: string };
   cover: File | null;
   audio: File | null;
+  album: { _id: string; name: string } | "single" ;
   preview: string | null;
   duration: number;
   genre: string | null;

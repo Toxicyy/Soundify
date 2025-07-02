@@ -25,6 +25,10 @@ export default function TrackQueue() {
     return () => window.removeEventListener("resize", updateWidth);
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    console.log(trackQueue)
+  }, [trackQueue]);
+
   function pageWidth() {
     return (
       (document.documentElement.clientWidth - (isMenuOpen ? 230 : 70)) * 0.47
@@ -38,6 +42,7 @@ export default function TrackQueue() {
       // Основные поля
       formData.append("name", track.name);
       formData.append("artist", track.artist._id);
+      formData.append("album", track.album?._id || "single"); // Привязка к альбому
       formData.append("audio", track.audio);
       formData.append("cover", track.cover);
       formData.append("duration", track.duration.toString());
@@ -52,30 +57,11 @@ export default function TrackQueue() {
       const coverSize = track.cover?.size || 0;
       const totalSize = audioSize + coverSize;
 
-      console.log(
-        `📊 [DEBUG] Размеры файлов - Audio: ${(audioSize / 1024 / 1024).toFixed(
-          2
-        )}MB, Cover: ${(coverSize / 1024).toFixed(2)}KB, Total: ${(
-          totalSize /
-          1024 /
-          1024
-        ).toFixed(2)}MB`
-      );
-
       const xhr = new XMLHttpRequest();
       let uploadPhase = "uploading"; // 'uploading' -> 'processing'
 
       // Отслеживание прогресса загрузки
       xhr.upload.addEventListener("progress", (event) => {
-        console.log(`📊 [DEBUG] Progress event:`, {
-          lengthComputable: event.lengthComputable,
-          loaded: event.loaded,
-          total: event.total,
-          percent: event.lengthComputable
-            ? ((event.loaded / event.total) * 100).toFixed(2)
-            : "unknown",
-        });
-
         if (event.lengthComputable) {
           const uploadPercentComplete = (event.loaded / event.total) * 100;
 
@@ -162,7 +148,12 @@ export default function TrackQueue() {
 
             // Небольшая задержка для визуального эффекта
             setTimeout(() => {
-              resolve(response);
+              // Возвращаем response с trackId и информацией об альбоме
+              resolve({
+                ...response,
+                trackId: response.data._id, // ID созданного трека
+                albumId: track.album?._id, // ID альбома для добавления
+              });
             }, 500);
           } catch (error) {
             console.error(
@@ -249,17 +240,108 @@ export default function TrackQueue() {
     });
   };
 
+  // Функция для добавления треков в альбомы (обновление массива tracks в альбоме)
+  const addTracksToAlbums = async (trackResults: any[]) => {
+    // Группируем треки по альбомам
+    const albumGroups = trackResults.reduce((groups, result) => {
+      if (result.albumId && result.trackId) {
+        if (!groups[result.albumId]) {
+          groups[result.albumId] = [];
+        }
+        groups[result.albumId].push(result.trackId);
+      }
+      return groups;
+    }, {} as Record<string, string[]>);
+
+    // Добавляем треки в каждый альбом через $push операцию
+    const albumPromises = Object.entries(albumGroups).map(
+      async ([albumId, trackIds]) => {
+        try {
+          // Сначала получаем текущие треки альбома
+          const albumResponse = await fetch(
+            `http://localhost:5000/api/albums/${albumId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+
+          if (!albumResponse.ok) {
+            throw new Error(
+              `Failed to fetch album ${albumId}: ${albumResponse.status}`
+            );
+          }
+
+          const albumData = await albumResponse.json();
+          const currentTracks = Array.isArray(albumData.data?.tracks)
+            ? albumData.data.tracks
+            : [];
+
+          // Проверяем, что trackIds - это массив
+          const safeTrackIds = Array.isArray(trackIds) ? trackIds : [];
+
+          // Объединяем существующие треки с новыми (только уникальные ID)
+          const existingTrackIds = currentTracks.map((track: any) =>
+            typeof track === "string" ? track : track._id || track.id
+          );
+          const newTrackIds = safeTrackIds.filter(
+            (id: string) => !existingTrackIds.includes(id)
+          );
+          const updatedTracks = [...existingTrackIds, ...newTrackIds];
+
+          const response = await fetch(
+            `http://localhost:5000/api/albums/${albumId}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: JSON.stringify({
+                tracks: updatedTracks, // Отправляем полный обновленный массив
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to update album ${albumId}: ${response.status}`
+            );
+          }
+
+          const data = await response.json();
+          console.log(
+            `✅ [DEBUG] Successfully added tracks to album ${albumId}`,
+            data
+          );
+          return { albumId, success: true, trackIds };
+        } catch (error) {
+          console.error(
+            `❌ [DEBUG] Failed to add tracks to album ${albumId}:`,
+            error
+          );
+          return { albumId, success: false, error: error, trackIds };
+        }
+      }
+    );
+
+    return Promise.all(albumPromises);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let successCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
+    const trackResults: any[] = []; // Для хранения результатов загрузки
 
     setFetching(true);
     setUploadProgress(0);
     setCurrentTrackProgress(0);
 
+    // Фаза 1: Загрузка треков
     for (let i = 0; i < trackQueue.length; i++) {
       const track = trackQueue[i];
 
@@ -284,13 +366,14 @@ export default function TrackQueue() {
           track.name
         );
 
-        const data = await uploadSingleTrack(track, i);
+        const result = await uploadSingleTrack(track, i);
+        trackResults.push(result);
 
-        console.log("Track uploaded successfully:", data);
+        console.log("Track uploaded successfully:", result);
         successCount++;
 
         // Устанавливаем прогресс для завершенного трека
-        setUploadProgress(((i + 1) / trackQueue.length) * 100);
+        setUploadProgress(((i + 1) / trackQueue.length) * 90); // 90% для загрузки треков
         setCurrentTrackProgress(0);
       } catch (err: any) {
         console.error("Upload error:", err);
@@ -298,13 +381,45 @@ export default function TrackQueue() {
         errors.push(`${track.name}: ${err.message}`);
 
         // Даже при ошибке обновляем прогресс
-        setUploadProgress(((i + 1) / trackQueue.length) * 100);
+        setUploadProgress(((i + 1) / trackQueue.length) * 90);
         setCurrentTrackProgress(0);
       }
 
       // Небольшая пауза между загрузками
       if (i < trackQueue.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    // Фаза 2: Добавление треков в альбомы (обновление массива tracks)
+    if (trackResults.length > 0) {
+      setCurrentUpload("Updating album track lists...");
+      setCurrentTrackProgress(0);
+
+      try {
+        const albumResults = await addTracksToAlbums(trackResults);
+
+        // Подсчет успешных и неуспешных операций с альбомами
+        const successfulAlbums = albumResults.filter((r) => r.success).length;
+        const failedAlbums = albumResults.filter((r) => !r.success).length;
+
+        console.log(
+          `📀 [DEBUG] Album track list updates completed: ${successfulAlbums} successful, ${failedAlbums} failed`
+        );
+
+        if (failedAlbums > 0) {
+          const albumErrors = albumResults
+            .filter((r) => !r.success)
+            .map((r) => `Album ${r.albumId}: ${r.error}`)
+            .join(", ");
+          errors.push(`Album track list update errors: ${albumErrors}`);
+        }
+
+        setUploadProgress(100);
+        setCurrentTrackProgress(100);
+      } catch (error) {
+        console.error("❌ [DEBUG] Error updating album track lists:", error);
+        errors.push(`Album track list update failed: ${error}`);
       }
     }
 
@@ -326,11 +441,11 @@ export default function TrackQueue() {
     // Итоговое уведомление
     if (successCount > 0 && errorCount === 0) {
       alert(
-        `🎉 All ${successCount} tracks uploaded successfully as HLS streams!`
+        `🎉 All ${successCount} tracks uploaded successfully and linked to albums!`
       );
     } else if (successCount > 0 && errorCount > 0) {
       alert(
-        `⚠️ Uploaded ${successCount} tracks, but ${errorCount} failed. Check console for details.`
+        `⚠️ Uploaded ${successCount} tracks, but encountered ${errorCount} errors. Check console for details.`
       );
     } else {
       alert(`❌ All uploads failed. Check console for details.`);

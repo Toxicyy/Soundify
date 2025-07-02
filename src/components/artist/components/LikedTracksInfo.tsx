@@ -11,8 +11,8 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({ artist }) => {
   const { count } = useArtistLikedTracksCount(artist._id);
   return (
     <div className="flex flex-col h-full">
-      <h1 className="text-white text-3xl font-bold">Liked Tracks</h1>
-      <div className="flex">
+      <h1 className="text-white text-3xl font-bold mb-3">Liked Tracks</h1>
+      <div className="flex hover:scale-[1.005] transition-all duration-300">
         <Link to={"/liked"}>
           <img
             src={artist?.avatar}

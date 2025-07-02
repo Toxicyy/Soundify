@@ -5,6 +5,7 @@ import TracksList from "./components/TrackList";
 import LikedTracksInfo from "./components/LikedTracksInfo";
 import type { Artist } from "../../types/ArtistData";
 import MusicList from "./components/MusicList";
+import ArtistInfo from "./components/ArtistInfo";
 
 type MainMenuProps = {
   isLoading?: boolean;
@@ -79,8 +80,11 @@ const MainMenu: FC<MainMenuProps> = ({
       <div className="px-6 py-3">
         <LikedTracksInfo artist={artist} />
       </div>
-      <div className="px-6 py-10">
+      <div className="px-6 py-5">
         <MusicList tracks={tracks} />
+      </div>
+      <div className="px-6 py-5 mb-5">
+        <ArtistInfo artist={artist} />
       </div>
     </div>
   );

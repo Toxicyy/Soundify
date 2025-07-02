@@ -29,6 +29,7 @@ const upload = multer({
 
 // Экспортируем конкретные middleware функции
 export const uploadAvatar = upload.single("avatar");
+export const uploadCover = upload.single("cover");
 export const uploadTrackFiles = upload.fields([
   { name: "audio", maxCount: 1 },
   { name: "cover", maxCount: 1 },

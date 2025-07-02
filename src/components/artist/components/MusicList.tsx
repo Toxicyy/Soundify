@@ -52,7 +52,7 @@ const MusicList: FC<MusicListProps> = ({ tracks, albums = [] }) => {
       <h1 className="text-white text-3xl font-bold mb-4">Music</h1>
 
       {/* Табы */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-6 px-2">
         <button
           className={`${
             currentTab === "singles"
@@ -81,7 +81,7 @@ const MusicList: FC<MusicListProps> = ({ tracks, albums = [] }) => {
         {showLeftArrow && currentItems.length > 0 && (
           <button
             onClick={scrollLeft}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 cursor-pointer"
           >
             <LeftOutlined />
           </button>
@@ -91,7 +91,7 @@ const MusicList: FC<MusicListProps> = ({ tracks, albums = [] }) => {
         {showRightArrow && currentItems.length > 0 && (
           <button
             onClick={scrollRight}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 cursor-pointer"
           >
             <RightOutlined />
           </button>
@@ -100,7 +100,7 @@ const MusicList: FC<MusicListProps> = ({ tracks, albums = [] }) => {
         {/* Скроллируемый контейнер */}
         <div
           ref={scrollContainerRef}
-          className="albums-scroll-light overflow-x-auto pb-4"
+          className="albums-scroll-light overflow-x-auto pb-4 py-2"
           onScroll={handleScroll}
         >
           <div className="flex gap-5 min-w-max px-2">

@@ -244,19 +244,22 @@ export default function AddArtist() {
           </div>
         </div>
 
-        <Space style={{ width: "100%" }} direction="vertical">
-          <Select
-            mode="multiple"
-            allowClear
-            style={{ width: "100%" }}
-            placeholder="Please select"
-            onChange={handleChange}
-            options={options}
-            status={!inputErrors.bio ? "" : "error"}
-            value={currentArtist.genres}
-            maxCount={5}
-          />
-        </Space>
+        <div>
+          <h1 className="text-sm text-gray-500">Genre</h1>
+          <Space style={{ width: "100%" }} direction="vertical">
+            <Select
+              mode="multiple"
+              allowClear
+              style={{ width: "100%" }}
+              placeholder="Please select"
+              onChange={handleChange}
+              options={options}
+              status={!inputErrors.bio ? "" : "error"}
+              value={currentArtist.genres}
+              maxCount={5}
+            />
+          </Space>
+        </div>
 
         <div className="flex flex-col gap-3">
           <span className="text-sm text-gray-500">Social links (optional)</span>

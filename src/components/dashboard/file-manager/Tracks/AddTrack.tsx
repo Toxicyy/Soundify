@@ -13,6 +13,8 @@ import type { Artist } from "../../../../types/ArtistData";
 import type { TrackData } from "../../../../types/TrackData";
 import SelectArtist from "./SelectArtist";
 import { useAudioDurationFromFile } from "../../../../hooks/useAudioDuration";
+import SelectAlbum from "./SelectAlbum";
+import { current } from "@reduxjs/toolkit";
 
 export default function AddTrack() {
   const isMenuOpen = useSelector(
@@ -28,11 +30,12 @@ export default function AddTrack() {
     chunks: Blob[];
   }>({ file: null, chunks: [] });
   const [currentTrack, setCurrentTrack] = useState<TrackData>({
-    id: 0,
+    id: "",
     name: "",
     artist: { _id: "", name: "" },
     cover: null,
     audio: null,
+    album: "single",
     preview: null,
     duration: 0,
     genre: null,
@@ -91,6 +94,9 @@ export default function AddTrack() {
     setCurrentTrack((prev) => ({ ...prev, audio: file }));
   };
 
+  const handleAlbumSelect = (album: { _id: string; name: string }) => {
+    setCurrentTrack((prev) => ({ ...prev, album: album }));
+  };
   const removeCover = () => {
     setCoverImage(null);
     setCurrentTrack((prev) => ({ ...prev, cover: null }));
@@ -123,7 +129,7 @@ export default function AddTrack() {
       return;
     }
 
-    currentTrack.id = 0;
+    currentTrack.id = "";
     try {
       currentTrack.duration = Math.floor(
         await useAudioDurationFromFile(currentTrack.audio!)
@@ -140,11 +146,12 @@ export default function AddTrack() {
 
     // Reset form
     setCurrentTrack({
-      id: 0,
+      id: "",
       name: "",
       artist: { _id: "", name: "" },
       cover: null,
       audio: null,
+      album: "single",
       preview: null,
       duration: 0,
       genre: null,
@@ -218,6 +225,13 @@ export default function AddTrack() {
           <GenreSelect
             value={currentTrack.genre}
             onChange={handleGenreSelect}
+          />
+        </div>
+        <div>
+          <span className="text-sm text-gray-500">Album</span>
+          <SelectAlbum
+            onSelect={handleAlbumSelect}
+            artist={currentTrack?.artist}
           />
         </div>
         <div className="px-5 py-5 bg-[#F4F4F4] rounded-3xl">

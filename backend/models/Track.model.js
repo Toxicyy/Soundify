@@ -15,7 +15,7 @@ const trackSchema = new mongoose.Schema(
       trim: true,
     },
     album: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: "Album",
       default: null,
     },
@@ -23,9 +23,19 @@ const trackSchema = new mongoose.Schema(
       type: String,
       required: [true, "URL аудио файла обязателен"],
     },
+    audioFileId: {
+      type: String,
+      // Not required for backward compatibility
+      // Will be populated by migration script
+    },
     coverUrl: {
       type: String,
       required: [true, "URL обложки обязателен"],
+    },
+    coverFileId: {
+      type: String,
+      // Not required for backward compatibility
+      // Will be populated by migration script
     },
     duration: {
       type: Number,
@@ -64,6 +74,11 @@ const trackSchema = new mongoose.Schema(
     hlsSegments: [
       {
         type: String, // URLs сегментов
+      },
+    ],
+    hlsSegmentFileIds: [
+      {
+        type: String, // BackBlaze B2 file IDs for HLS segments
       },
     ],
     audioQuality: {

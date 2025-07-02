@@ -10,7 +10,10 @@ export const audioQueueSlice = createSlice({
   name: "audioQueue",
   initialState: initialState,
   reducers: {
-    addToQueueState: (state, action: { payload: Omit <TrackData, "id"> & { id: number } }) => {
+    addToQueueState: (
+      state,
+      action: { payload: Omit<TrackData, "id"> & { id: string } }
+    ) => {
       action.payload.id = state.queue.length + 1;
       state.queue.push(action.payload);
     },

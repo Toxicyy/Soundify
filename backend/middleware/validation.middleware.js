@@ -1,6 +1,7 @@
 import { body, validationResult } from "express-validator";
 import { ApiResponse } from "../utils/responses.js";
 import Artist from "../models/Artist.model.js";
+import Album from "../models/Album.model.js";
 
 export const validateTrackCreation = [
   body("name")
@@ -330,6 +331,237 @@ export const validateArtistUpdate = [
       return res
         .status(400)
         .json(ApiResponse.error("Ошибки валидации", errors.array()));
+    }
+    next();
+  },
+];
+
+export const validateAlbumCreation = [
+  // Add JSON parsing at the beginning of middleware chain
+  parseFormDataJSON,
+
+  // Album name validation
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Album name is required")
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Album name must be between 1 and 100 characters")
+    .custom(async (value, { req }) => {
+      // Check name uniqueness for the same artist
+      if (req.body.artist) {
+        const existingAlbum = await Album.findOne({
+          name: new RegExp(`^${value}$`, "i"),
+          artist: req.body.artist,
+        });
+        if (existingAlbum) {
+          throw new Error(
+            "Album with this name already exists for this artist"
+          );
+        }
+      }
+      return true;
+    }),
+
+  // Artist validation
+  body("artist")
+    .trim()
+    .notEmpty()
+    .withMessage("Artist is required")
+    .isMongoId()
+    .withMessage("Invalid artist ID")
+    .custom(async (value) => {
+      // Check if artist exists
+      const artist = await Artist.findById(value);
+      if (!artist) {
+        throw new Error("Artist not found");
+      }
+      return true;
+    }),
+
+  // Description validation (optional)
+  body("description")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Description cannot be longer than 1000 characters"),
+
+  // Genre validation
+  body("genre")
+    .trim()
+    .notEmpty()
+    .withMessage("Genre is required")
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Genre must be between 2 and 50 characters"),
+
+  // Album type validation
+  body("type")
+    .optional()
+    .isIn(["album", "ep", "single"])
+    .withMessage("Type must be album, ep, or single"),
+
+  // Release date validation (optional)
+  body("releaseDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid release date format"),
+
+  // Tracks validation (optional, for future use)
+  body("tracks").optional().isArray().withMessage("Tracks must be an array"),
+
+  body("tracks.*")
+    .optional()
+    .isMongoId()
+    .withMessage("Each track must be a valid MongoDB ID"),
+
+  // Cover file validation middleware
+  (req, res, next) => {
+    // Cover is required for album creation
+    if (!req.file) {
+      return res.status(400).json(ApiResponse.error("Album cover is required"));
+    }
+
+    const allowedImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedImageTypes.includes(req.file.mimetype)) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Unsupported image format"));
+    }
+
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (req.file.size > maxSize) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Image size must not exceed 10MB"));
+    }
+
+    next();
+  },
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];
+
+// Album update validation
+export const validateAlbumUpdate = [
+  // Add JSON parsing
+  parseFormDataJSON,
+
+  // All fields are optional for updates
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Album name cannot be empty")
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Album name must be between 1 and 100 characters")
+    .custom(async (value, { req }) => {
+      // Check uniqueness excluding current album
+      if (req.body.artist) {
+        const existingAlbum = await Album.findOne({
+          name: new RegExp(`^${value}$`, "i"),
+          artist: req.body.artist,
+          _id: { $ne: req.params.id },
+        });
+        if (existingAlbum) {
+          throw new Error(
+            "Album with this name already exists for this artist"
+          );
+        }
+      }
+      return true;
+    }),
+
+  body("artist")
+    .optional()
+    .trim()
+    .isMongoId()
+    .withMessage("Invalid artist ID")
+    .custom(async (value) => {
+      const artist = await Artist.findById(value);
+      if (!artist) {
+        throw new Error("Artist not found");
+      }
+      return true;
+    }),
+
+  body("description")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Description cannot be longer than 1000 characters"),
+
+  body("genre")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Genre must be between 2 and 50 characters"),
+
+  body("type")
+    .optional()
+    .isIn(["album", "ep", "single"])
+    .withMessage("Type must be album, ep, or single"),
+
+  body("releaseDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid release date format"),
+
+  body("tracks").optional().isArray().withMessage("Tracks must be an array"),
+
+  body("tracks.*")
+    .optional()
+    .isMongoId()
+    .withMessage("Each track must be a valid MongoDB ID"),
+
+  // Cover file validation middleware for updates
+  (req, res, next) => {
+    if (req.file) {
+      const allowedImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Unsupported image format"));
+      }
+
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (req.file.size > maxSize) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Image size must not exceed 10MB"));
+      }
+    }
+    next();
+  },
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },

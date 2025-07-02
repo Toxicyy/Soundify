@@ -11,13 +11,13 @@ const SingleTemplate: FC<SingleTemplateProps> = ({ track, index }) => {
     return date.getFullYear();
   }
   return (
-    <div>
+    <div className="max-w-[160px] hover:scale-105 transition-all duration-300">
       <img
         src={track.coverUrl}
         alt={track.name}
-        className="w-[160px] h-[160px] border-2 border-black mb-1"
+        className="w-[160px] h-[160px] mb-1 rounded-lg"
       />
-      <h1 className="text-lg text-white">{track.name}</h1>
+      <h1 className="text-lg text-white truncate">{track.name}</h1>
       <div className="flex items-center text-white/60 gap-2">
         <h1>
           {index === 0 ? (

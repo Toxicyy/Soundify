@@ -41,9 +41,30 @@ class TrackService {
     }
   }
 
+  /**
+   * Extract file ID from BackBlaze B2 URL for file management
+   */
+  extractFileIdFromUrl(url) {
+    if (!url) return null;
+
+    try {
+      const urlParts = url.split("/");
+      const fileIndex = urlParts.indexOf("file");
+
+      if (fileIndex === -1 || fileIndex + 2 >= urlParts.length) {
+        return null;
+      }
+
+      const pathParts = urlParts.slice(fileIndex + 2);
+      return pathParts.join("/");
+    } catch (error) {
+      return null;
+    }
+  }
+
   // Create track with HLS streaming conversion
   async createTrackWithHLS(trackData, files, userId) {
-    const { name, artist, genre, tags } = trackData;
+    const { name, artist, genre, tags, album } = trackData;
 
     if (!files?.audio || !files?.cover) {
       throw new Error("Audio file and cover image are required");
@@ -96,13 +117,19 @@ class TrackService {
       // Calculate duration from playlist
       const duration = this.calculatePlaylistDuration(hlsData.playlist);
 
-      // Create track record
+      // Create track record with file IDs
       const track = new Track({
         name: name.trim(),
         artist: artist.trim(),
+        album: album.trim(),
         audioUrl: playlistUpload.url,
+        audioFileId: this.extractFileIdFromUrl(playlistUpload.url),
         hlsSegments: segmentUploads.map((upload) => upload.url),
+        hlsSegmentFileIds: segmentUploads
+          .map((upload) => this.extractFileIdFromUrl(upload.url))
+          .filter((id) => id !== null),
         coverUrl: coverUpload.url,
+        coverFileId: this.extractFileIdFromUrl(coverUpload.url),
         genre: genre?.trim(),
         tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
         duration: Math.round(duration),
@@ -396,9 +423,13 @@ class TrackService {
         hlsFolder
       );
 
-      // Update track
+      // Update track with file IDs
       track.audioUrl = playlistUpload.url;
+      track.audioFileId = this.extractFileIdFromUrl(playlistUpload.url);
       track.hlsSegments = segmentUploads.map((upload) => upload.url);
+      track.hlsSegmentFileIds = segmentUploads
+        .map((upload) => this.extractFileIdFromUrl(upload.url))
+        .filter((id) => id !== null);
       track.isHLS = true;
       track.audioQuality = "128k";
 
@@ -413,6 +444,10 @@ class TrackService {
     }
   }
 
+  /**
+   * Delete track and associated files from BackBlaze B2
+   * Now properly handles file cleanup using fileIds
+   */
   async deleteTrack(trackId, userId) {
     try {
       const track = await Track.findById(trackId);
@@ -426,10 +461,86 @@ class TrackService {
         return false;
       }
 
+      // Delete files from BackBlaze B2 if fileIds exist
+      const filesToDelete = [];
+
+      if (track.audioFileId) {
+        filesToDelete.push(track.audioFileId);
+      }
+
+      if (track.coverFileId) {
+        filesToDelete.push(track.coverFileId);
+      }
+
+      if (track.hlsSegmentFileIds && track.hlsSegmentFileIds.length > 0) {
+        filesToDelete.push(...track.hlsSegmentFileIds);
+      }
+
+      // Delete files from B2 (silently fail if deletion fails)
+      if (filesToDelete.length > 0) {
+        try {
+          await this.deleteFilesFromB2(filesToDelete);
+        } catch (error) {
+          console.warn(
+            `Warning: Failed to delete some files from B2:`,
+            error.message
+          );
+          // Continue with database deletion even if file deletion fails
+        }
+      }
+
+      // Delete track from database
       await Track.findByIdAndDelete(trackId);
       return true;
     } catch (error) {
       throw new Error(`Track deletion failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete files from BackBlaze B2 using file IDs
+   */
+  async deleteFilesFromB2(fileIds) {
+    try {
+      const b2 = new B2({
+        applicationKeyId: config.b2.accountId,
+        applicationKey: config.b2.secretKey,
+      });
+
+      await b2.authorize();
+
+      // Delete files in batches to avoid rate limiting
+      const batchSize = 5;
+      for (let i = 0; i < fileIds.length; i += batchSize) {
+        const batch = fileIds.slice(i, i + batchSize);
+
+        await Promise.allSettled(
+          batch.map(async (fileId) => {
+            try {
+              // Get file info first
+              const fileInfo = await b2.getFileInfo({ fileId });
+
+              // Delete the file
+              await b2.deleteFileVersion({
+                fileId: fileId,
+                fileName: fileInfo.data.fileName,
+              });
+
+              console.log(`Deleted file: ${fileInfo.data.fileName}`);
+            } catch (error) {
+              console.warn(`Failed to delete file ${fileId}:`, error.message);
+              // Continue with other files
+            }
+          })
+        );
+
+        // Small delay between batches
+        if (i + batchSize < fileIds.length) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+    } catch (error) {
+      throw new Error(`B2 file deletion failed: ${error.message}`);
     }
   }
 
