@@ -4,6 +4,8 @@ import Album from "../models/Album.model.js";
 import { uploadToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import TrackService from "./TrackService.js";
+import mongoose from "mongoose";
+import AlbumService from "./AlbumService.js";
 
 class ArtistService {
   async createArtist(artistData, avatarFile) {
@@ -227,11 +229,21 @@ class ArtistService {
       const sort = { [sortBy]: sortOrder };
 
       const tracks = await Track.find({ artist: artistId })
-        .populate("album", "name coverUrl")
         .populate("artist", "name")
         .sort(sort)
         .skip(skip)
         .limit(limit);
+
+      // Populate только для треков с ObjectId в поле album
+      for (let track of tracks) {
+        if (
+          track.album &&
+          track.album !== "single" &&
+          mongoose.Types.ObjectId.isValid(track.album)
+        ) {
+          await track.populate("album", "name coverUrl");
+        }
+      }
       const total = await Track.countDocuments({ artist: artistId });
       const totalPages = Math.ceil(total / limit);
 
@@ -265,9 +277,10 @@ class ArtistService {
 
       const total = await Album.countDocuments({ artist: artistId });
       const totalPages = Math.ceil(total / limit);
+      const albumsWithSignedUrls = await AlbumService.addSignedUrlsToAlbums(albums);
 
       return {
-        albums,
+        albumsWithSignedUrls,
         pagination: {
           currentPage: page,
           totalPages,

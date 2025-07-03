@@ -1,79 +1,49 @@
 import { useLocation } from "react-router-dom";
 import { memo } from "react";
-import Header from "../components/artist/Header";
-import MainMenu from "../components/artist/MainMenu";
-import type { Artist } from "../types/ArtistData";
-import { useArtistData } from "../hooks/useArtistData";
-import { useArtistTracks } from "../hooks/useArtistTracks";
-import { useArtistAlbums } from "../hooks/useArtistAlbums";
+import Header from "../components/Album/Header";
+import MainMenu from "../components/Album/MainMenu";
+import { useAlbumTracks } from "../hooks/useAlbumTracks";
 import { useImagePreloader } from "../hooks/useImagePreloader";
 
 /**
- * Artist page component displaying artist information, tracks, and albums
- * Provides comprehensive artist profile with responsive design and error handling
+ * Album page component displaying album information and tracks
+ * Handles loading states, error management, and responsive layout
  */
-const Artist = () => {
+const Album = () => {
   const location = useLocation();
 
-  // Extract artist ID from URL path
-  const artistId = location.pathname.split("/artist/")[1];
+  // Extract album ID from URL path
+  const albumId = location.pathname.split("/album/")[1];
 
-  // Fetch artist data
-  const {
-    data: artist,
-    loading: artistLoading,
-    error: artistError,
-    refetch: refetchArtist,
-  } = useArtistData(artistId || "");
+  // Fetch album data and tracks with pagination
+  const { album, tracks, isLoading, error } = useAlbumTracks(albumId, {
+    limit: 30,
+  });
 
-  // Fetch artist tracks
-  const {
-    tracks,
-    loading: tracksLoading,
-    error: tracksError,
-  } = useArtistTracks(artist?._id || "");
-
-  // Fetch artist albums
-  const { albums, isLoading: albumsLoading } = useArtistAlbums(
-    artist?._id || "",
-    {
-      page: 1,
-      limit: 20,
-    }
-  );
-
-  // Preload all images for better UX
+  // Preload images for better UX
   const imagesToPreload = [
-    artist?.avatar,
+    album?.coverUrl,
     ...tracks.map((track) => track.coverUrl),
-    ...albums.map((album) => album.coverUrl),
   ].filter(Boolean) as string[];
 
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
-  // Determine overall loading state
-  const isDataLoading = artistLoading || tracksLoading || albumsLoading;
-  const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
-  const isOverallLoading = isDataLoading || isImagesLoading;
+  // Determine overall loading state (data + images)
+  const isOverallLoading =
+    isLoading || (!allImagesLoaded && imagesToPreload.length > 0);
 
-  // Show loading state while any data or images are loading
+  // Show loading state while data or images are loading
   if (isOverallLoading) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
-        <Header artist={{} as Artist} isLoading={true} />
-        <MainMenu
-          isLoading={true}
-          artist={{} as Artist}
-          albums={[]}
-          tracks={[]}
-          tracksError={null}
-        />
+        <Header tracks={[]} album={{} as any} isLoading={true} />
+        <MainMenu tracks={[]} isLoading={true} />
       </div>
     );
   }
 
-  // Show error state if artist loading failed
-  if (artistError) {
+  // Show error state if album loading failed
+  if (error) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6 text-center max-w-md">
@@ -96,27 +66,25 @@ const Artist = () => {
 
           <div>
             <h2 className="text-white text-xl font-semibold mb-2">
-              {artistError.includes("не найден") ||
-              artistError.includes("not found")
-                ? "Artist not found"
+              {error.includes("not found")
+                ? "Album not found"
                 : "Loading error"}
             </h2>
             <p className="text-white/70 text-sm mb-1">
-              {artistError.includes("не найден") ||
-              artistError.includes("not found")
-                ? `Artist with ID "${artistId}" doesn't exist or has been removed`
-                : artistError}
+              {error.includes("not found")
+                ? `Album with ID "${albumId}" doesn't exist or has been removed`
+                : error}
             </p>
             <p className="text-white/50 text-xs">
-              Please check the URL or try searching for the artist
+              Please check the URL or try searching for the album
             </p>
           </div>
 
           <div className="flex gap-3 flex-wrap justify-center">
             <button
-              onClick={refetchArtist}
+              onClick={() => window.location.reload()}
               className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-white/20"
-              aria-label="Retry loading artist"
+              aria-label="Retry loading album"
             >
               <svg
                 className="w-4 h-4"
@@ -148,16 +116,16 @@ const Artist = () => {
     );
   }
 
-  // Show message if no artist data available
-  if (!artist) {
+  // Show message if no album data available
+  if (!album || !album.name) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="text-white/60 text-lg">Artist data unavailable</div>
+          <div className="text-white/60 text-lg">Album data unavailable</div>
           <button
-            onClick={refetchArtist}
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/20"
-            aria-label="Refresh artist data"
+            aria-label="Refresh page"
           >
             Refresh
           </button>
@@ -169,16 +137,10 @@ const Artist = () => {
   // Main content render - all data loaded successfully
   return (
     <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
-      <Header artist={artist} isLoading={false} />
-      <MainMenu
-        isLoading={false}
-        tracks={tracks}
-        tracksError={tracksError}
-        artist={artist}
-        albums={albums}
-      />
+      <Header tracks={tracks} album={album} isLoading={false} />
+      <MainMenu tracks={tracks} isLoading={false} />
     </main>
   );
 };
 
-export default memo(Artist);
+export default memo(Album);

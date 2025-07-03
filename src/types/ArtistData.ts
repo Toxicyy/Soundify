@@ -15,6 +15,7 @@ export type Artist = {
   name: string;
   bio: string;
   avatar: string; // URL строка, а не File
+  albums: {name: string, coverUrl: string, _id: string}[];
   genres: string[];
   slug: string;
   isVerified: boolean;

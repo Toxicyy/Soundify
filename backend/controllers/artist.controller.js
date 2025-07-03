@@ -90,7 +90,7 @@ export const getArtistAlbums = catchAsync(async (req, res) => {
   res.json(
     ApiResponse.paginated(
       "Альбомы артиста успешно получены",
-      result.albums,
+      result.albumsWithSignedUrls,
       result.pagination
     )
   );

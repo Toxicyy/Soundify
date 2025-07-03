@@ -9,6 +9,8 @@ import AddArtistPage from "./Pages/Dashboard/FileManage/AddArtistPage";
 import MainMenu from "./components/mainPage/mainMenu/MainMenu";
 import LikedSongs from "./Pages/LikedSongs";
 import Artist from "./Pages/Artist";
+import Album from "./Pages/Album";
+import Single from "./Pages/Single";
 
 export const router = createBrowserRouter([
   {
@@ -47,7 +49,15 @@ export const router = createBrowserRouter([
             path: "/artist/:id",
             element: <Artist />,
           },
-        ]
+          {
+            path: "/album/:id",
+            element: <Album />,
+          },
+          {
+            path: "/single/:id",
+            element: <Single />,
+          }
+        ],
       },
       {
         path: "/signup",

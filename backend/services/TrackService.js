@@ -274,7 +274,7 @@ class TrackService {
       const track = await Track.findById(trackId).populate(
         "uploadedBy",
         "name username avatar"
-      );
+      ).populate("artist", "name");
 
       if (!track) {
         throw new Error("Track not found");

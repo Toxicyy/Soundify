@@ -1,5 +1,6 @@
 import Album from "../models/Album.model.js";
 import Track from "../models/Track.model.js";
+import Artist from "../models/Artist.model.js";
 import TrackService from "./TrackService.js";
 import { uploadToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
@@ -63,8 +64,17 @@ class AlbumService {
         type: type || "album",
       });
 
-      await newAlbum.save();
-      return await this.addSignedUrlsToAlbums(newAlbum);
+      // Сохраняем альбом
+      const savedAlbum = await newAlbum.save();
+
+      // Обновляем поле albums у артиста
+      await Artist.findByIdAndUpdate(
+        artist.trim(),
+        { $push: { albums: savedAlbum._id } },
+        { new: true }
+      );
+
+      return await this.addSignedUrlsToAlbums(savedAlbum);
     } catch (error) {
       throw new Error(`Album creation failed: ${error.message}`);
     }
@@ -186,7 +196,12 @@ class AlbumService {
         }
       }
 
+      // Удаляем альбом из массива albums у артиста
+      await Artist.findByIdAndUpdate(album.artist, { $pull: { albums: id } });
+
+      // Удаляем сам альбом
       await Album.findByIdAndDelete(id);
+
       return true;
     } catch (error) {
       throw new Error(`Album deletion failed: ${error.message}`);
@@ -254,7 +269,7 @@ class AlbumService {
     }
 
     try {
-      const album = await Album.findById(albumId);
+      const album = await Album.findById(albumId).populate("artist", "name");
       if (!album) {
         throw new Error("Album not found");
       }
@@ -263,7 +278,7 @@ class AlbumService {
       const sort = { [sortBy]: sortOrder };
 
       const [tracks, total] = await Promise.all([
-        Track.find({ album: albumId })
+        Track.find({ _id: { $in: album.tracks } })
           .populate("artist", "name avatar")
           .sort(sort)
           .skip(skip)
@@ -275,9 +290,25 @@ class AlbumService {
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
         tracks
       );
+      const albumWithSignerUrls = await this.addSignedUrlsToAlbumsSimple([
+        album,
+      ]);
 
       return {
-        tracks: tracksWithSignedUrls,
+        data: {
+          album: {
+            name: albumWithSignerUrls[0].name,
+            coverUrl: albumWithSignerUrls[0].coverUrl,
+            artist: {
+              name: albumWithSignerUrls[0].artist.name
+            },
+          },
+          tracks: tracksWithSignedUrls.map((track) => {
+            const { hlsSegments, hlsSegmentFileIds, ...trackWithoutHls } =
+              track;
+            return trackWithoutHls;
+          }),
+        },
         pagination: {
           currentPage: page,
           totalPages,
@@ -467,18 +498,32 @@ class AlbumService {
 
       const albumsWithSignedUrls = await Promise.all(
         albumsArray.map(async (album) => {
-          const albumObj = album.toObject ? album.toObject() : album;
+          // ИСПРАВЛЕНО: Создаем копию объекта
+          let albumObj;
+          if (album.toObject) {
+            albumObj = album.toObject();
+          } else {
+            albumObj = JSON.parse(JSON.stringify(album)); // Deep copy
+          }
 
           // Generate signed URL for album cover
           if (albumObj.coverUrl) {
             const coverFileName = extractFileName(albumObj.coverUrl);
             if (coverFileName) {
-              const signedCoverUrl = await generateSignedUrl(
-                coverFileName,
-                7200
-              );
-              if (signedCoverUrl) {
-                albumObj.coverUrl = signedCoverUrl;
+              try {
+                const signedCoverUrl = await generateSignedUrl(
+                  coverFileName,
+                  7200
+                );
+                if (signedCoverUrl) {
+                  albumObj.coverUrl = signedCoverUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for album cover ${coverFileName}:`,
+                  urlError.message
+                );
+                // Оставляем оригинальный URL
               }
             }
           }
@@ -487,12 +532,20 @@ class AlbumService {
           if (albumObj.artist && albumObj.artist.avatar) {
             const avatarFileName = extractFileName(albumObj.artist.avatar);
             if (avatarFileName) {
-              const signedAvatarUrl = await generateSignedUrl(
-                avatarFileName,
-                7200
-              );
-              if (signedAvatarUrl) {
-                albumObj.artist.avatar = signedAvatarUrl;
+              try {
+                const signedAvatarUrl = await generateSignedUrl(
+                  avatarFileName,
+                  7200
+                );
+                if (signedAvatarUrl) {
+                  albumObj.artist.avatar = signedAvatarUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for artist avatar ${avatarFileName}:`,
+                  urlError.message
+                );
+                // Оставляем оригинальный URL
               }
             }
           }
@@ -505,17 +558,39 @@ class AlbumService {
     } catch (error) {
       console.error("Error creating signed URLs for albums:", error);
 
-      // Return original albums with cleared coverUrl on error
+      // ИСПРАВЛЕНО: Возвращаем безопасные копии
       const isArray = Array.isArray(albums);
-      return isArray
-        ? albums.map((album) => ({
-            ...(album.toObject ? album.toObject() : album),
-            coverUrl: null,
-          }))
-        : {
-            ...(albums.toObject ? albums.toObject() : albums),
-            coverUrl: null,
-          };
+      const fallbackAlbums = isArray
+        ? albums.map((album) => {
+            const albumObj = album.toObject ? album.toObject() : { ...album };
+            return {
+              ...albumObj,
+              coverUrl: albumObj.coverUrl || null, // Оставляем оригинальный URL
+              artist: albumObj.artist
+                ? {
+                    ...albumObj.artist,
+                    avatar: albumObj.artist.avatar || null,
+                  }
+                : albumObj.artist,
+            };
+          })
+        : (() => {
+            const albumObj = albums.toObject
+              ? albums.toObject()
+              : { ...albums };
+            return {
+              ...albumObj,
+              coverUrl: albumObj.coverUrl || null,
+              artist: albumObj.artist
+                ? {
+                    ...albumObj.artist,
+                    avatar: albumObj.artist.avatar || null,
+                  }
+                : albumObj.artist,
+            };
+          })();
+
+      return fallbackAlbums;
     }
   }
 

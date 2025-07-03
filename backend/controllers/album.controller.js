@@ -152,7 +152,7 @@ export const getAlbumTracks = catchAsync(async (req, res) => {
   res.json(
     ApiResponse.paginated(
       "Album tracks retrieved successfully",
-      result.tracks,
+      result.data,
       result.pagination
     )
   );
