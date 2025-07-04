@@ -25,8 +25,8 @@ export const createAlbum = catchAsync(async (req, res) => {
     artist: req.body.artist,
     description: req.body.description || "",
     releaseDate: req.body.releaseDate,
-    tracks: req.body.tracks,
-    genre: req.body.genre,
+    tracks: req.body.tracks || [],
+    genre: req.body.genre, // Changed from 'genres' to 'genre' to match model
     type: req.body.type || "album",
   };
 
@@ -98,7 +98,7 @@ export const updateAlbum = catchAsync(async (req, res) => {
     description: req.body.description,
     releaseDate: req.body.releaseDate,
     tracks: req.body.tracks,
-    genre: req.body.genre,
+    genre: req.body.genre, // Changed from 'genres' to 'genre' to match model
     type: req.body.type,
   };
 

@@ -4,21 +4,21 @@ import Artist from "../models/Artist.model.js";
 import TrackService from "./TrackService.js";
 import { uploadToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
-import { config } from "../config/config.js";
-import B2 from "backblaze-b2";
+import { extractFileIdFromUrl, deleteFileFromB2 } from "../utils/b2Utils.js";
 
 /**
  * Service for managing albums and their associated data
+ * Handles album CRUD operations, track management, and file operations
  */
 class AlbumService {
   /**
    * Create new album with optional cover image
    * @param {Object} albumData - Album data (name, artist, description, etc.)
    * @param {Object} coverFile - Cover image file from multer
-   * @returns {Object} Created album document
+   * @returns {Promise<Object>} Created album document with signed URLs
    */
   async createAlbum(albumData, coverFile) {
-    const { name, artist, description, releaseDate, tracks, genres, type } =
+    const { name, artist, description, releaseDate, tracks, genre, type } =
       albumData;
 
     if (!name || !artist) {
@@ -32,23 +32,18 @@ class AlbumService {
       // Upload cover image if provided
       if (coverFile) {
         const uploadResult = await uploadToB2(coverFile, "albumCovers");
-        if (typeof uploadResult === "string") {
-          coverUrl = uploadResult;
-          coverFileId = this.extractFileIdFromUrl(uploadResult);
-        } else {
-          coverUrl = uploadResult.url || uploadResult.coverUrl;
-          coverFileId =
-            uploadResult.fileId || this.extractFileIdFromUrl(coverUrl);
-        }
+        coverUrl = uploadResult.url;
+        coverFileId =
+          uploadResult.fileId || extractFileIdFromUrl(uploadResult.url);
       }
 
-      // Parse genres from string or array
-      let parsedGenres = genres;
-      if (typeof genres === "string") {
+      // Parse genre from string or array (note: model uses 'genre' not 'genres')
+      let parsedGenres = genre;
+      if (typeof genre === "string") {
         try {
-          parsedGenres = JSON.parse(genres);
+          parsedGenres = JSON.parse(genre);
         } catch (e) {
-          parsedGenres = genres.split(",").map((g) => g.trim());
+          parsedGenres = genre.split(",").map((g) => g.trim());
         }
       }
 
@@ -64,17 +59,17 @@ class AlbumService {
         type: type || "album",
       });
 
-      // Сохраняем альбом
+      // Save album
       const savedAlbum = await newAlbum.save();
 
-      // Обновляем поле albums у артиста
+      // Update artist's albums array
       await Artist.findByIdAndUpdate(
         artist.trim(),
-        { $push: { albums: savedAlbum._id } },
+        { $addToSet: { albums: savedAlbum._id } }, // Use $addToSet to prevent duplicates
         { new: true }
       );
 
-      return await this.addSignedUrlsToAlbums(savedAlbum);
+      return await this.addSignedUrlsToAlbumsSimple(savedAlbum);
     } catch (error) {
       throw new Error(`Album creation failed: ${error.message}`);
     }
@@ -83,7 +78,7 @@ class AlbumService {
   /**
    * Get album by ID with populated data
    * @param {string} id - Album ID
-   * @returns {Object} Album with signed URLs
+   * @returns {Promise<Object>} Album with signed URLs
    */
   async getAlbumById(id) {
     if (!id) {
@@ -107,7 +102,10 @@ class AlbumService {
 
   /**
    * Update album with optional new cover image
-   * Handles file cleanup for replaced covers
+   * @param {string} id - Album ID
+   * @param {Object} updates - Update data
+   * @param {Object} coverFile - Optional new cover file
+   * @returns {Promise<Object>} Updated album with signed URLs
    */
   async updateAlbum(id, updates, coverFile) {
     if (!id) {
@@ -125,7 +123,7 @@ class AlbumService {
         // Delete old cover file if exists
         if (existingAlbum.coverFileId) {
           try {
-            await this.deleteFileFromB2(existingAlbum.coverFileId);
+            await deleteFileFromB2(existingAlbum.coverFileId);
           } catch (error) {
             console.warn(`Failed to delete old cover file: ${error.message}`);
           }
@@ -133,22 +131,17 @@ class AlbumService {
 
         // Upload new cover
         const uploadResult = await uploadToB2(coverFile, "albumCovers");
-        if (typeof uploadResult === "string") {
-          updates.coverUrl = uploadResult;
-          updates.coverFileId = this.extractFileIdFromUrl(uploadResult);
-        } else {
-          updates.coverUrl = uploadResult.url || uploadResult.coverUrl;
-          updates.coverFileId =
-            uploadResult.fileId || this.extractFileIdFromUrl(updates.coverUrl);
-        }
+        updates.coverUrl = uploadResult.url;
+        updates.coverFileId =
+          uploadResult.fileId || extractFileIdFromUrl(uploadResult.url);
       }
 
-      // Parse genres if provided
-      if (updates.genres && typeof updates.genres === "string") {
+      // Parse genre if provided
+      if (updates.genre && typeof updates.genre === "string") {
         try {
-          updates.genres = JSON.parse(updates.genres);
+          updates.genre = JSON.parse(updates.genre);
         } catch (e) {
-          updates.genres = updates.genres.split(",").map((g) => g.trim());
+          updates.genre = updates.genre.split(",").map((g) => g.trim());
         }
       }
 
@@ -158,7 +151,7 @@ class AlbumService {
         { new: true, runValidators: true }
       ).populate("artist", "name avatar");
 
-      return await this.addSignedUrlsToAlbums(updatedAlbum);
+      return await this.addSignedUrlsToAlbumsSimple(updatedAlbum);
     } catch (error) {
       throw new Error(`Album update failed: ${error.message}`);
     }
@@ -166,7 +159,8 @@ class AlbumService {
 
   /**
    * Delete album and its cover file
-   * Prevents deletion if album has tracks
+   * @param {string} id - Album ID
+   * @returns {Promise<boolean>} Success status
    */
   async deleteAlbum(id) {
     if (!id) {
@@ -190,16 +184,16 @@ class AlbumService {
       // Delete cover file from B2 if exists
       if (album.coverFileId) {
         try {
-          await this.deleteFileFromB2(album.coverFileId);
+          await deleteFileFromB2(album.coverFileId);
         } catch (error) {
           console.warn(`Failed to delete cover file: ${error.message}`);
         }
       }
 
-      // Удаляем альбом из массива albums у артиста
+      // Remove album from artist's albums array
       await Artist.findByIdAndUpdate(album.artist, { $pull: { albums: id } });
 
-      // Удаляем сам альбом
+      // Delete the album
       await Album.findByIdAndDelete(id);
 
       return true;
@@ -210,6 +204,8 @@ class AlbumService {
 
   /**
    * Get paginated list of albums with search and filtering
+   * @param {Object} options - Query options
+   * @returns {Promise<Object>} Albums with pagination info
    */
   async getAllAlbums({ page = 1, limit = 20, search, genre, type, artist }) {
     try {
@@ -259,6 +255,9 @@ class AlbumService {
 
   /**
    * Get tracks from specific album with pagination
+   * @param {string} albumId - Album ID
+   * @param {Object} options - Query options
+   * @returns {Promise<Object>} Album tracks with pagination info
    */
   async getAlbumTracks(
     albumId,
@@ -283,24 +282,24 @@ class AlbumService {
           .sort(sort)
           .skip(skip)
           .limit(limit),
-        Track.countDocuments({ album: albumId }),
+        Track.countDocuments({ _id: { $in: album.tracks } }),
       ]);
 
       const totalPages = Math.ceil(total / limit);
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
         tracks
       );
-      const albumWithSignerUrls = await this.addSignedUrlsToAlbumsSimple([
+      const albumWithSignedUrls = await this.addSignedUrlsToAlbumsSimple([
         album,
       ]);
 
       return {
         data: {
           album: {
-            name: albumWithSignerUrls[0].name,
-            coverUrl: albumWithSignerUrls[0].coverUrl,
+            name: albumWithSignedUrls[0].name,
+            coverUrl: albumWithSignedUrls[0].coverUrl,
             artist: {
-              name: albumWithSignerUrls[0].artist.name
+              name: albumWithSignedUrls[0].artist.name,
             },
           },
           tracks: tracksWithSignedUrls.map((track) => {
@@ -324,6 +323,9 @@ class AlbumService {
 
   /**
    * Search albums by name with prefix matching
+   * @param {string} query - Search query
+   * @param {Object} options - Search options
+   * @returns {Promise<Object>} Search results
    */
   async searchAlbum(query, { limit = 10 }) {
     if (!query || query.trim().length === 0) {
@@ -355,6 +357,8 @@ class AlbumService {
 
   /**
    * Get albums by genre
+   * @param {string} genre - Genre to filter by
+   * @returns {Promise<Array>} Albums in the specified genre
    */
   async getAlbumsByGenre(genre) {
     if (!genre) {
@@ -374,6 +378,8 @@ class AlbumService {
 
   /**
    * Get albums by type (album/ep/single)
+   * @param {string} type - Album type
+   * @returns {Promise<Array>} Albums of the specified type
    */
   async getAlbumsByType(type) {
     if (!type) {
@@ -393,7 +399,9 @@ class AlbumService {
 
   /**
    * Add track to album
-   * Also updates track's album reference
+   * @param {string} albumId - Album ID
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Updated album
    */
   async addTrackToAlbum(albumId, trackId) {
     if (!albumId || !trackId) {
@@ -416,7 +424,7 @@ class AlbumService {
 
       // Add track to album and update track's album reference
       await Promise.all([
-        Album.findByIdAndUpdate(albumId, { $push: { tracks: trackId } }),
+        Album.findByIdAndUpdate(albumId, { $addToSet: { tracks: trackId } }),
         Track.findByIdAndUpdate(trackId, { album: albumId }),
       ]);
 
@@ -428,7 +436,9 @@ class AlbumService {
 
   /**
    * Remove track from album
-   * Also clears track's album reference
+   * @param {string} albumId - Album ID
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Updated album
    */
   async removeTrackFromAlbum(albumId, trackId) {
     if (!albumId || !trackId) {
@@ -457,6 +467,7 @@ class AlbumService {
    * Update track order in album
    * @param {string} albumId - Album ID
    * @param {Array} trackIds - Ordered array of track IDs
+   * @returns {Promise<Object>} Updated album
    */
   async updateTrackOrder(albumId, trackIds) {
     if (!albumId || !Array.isArray(trackIds)) {
@@ -475,7 +486,7 @@ class AlbumService {
         throw new Error("Some track IDs are not part of this album");
       }
 
-      const updatedAlbum = await Album.findByIdAndUpdate(
+      await Album.findByIdAndUpdate(
         albumId,
         { tracks: trackIds, updatedAt: new Date() },
         { new: true }
@@ -489,7 +500,8 @@ class AlbumService {
 
   /**
    * Add signed URLs to albums (simple version for ObjectId references)
-   * Only processes album cover URLs
+   * @param {Object|Array} albums - Album(s) to process
+   * @returns {Promise<Object|Array>} Albums with signed URLs
    */
   async addSignedUrlsToAlbumsSimple(albums) {
     try {
@@ -498,12 +510,11 @@ class AlbumService {
 
       const albumsWithSignedUrls = await Promise.all(
         albumsArray.map(async (album) => {
-          // ИСПРАВЛЕНО: Создаем копию объекта
           let albumObj;
           if (album.toObject) {
             albumObj = album.toObject();
           } else {
-            albumObj = JSON.parse(JSON.stringify(album)); // Deep copy
+            albumObj = JSON.parse(JSON.stringify(album));
           }
 
           // Generate signed URL for album cover
@@ -523,7 +534,6 @@ class AlbumService {
                   `Failed to generate signed URL for album cover ${coverFileName}:`,
                   urlError.message
                 );
-                // Оставляем оригинальный URL
               }
             }
           }
@@ -545,7 +555,6 @@ class AlbumService {
                   `Failed to generate signed URL for artist avatar ${avatarFileName}:`,
                   urlError.message
                 );
-                // Оставляем оригинальный URL
               }
             }
           }
@@ -558,14 +567,13 @@ class AlbumService {
     } catch (error) {
       console.error("Error creating signed URLs for albums:", error);
 
-      // ИСПРАВЛЕНО: Возвращаем безопасные копии
       const isArray = Array.isArray(albums);
       const fallbackAlbums = isArray
         ? albums.map((album) => {
             const albumObj = album.toObject ? album.toObject() : { ...album };
             return {
               ...albumObj,
-              coverUrl: albumObj.coverUrl || null, // Оставляем оригинальный URL
+              coverUrl: albumObj.coverUrl || null,
               artist: albumObj.artist
                 ? {
                     ...albumObj.artist,
@@ -596,7 +604,8 @@ class AlbumService {
 
   /**
    * Add signed URLs to albums with full nested data processing
-   * For use with populated tracks and artist data
+   * @param {Object|Array} albums - Album(s) to process
+   * @returns {Promise<Object|Array>} Albums with signed URLs
    */
   async addSignedUrlsToAlbums(albums) {
     try {
@@ -611,12 +620,19 @@ class AlbumService {
           if (albumObj.coverUrl) {
             const coverFileName = extractFileName(albumObj.coverUrl);
             if (coverFileName) {
-              const signedCoverUrl = await generateSignedUrl(
-                coverFileName,
-                7200
-              );
-              if (signedCoverUrl) {
-                albumObj.coverUrl = signedCoverUrl;
+              try {
+                const signedCoverUrl = await generateSignedUrl(
+                  coverFileName,
+                  7200
+                );
+                if (signedCoverUrl) {
+                  albumObj.coverUrl = signedCoverUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for album cover ${coverFileName}:`,
+                  urlError.message
+                );
               }
             }
           }
@@ -627,12 +643,19 @@ class AlbumService {
               albumObj.artist.avatar
             );
             if (artistAvatarFileName) {
-              const signedAvatarUrl = await generateSignedUrl(
-                artistAvatarFileName,
-                7200
-              );
-              if (signedAvatarUrl) {
-                albumObj.artist.avatar = signedAvatarUrl;
+              try {
+                const signedAvatarUrl = await generateSignedUrl(
+                  artistAvatarFileName,
+                  7200
+                );
+                if (signedAvatarUrl) {
+                  albumObj.artist.avatar = signedAvatarUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for artist avatar ${artistAvatarFileName}:`,
+                  urlError.message
+                );
               }
             }
           }
@@ -649,12 +672,19 @@ class AlbumService {
                 if (trackObj.coverUrl) {
                   const trackCoverFileName = extractFileName(trackObj.coverUrl);
                   if (trackCoverFileName) {
-                    const signedTrackCoverUrl = await generateSignedUrl(
-                      trackCoverFileName,
-                      7200
-                    );
-                    if (signedTrackCoverUrl) {
-                      trackObj.coverUrl = signedTrackCoverUrl;
+                    try {
+                      const signedTrackCoverUrl = await generateSignedUrl(
+                        trackCoverFileName,
+                        7200
+                      );
+                      if (signedTrackCoverUrl) {
+                        trackObj.coverUrl = signedTrackCoverUrl;
+                      }
+                    } catch (urlError) {
+                      console.warn(
+                        `Failed to generate signed URL for track cover ${trackCoverFileName}:`,
+                        urlError.message
+                      );
                     }
                   }
                 }
@@ -663,12 +693,19 @@ class AlbumService {
                 if (trackObj.audioUrl) {
                   const trackAudioFileName = extractFileName(trackObj.audioUrl);
                   if (trackAudioFileName) {
-                    const signedTrackAudioUrl = await generateSignedUrl(
-                      trackAudioFileName,
-                      7200
-                    );
-                    if (signedTrackAudioUrl) {
-                      trackObj.audioUrl = signedTrackAudioUrl;
+                    try {
+                      const signedTrackAudioUrl = await generateSignedUrl(
+                        trackAudioFileName,
+                        7200
+                      );
+                      if (signedTrackAudioUrl) {
+                        trackObj.audioUrl = signedTrackAudioUrl;
+                      }
+                    } catch (urlError) {
+                      console.warn(
+                        `Failed to generate signed URL for track audio ${trackAudioFileName}:`,
+                        urlError.message
+                      );
                     }
                   }
                 }
@@ -689,53 +726,6 @@ class AlbumService {
         error
       );
       return this.addSignedUrlsToAlbumsSimple(albums); // Fallback to simple version
-    }
-  }
-
-  // Utility methods
-
-  /**
-   * Extract file ID from BackBlaze B2 URL
-   */
-  extractFileIdFromUrl(url) {
-    if (!url) return null;
-
-    try {
-      const urlParts = url.split("/");
-      const fileIndex = urlParts.indexOf("file");
-
-      if (fileIndex === -1 || fileIndex + 2 >= urlParts.length) {
-        return null;
-      }
-
-      const pathParts = urlParts.slice(fileIndex + 2);
-      return pathParts.join("/");
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Delete file from BackBlaze B2 using file ID
-   */
-  async deleteFileFromB2(fileId) {
-    try {
-      const b2 = new B2({
-        applicationKeyId: config.b2.accountId,
-        applicationKey: config.b2.secretKey,
-      });
-
-      await b2.authorize();
-
-      const fileInfo = await b2.getFileInfo({ fileId });
-      await b2.deleteFileVersion({
-        fileId: fileId,
-        fileName: fileInfo.data.fileName,
-      });
-
-      console.log(`Deleted file: ${fileInfo.data.fileName}`);
-    } catch (error) {
-      throw new Error(`B2 file deletion failed: ${error.message}`);
     }
   }
 }

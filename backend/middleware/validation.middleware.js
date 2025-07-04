@@ -566,3 +566,200 @@ export const validateAlbumUpdate = [
     next();
   },
 ];
+
+// Добавить эти функции в validation.middleware.js
+
+/**
+ * Playlist creation validation middleware
+ * Validates playlist name, description, tags, category, and cover file
+ */
+export const validatePlaylistCreation = [
+  // Add JSON parsing at the beginning
+  parseFormDataJSON,
+
+  // Playlist name validation
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Playlist name is required")
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Playlist name must be between 1 and 100 characters"),
+
+  // Description validation (optional)
+  body("description")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Description cannot be longer than 500 characters"),
+
+  // Tags validation (optional)
+  body("tags")
+    .optional()
+    .isArray()
+    .withMessage("Tags must be an array")
+    .custom((value) => {
+      if (value && value.length > 20) {
+        throw new Error("Maximum 20 tags allowed");
+      }
+      return true;
+    }),
+
+  body("tags.*")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage("Each tag must be between 1 and 50 characters"),
+
+  // Category validation
+  body("category")
+    .optional()
+    .isIn(["user", "featured", "genre", "mood", "activity"])
+    .withMessage("Invalid category"),
+
+  // Privacy validation
+  body("privacy")
+    .optional()
+    .isIn(["public", "private", "unlisted"])
+    .withMessage("Privacy must be public, private, or unlisted"),
+
+  // Tracks validation (optional)
+  body("tracks").optional().isArray().withMessage("Tracks must be an array"),
+
+  body("tracks.*")
+    .optional()
+    .isMongoId()
+    .withMessage("Each track must be a valid MongoDB ID"),
+
+  // Cover file validation middleware (optional for playlist creation)
+  (req, res, next) => {
+    if (req.file) {
+      const allowedImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Unsupported image format"));
+      }
+
+      // Check file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (req.file.size > maxSize) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Image size must not exceed 5MB"));
+      }
+    }
+    next();
+  },
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];
+
+/**
+ * Playlist update validation middleware
+ * All fields are optional for updates
+ */
+export const validatePlaylistUpdate = [
+  // Add JSON parsing
+  parseFormDataJSON,
+
+  // All fields are optional for updates
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Playlist name cannot be empty")
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Playlist name must be between 1 and 100 characters"),
+
+  body("description")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Description cannot be longer than 500 characters"),
+
+  body("tags")
+    .optional()
+    .isArray()
+    .withMessage("Tags must be an array")
+    .custom((value) => {
+      if (value && value.length > 20) {
+        throw new Error("Maximum 20 tags allowed");
+      }
+      return true;
+    }),
+
+  body("tags.*")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage("Each tag must be between 1 and 50 characters"),
+
+  body("category")
+    .optional()
+    .isIn(["user", "featured", "genre", "mood", "activity"])
+    .withMessage("Invalid category"),
+
+  body("privacy")
+    .optional()
+    .isIn(["public", "private", "unlisted"])
+    .withMessage("Privacy must be public, private, or unlisted"),
+
+  body("tracks").optional().isArray().withMessage("Tracks must be an array"),
+
+  body("tracks.*")
+    .optional()
+    .isMongoId()
+    .withMessage("Each track must be a valid MongoDB ID"),
+
+  // Cover file validation middleware for updates
+  (req, res, next) => {
+    if (req.file) {
+      const allowedImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Unsupported image format"));
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (req.file.size > maxSize) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Image size must not exceed 5MB"));
+      }
+    }
+    next();
+  },
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];

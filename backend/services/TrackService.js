@@ -1,68 +1,44 @@
 import Track from "../models/Track.model.js";
-import { uploadToB2, uploadMultipleToB2 } from "../utils/upload.js";
+import { uploadToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import {
   processAudioToHLS,
   checkFFmpegAvailability,
 } from "../utils/audioProcessor.js";
-import { config } from "../config/config.js";
-import B2 from "backblaze-b2";
+import {
+  extractFileIdFromUrl,
+  deleteFilesFromB2,
+  checkB2Connection,
+} from "../utils/b2Utils.js";
 import fs from "fs/promises";
 
+/**
+ * Service for managing tracks and their associated data
+ * Handles track creation with HLS processing, streaming, and file management
+ */
 class TrackService {
-  async checkB2Access() {
-    try {
-      const b2 = new B2({
-        applicationKeyId: config.b2.accountId,
-        applicationKey: config.b2.secretKey,
-      });
-
-      await b2.authorize();
-
-      const buckets = await b2.listBuckets();
-      const targetBucket = buckets.data.buckets.find(
-        (bucket) => bucket.bucketId === config.b2.bucketId
-      );
-
-      return !!targetBucket;
-    } catch (error) {
-      return false;
-    }
-  }
-
+  /**
+   * Check system requirements for track processing
+   * @returns {Promise<boolean>} Whether system meets requirements
+   */
   async verifySystemRequirements() {
     try {
       await checkFFmpegAvailability();
-      const b2Available = await this.checkB2Access();
-
+      const b2Available = await checkB2Connection();
       return true; // FFmpeg is primary requirement
     } catch (error) {
+      console.error("System requirements check failed:", error.message);
       return false;
     }
   }
 
   /**
-   * Extract file ID from BackBlaze B2 URL for file management
+   * Create track with HLS streaming conversion
+   * @param {Object} trackData - Track metadata
+   * @param {Object} files - Audio and cover files from multer
+   * @param {string} userId - User ID of uploader
+   * @returns {Promise<Object>} Created track document
    */
-  extractFileIdFromUrl(url) {
-    if (!url) return null;
-
-    try {
-      const urlParts = url.split("/");
-      const fileIndex = urlParts.indexOf("file");
-
-      if (fileIndex === -1 || fileIndex + 2 >= urlParts.length) {
-        return null;
-      }
-
-      const pathParts = urlParts.slice(fileIndex + 2);
-      return pathParts.join("/");
-    } catch (error) {
-      return null;
-    }
-  }
-
-  // Create track with HLS streaming conversion
   async createTrackWithHLS(trackData, files, userId) {
     const { name, artist, genre, tags, album } = trackData;
 
@@ -121,15 +97,15 @@ class TrackService {
       const track = new Track({
         name: name.trim(),
         artist: artist.trim(),
-        album: album.trim(),
+        album: album?.trim() || null,
         audioUrl: playlistUpload.url,
-        audioFileId: this.extractFileIdFromUrl(playlistUpload.url),
+        audioFileId: extractFileIdFromUrl(playlistUpload.url),
         hlsSegments: segmentUploads.map((upload) => upload.url),
         hlsSegmentFileIds: segmentUploads
-          .map((upload) => this.extractFileIdFromUrl(upload.url))
+          .map((upload) => extractFileIdFromUrl(upload.url))
           .filter((id) => id !== null),
         coverUrl: coverUpload.url,
-        coverFileId: this.extractFileIdFromUrl(coverUpload.url),
+        coverFileId: extractFileIdFromUrl(coverUpload.url),
         genre: genre?.trim(),
         tags: tags ? tags.split(",").map((tag) => tag.trim()) : [],
         duration: Math.round(duration),
@@ -150,7 +126,12 @@ class TrackService {
     }
   }
 
-  // Upload HLS segments with controlled concurrency to prevent B2 rate limiting
+  /**
+   * Upload HLS segments with controlled concurrency
+   * @param {Array} segmentFiles - Segment files to upload
+   * @param {string} folder - Target folder
+   * @returns {Promise<Array>} Upload results
+   */
   async uploadHLSSegments(segmentFiles, folder) {
     const batchSize = 3;
     const uploads = [];
@@ -187,6 +168,11 @@ class TrackService {
     return uploads;
   }
 
+  /**
+   * Get paginated list of public tracks
+   * @param {Object} options - Query options
+   * @returns {Promise<Object>} Tracks with pagination info
+   */
   async getAllTracks({
     page = 1,
     limit = 20,
@@ -201,7 +187,8 @@ class TrackService {
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .populate("uploadedBy", "name username avatar");
+        .populate("uploadedBy", "name username avatar")
+        .populate("artist", "name avatar");
 
       const total = await Track.countDocuments({ isPublic: true });
       const totalPages = Math.ceil(total / limit);
@@ -223,6 +210,12 @@ class TrackService {
     }
   }
 
+  /**
+   * Search tracks by query string
+   * @param {string} query - Search query
+   * @param {Object} options - Search options
+   * @returns {Promise<Object>} Search results
+   */
   async searchTracks(query, { page = 1, limit = 20 }) {
     try {
       const skip = (page - 1) * limit;
@@ -234,7 +227,6 @@ class TrackService {
           {
             $or: [
               { name: searchRegex },
-              { artist: searchRegex },
               { genre: searchRegex },
               { tags: { $in: [searchRegex] } },
             ],
@@ -246,7 +238,8 @@ class TrackService {
         .sort({ listenCount: -1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("uploadedBy", "name username avatar");
+        .populate("uploadedBy", "name username avatar")
+        .populate("artist", "name avatar");
 
       const total = await Track.countDocuments(searchCondition);
       const totalPages = Math.ceil(total / limit);
@@ -269,12 +262,16 @@ class TrackService {
     }
   }
 
+  /**
+   * Get track by ID with populated data
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Track with signed URLs
+   */
   async getTrackById(trackId) {
     try {
-      const track = await Track.findById(trackId).populate(
-        "uploadedBy",
-        "name username avatar"
-      ).populate("artist", "name");
+      const track = await Track.findById(trackId)
+        .populate("uploadedBy", "name username avatar")
+        .populate("artist", "name avatar");
 
       if (!track) {
         throw new Error("Track not found");
@@ -286,6 +283,11 @@ class TrackService {
     }
   }
 
+  /**
+   * Increment track listen count
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Updated track
+   */
   async incrementListenCount(trackId) {
     try {
       const track = await Track.findByIdAndUpdate(
@@ -300,7 +302,11 @@ class TrackService {
     }
   }
 
-  // Generate signed URLs for private bucket access
+  /**
+   * Add signed URLs to tracks for secure access
+   * @param {Object|Array} tracks - Track(s) to process
+   * @returns {Promise<Object|Array>} Tracks with signed URLs
+   */
   async addSignedUrlsToTracks(tracks) {
     try {
       const isArray = Array.isArray(tracks);
@@ -314,12 +320,19 @@ class TrackService {
           if (trackObj.coverUrl) {
             const coverFileName = extractFileName(trackObj.coverUrl);
             if (coverFileName) {
-              const signedCoverUrl = await generateSignedUrl(
-                coverFileName,
-                7200
-              );
-              if (signedCoverUrl) {
-                trackObj.coverUrl = signedCoverUrl;
+              try {
+                const signedCoverUrl = await generateSignedUrl(
+                  coverFileName,
+                  7200
+                );
+                if (signedCoverUrl) {
+                  trackObj.coverUrl = signedCoverUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for track cover ${coverFileName}:`,
+                  urlError.message
+                );
               }
             }
           }
@@ -328,12 +341,19 @@ class TrackService {
           if (trackObj.audioUrl) {
             const audioFileName = extractFileName(trackObj.audioUrl);
             if (audioFileName) {
-              const signedAudioUrl = await generateSignedUrl(
-                audioFileName,
-                7200
-              );
-              if (signedAudioUrl) {
-                trackObj.audioUrl = signedAudioUrl;
+              try {
+                const signedAudioUrl = await generateSignedUrl(
+                  audioFileName,
+                  7200
+                );
+                if (signedAudioUrl) {
+                  trackObj.audioUrl = signedAudioUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for track audio ${audioFileName}:`,
+                  urlError.message
+                );
               }
             }
           }
@@ -344,12 +364,19 @@ class TrackService {
               trackObj.artist.avatar
             );
             if (artistAvatarFileName) {
-              const signedAvatarUrl = await generateSignedUrl(
-                artistAvatarFileName,
-                7200
-              );
-              if (signedAvatarUrl) {
-                trackObj.artist.avatar = signedAvatarUrl;
+              try {
+                const signedAvatarUrl = await generateSignedUrl(
+                  artistAvatarFileName,
+                  7200
+                );
+                if (signedAvatarUrl) {
+                  trackObj.artist.avatar = signedAvatarUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for artist avatar ${artistAvatarFileName}:`,
+                  urlError.message
+                );
               }
             }
           }
@@ -360,6 +387,7 @@ class TrackService {
 
       return isArray ? tracksWithSignedUrls : tracksWithSignedUrls[0];
     } catch (error) {
+      console.error("Error creating signed URLs for tracks:", error);
       // Return original tracks without signed URLs on error
       const isArray = Array.isArray(tracks);
       return isArray
@@ -370,7 +398,11 @@ class TrackService {
     }
   }
 
-  // Convert existing non-HLS track to HLS format
+  /**
+   * Convert existing non-HLS track to HLS format
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Converted track
+   */
   async convertExistingTrackToHLS(trackId) {
     const systemReady = await this.verifySystemRequirements();
     if (!systemReady) {
@@ -425,10 +457,10 @@ class TrackService {
 
       // Update track with file IDs
       track.audioUrl = playlistUpload.url;
-      track.audioFileId = this.extractFileIdFromUrl(playlistUpload.url);
+      track.audioFileId = extractFileIdFromUrl(playlistUpload.url);
       track.hlsSegments = segmentUploads.map((upload) => upload.url);
       track.hlsSegmentFileIds = segmentUploads
-        .map((upload) => this.extractFileIdFromUrl(upload.url))
+        .map((upload) => extractFileIdFromUrl(upload.url))
         .filter((id) => id !== null);
       track.isHLS = true;
       track.audioQuality = "128k";
@@ -445,8 +477,10 @@ class TrackService {
   }
 
   /**
-   * Delete track and associated files from BackBlaze B2
-   * Now properly handles file cleanup using fileIds
+   * Delete track and associated files
+   * @param {string} trackId - Track ID
+   * @param {string} userId - User ID for ownership verification
+   * @returns {Promise<boolean>} Success status
    */
   async deleteTrack(trackId, userId) {
     try {
@@ -461,7 +495,7 @@ class TrackService {
         return false;
       }
 
-      // Delete files from BackBlaze B2 if fileIds exist
+      // Collect files to delete
       const filesToDelete = [];
 
       if (track.audioFileId) {
@@ -476,16 +510,15 @@ class TrackService {
         filesToDelete.push(...track.hlsSegmentFileIds);
       }
 
-      // Delete files from B2 (silently fail if deletion fails)
+      // Delete files from B2 (continue even if some fail)
       if (filesToDelete.length > 0) {
         try {
-          await this.deleteFilesFromB2(filesToDelete);
+          await deleteFilesFromB2(filesToDelete);
         } catch (error) {
           console.warn(
             `Warning: Failed to delete some files from B2:`,
             error.message
           );
-          // Continue with database deletion even if file deletion fails
         }
       }
 
@@ -498,52 +531,12 @@ class TrackService {
   }
 
   /**
-   * Delete files from BackBlaze B2 using file IDs
+   * Update track metadata
+   * @param {string} trackId - Track ID
+   * @param {Object} updateData - Update data
+   * @param {string} userId - User ID for ownership verification
+   * @returns {Promise<Object>} Updated track
    */
-  async deleteFilesFromB2(fileIds) {
-    try {
-      const b2 = new B2({
-        applicationKeyId: config.b2.accountId,
-        applicationKey: config.b2.secretKey,
-      });
-
-      await b2.authorize();
-
-      // Delete files in batches to avoid rate limiting
-      const batchSize = 5;
-      for (let i = 0; i < fileIds.length; i += batchSize) {
-        const batch = fileIds.slice(i, i + batchSize);
-
-        await Promise.allSettled(
-          batch.map(async (fileId) => {
-            try {
-              // Get file info first
-              const fileInfo = await b2.getFileInfo({ fileId });
-
-              // Delete the file
-              await b2.deleteFileVersion({
-                fileId: fileId,
-                fileName: fileInfo.data.fileName,
-              });
-
-              console.log(`Deleted file: ${fileInfo.data.fileName}`);
-            } catch (error) {
-              console.warn(`Failed to delete file ${fileId}:`, error.message);
-              // Continue with other files
-            }
-          })
-        );
-
-        // Small delay between batches
-        if (i + batchSize < fileIds.length) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-      }
-    } catch (error) {
-      throw new Error(`B2 file deletion failed: ${error.message}`);
-    }
-  }
-
   async updateTrack(trackId, updateData, userId) {
     try {
       const track = await Track.findById(trackId);
@@ -561,7 +554,9 @@ class TrackService {
         trackId,
         { ...updateData, updatedAt: new Date() },
         { new: true }
-      ).populate("uploadedBy", "name username avatar");
+      )
+        .populate("uploadedBy", "name username avatar")
+        .populate("artist", "name avatar");
 
       return await this.addSignedUrlsToTracks(updatedTrack);
     } catch (error) {
@@ -571,11 +566,20 @@ class TrackService {
 
   // Utility methods
 
+  /**
+   * Sanitize filename for safe usage
+   * @param {string} filename - Original filename
+   * @returns {string} Sanitized filename
+   */
   sanitizeFileName(filename) {
     return filename.replace(/[^a-zA-Z0-9\-_]/g, "-");
   }
 
-  // Calculate total duration from M3U8 playlist content
+  /**
+   * Calculate total duration from M3U8 playlist content
+   * @param {string} playlist - M3U8 playlist content
+   * @returns {number} Total duration in seconds
+   */
   calculatePlaylistDuration(playlist) {
     const lines = playlist.split("\n");
     let totalDuration = 0;
@@ -592,11 +596,18 @@ class TrackService {
     return totalDuration;
   }
 
+  /**
+   * Cleanup temporary directory
+   * @param {string} dirPath - Directory path to cleanup
+   */
   async cleanupTempDirectory(dirPath) {
     try {
       await fs.rm(dirPath, { recursive: true, force: true });
     } catch (error) {
-      // Silent cleanup failure
+      console.warn(
+        `Failed to cleanup temp directory ${dirPath}:`,
+        error.message
+      );
     }
   }
 }
