@@ -69,6 +69,28 @@ const playlistSchema = new mongoose.Schema(
       enum: ["public", "private", "unlisted"],
       default: "public",
     },
+    isDraft: {
+      type: Boolean,
+      default: false,
+      index: true, // Для быстрых запросов
+    },
+
+    lastModified: {
+      type: Date,
+      default: Date.now,
+    },
+
+    // Для отслеживания неактивных черновиков
+    lastActivity: {
+      type: Date,
+      default: Date.now,
+    },
+
+    // Версионирование для optimistic updates
+    version: {
+      type: Number,
+      default: 1,
+    },
   },
   {
     timestamps: true,
@@ -85,6 +107,13 @@ playlistSchema.index({ category: 1 });
 // Виртуальное поле для подсчета треков
 playlistSchema.virtual("tracksCount").get(function () {
   return this.tracks.length;
+});
+
+playlistSchema.pre("save", function (next) {
+  if (this.isModified() && !this.isModified("lastActivity")) {
+    this.lastActivity = new Date();
+  }
+  next();
 });
 
 // Middleware для обновления счетчиков при изменении
@@ -108,5 +137,16 @@ playlistSchema.pre("save", async function (next) {
   }
   next();
 });
+
+playlistSchema.statics.cleanupOldDrafts = async function (daysOld = 7) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+  return await this.deleteMany({
+    isDraft: true,
+    lastActivity: { $lt: cutoffDate },
+    tracks: { $size: 0 }, // Только пустые плейлисты
+  });
+};
 
 export default mongoose.model("Playlist", playlistSchema);

@@ -11,6 +11,7 @@ import LikedSongs from "./Pages/LikedSongs";
 import Artist from "./Pages/Artist";
 import Album from "./Pages/Album";
 import Single from "./Pages/Single";
+import Playlist from "./Pages/Playlist";
 
 export const router = createBrowserRouter([
   {
@@ -42,8 +43,8 @@ export const router = createBrowserRouter([
             element: <div>recently</div>,
           },
           {
-            path: "/playlist",
-            element: <div>playlist</div>,
+            path: "/playlist/:id",
+            element: <Playlist />,
           },
           {
             path: "/artist/:id",
@@ -56,7 +57,7 @@ export const router = createBrowserRouter([
           {
             path: "/single/:id",
             element: <Single />,
-          }
+          },
         ],
       },
       {

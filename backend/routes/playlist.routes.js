@@ -8,6 +8,7 @@ import {
 import {
   addTrackToPlaylist,
   createPlaylist,
+  createQuickPlaylist,
   deletePlaylist,
   getAllPlaylists,
   getFeaturedPlaylists,
@@ -17,6 +18,7 @@ import {
   getPlaylistStats,
   getPlaylistTracks,
   likePlaylist,
+  publishPlaylist,
   removeTrackFromPlaylist,
   searchPlaylists,
   unlikePlaylist,
@@ -31,7 +33,7 @@ router.get("/search", searchPlaylists);
 router.get("/featured", getFeaturedPlaylists);
 router.get("/category/:category", getPlaylistsByCategory);
 router.get("/tag/:tag", getPlaylistsByTag);
-router.get("/:id", getPlaylistById);
+router.get("/:id", authenticate, getPlaylistById);
 router.get("/:id/tracks", getPlaylistTracks);
 router.get("/:id/statistics", getPlaylistStats);
 
@@ -42,6 +44,8 @@ router.post(
   validatePlaylistCreation,
   createPlaylist
 );
+router.post("/quick", authenticate, createQuickPlaylist);
+router.post("/:id/publish", authenticate, publishPlaylist);
 router.put(
   "/:id",
   authenticate,

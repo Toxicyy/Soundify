@@ -8,25 +8,24 @@ import {
   InsertRowRightOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
-import { useDispatch} from "react-redux";
-import { type AppDispatch} from "../../../../../store";
 import { Link, useLocation } from "react-router-dom";
 
 interface MainBarProps {
   text: string;
   animationDuration: number;
   path: string;
+  callback?: () => void;
 }
 
 export const MainBar: FC<MainBarProps> = ({
   text,
   animationDuration,
   path,
+  callback,
 }) => {
   const location = useLocation();
   const pathname = location.pathname;
   const [hover, setHover] = useState(false);
-  const dispatch = useDispatch<AppDispatch>();
   const icons = {
     Home: <HomeOutlined />,
     Radio: <ApartmentOutlined />,
@@ -44,10 +43,11 @@ export const MainBar: FC<MainBarProps> = ({
         transition={{ duration: animationDuration, ease: "easeInOut" }}
         className={
           "flex items-center gap-3 w-[13vw] h-[35px] rounded-lg pl-5 cursor-pointer duration-300 " +
-          (hover || pathname === path ? "bg-gray-100/70" : "glass")
+          (hover || pathname === path && !callback ? "bg-gray-100/70" : "glass")
         }
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
+        onClick={callback ? callback : () => {}}
       >
         <div className="text-lg font-semibold">
           {icons[text as keyof typeof icons]}

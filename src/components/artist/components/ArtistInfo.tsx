@@ -94,7 +94,7 @@ const ArtistInfo: FC<ArtistInfoProps> = ({ artist, isLoading = false }) => {
             <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors duration-300 rounded-full" />
           </div>
 
-          <p className="text-white text-lg sm:text-xl">
+          <p className="text-white text-lg sm:text-xl text-center">
             <span className="font-medium">
               {formatFollowerCount(artist.followerCount)}
             </span>{" "}
@@ -124,48 +124,6 @@ const ArtistInfo: FC<ArtistInfoProps> = ({ artist, isLoading = false }) => {
               <span className="text-white/70">{artist.genres.join(", ")}</span>
             </div>
           )}
-
-          {/* Social links if available */}
-          {artist.socialLinks &&
-            Object.values(artist.socialLinks).some((link) => link) && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <span className="font-semibold text-white/90 block mb-2">
-                  Social Links:
-                </span>
-                <div className="flex gap-3 flex-wrap">
-                  {artist.socialLinks.spotify && (
-                    <a
-                      href={artist.socialLinks.spotify}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-green-400 hover:text-green-300 transition-colors duration-200 underline focus:outline-none focus:ring-2 focus:ring-green-400/20 rounded"
-                    >
-                      Spotify
-                    </a>
-                  )}
-                  {artist.socialLinks.instagram && (
-                    <a
-                      href={artist.socialLinks.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-pink-400 hover:text-pink-300 transition-colors duration-200 underline focus:outline-none focus:ring-2 focus:ring-pink-400/20 rounded"
-                    >
-                      Instagram
-                    </a>
-                  )}
-                  {artist.socialLinks.twitter && (
-                    <a
-                      href={artist.socialLinks.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors duration-200 underline focus:outline-none focus:ring-2 focus:ring-blue-400/20 rounded"
-                    >
-                      Twitter
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
         </div>
       </div>
     </section>

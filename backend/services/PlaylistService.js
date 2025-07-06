@@ -74,6 +74,63 @@ class PlaylistService {
     }
   }
 
+  // В PlaylistService.js - добавить метод для генерации уникального имени
+  async generateUniquePlaylistName(userId, baseName = "My Playlist") {
+    try {
+      // Находим все плейлисты пользователя с похожим именем
+      const existingPlaylists = await Playlist.find({
+        owner: userId,
+        name: { $regex: `^${baseName}`, $options: "i" },
+      })
+        .select("name")
+        .sort({ createdAt: -1 });
+
+      if (existingPlaylists.length === 0) {
+        return baseName;
+      }
+
+      // Извлекаем номера из существующих плейлистов
+      const numbers = existingPlaylists
+        .map((playlist) => {
+          const match = playlist.name.match(
+            new RegExp(`^${baseName}\\s*#?(\\d+)$`, "i")
+          );
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter((num) => !isNaN(num))
+        .sort((a, b) => b - a);
+
+      // Находим следующий доступный номер
+      const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+      return `${baseName} #${nextNumber}`;
+    } catch (error) {
+      // Fallback с timestamp
+      return `${baseName} #${Date.now()}`;
+    }
+  }
+
+  // Новый метод для создания быстрого плейлиста
+  async createQuickPlaylist(userId) {
+    try {
+      const playlistName = await this.generateUniquePlaylistName(userId);
+
+      const playlistData = {
+        name: playlistName,
+        owner: userId,
+        description: "",
+        tracks: [],
+        tags: [],
+        category: "user",
+        privacy: "private", // По умолчанию приватный
+        isDraft: true, // Добавляем флаг черновика
+      };
+
+      return await this.createPlaylist(playlistData, null);
+    } catch (error) {
+      throw new Error(`Quick playlist creation failed: ${error.message}`);
+    }
+  }
+
   /**
    * Update playlist with optional new cover image
    * @param {string} id - Playlist ID
@@ -244,7 +301,7 @@ class PlaylistService {
 
     try {
       const playlist = await Playlist.findById(id)
-        .populate("owner", "name avatar")
+        .populate("owner", "username avatar")
         .populate("tracks", "name duration coverUrl");
 
       if (!playlist) {
@@ -757,7 +814,7 @@ class PlaylistService {
     if (playlist.privacy === "public") return true;
     if (playlist.privacy === "unlisted") return true;
     if (playlist.privacy === "private") {
-      return userId && playlist.owner.toString() === userId.toString();
+      return userId && playlist.owner._id.toString() === userId.toString();
     }
     return false;
   }

@@ -12,12 +12,16 @@ interface HeaderContentProps {
     src?: string;
     alt: string;
     className: string;
+    callback?: () => void;
   };
   badge?: {
     show: boolean;
     text: string;
   };
-  title: string | ReactNode;
+  title: {
+    text: string | ReactNode;
+    callback?: () => void;
+  };
   subtitle?: string | ReactNode;
   isLoading: boolean;
 }
@@ -95,6 +99,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
         alt={image.alt}
         className={`${image.className} drop-shadow-[0_7px_8px_rgba(0,0,0,0.3)]`}
         loading="lazy"
+        onClick={image.callback}
       />
 
       <div className="flex-1 text-center sm:text-left">
@@ -109,8 +114,13 @@ export const HeaderContent: FC<HeaderContentProps> = ({
         )}
 
         {/* Main title */}
-        <h1 className="text-2xl sm:text-4xl lg:text-[5rem] font-bold text-white mb-2 break-words">
-          {typeof title === "string" ? title : title}
+        <h1
+          className={`text-2xl sm:text-4xl lg:text-[5rem] font-bold text-white mb-2 break-words cursor-${
+            title.callback ? "pointer" : "default"
+          } `}
+          onClick={title.callback}
+        >
+          {typeof title.text === "string" ? title.text : title.text}
         </h1>
 
         {/* Subtitle/metadata */}

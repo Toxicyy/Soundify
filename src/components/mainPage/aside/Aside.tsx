@@ -1,7 +1,11 @@
+
+import { useQuickPlaylist } from "../../../hooks/useQuickPlaylist";
 import { MainBar } from "./components/mainBars/MainBar";
 import { Player } from "./components/player/Player";
 
 export default function Aside() {
+  const { createQuickPlaylist} = useQuickPlaylist();
+
   return (
     <div className="fixed h-screen flex-col w-[20vw] aside pl-10 pr-10">
       <div className="h-full flex flex-col justify-between">
@@ -11,8 +15,8 @@ export default function Aside() {
           <MainBar text="Library" animationDuration={0.7} path="/library" />
           <MainBar text="Liked Songs" animationDuration={0.8} path="/liked" />
           <MainBar text="Recently" animationDuration={0.9} path="/recently" />
-          <MainBar text="New Playlist" animationDuration={1} path="/playlist" />
-        </div>
+          <MainBar text="New Playlist" animationDuration={1} path="/" callback={createQuickPlaylist} />
+        </div> 
 
         <div className="pb-[2vh]">
           <Player />

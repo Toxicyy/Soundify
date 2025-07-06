@@ -75,7 +75,6 @@ export const getPlaylistById = catchAsync(async (req, res) => {
   if (!id) {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
-
   const playlist = await PlaylistService.getPlaylistById(id, req.user?.id);
 
   res.json(ApiResponse.success("Playlist retrieved successfully", playlist));
@@ -110,7 +109,6 @@ export const updatePlaylist = catchAsync(async (req, res) => {
   );
 
   const coverFile = req.file;
-
   const playlist = await PlaylistService.updatePlaylist(
     id,
     updateData,
@@ -414,4 +412,31 @@ export const getPlaylistStats = catchAsync(async (req, res) => {
   res.json(
     ApiResponse.success("Playlist statistics retrieved successfully", stats)
   );
+});
+
+export const createQuickPlaylist = catchAsync(async (req, res) => {
+  const playlist = await PlaylistService.createQuickPlaylist(req.user.id);
+
+  res.status(201).json(
+    ApiResponse.success("Quick playlist created successfully", {
+      id: playlist._id,
+      name: playlist.name,
+      isDraft: playlist.isDraft,
+    })
+  );
+});
+
+// Также добавить метод для превращения черновика в полноценный плейлист
+export const publishPlaylist = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  // Валидация владельца
+  await PlaylistService.validatePlaylistOwnership(id, req.user.id);
+
+  const playlist = await PlaylistService.updatePlaylist(id, {
+    isDraft: false,
+    privacy: req.body.privacy || "public",
+  });
+
+  res.json(ApiResponse.success("Playlist published successfully", playlist));
 });

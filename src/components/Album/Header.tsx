@@ -40,7 +40,7 @@ const AlbumHeader: FC<AlbumHeaderProps> = ({ tracks, album, isLoading }) => {
           className:
             "w-[120px] h-[120px] sm:w-[8vw] sm:h-[8vw] lg:w-[10vw] lg:h-[10vw] rounded-2xl mx-auto sm:mx-0",
         }}
-        title={album.name || "Unknown Album"}
+        title={{ text: album.name || "Unknown Album" }}
         subtitle={subtitle}
         isLoading={isLoading}
       />
