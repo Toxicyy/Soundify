@@ -89,6 +89,17 @@ const parseFormDataJSON = (req, res, next) => {
     }
   }
 
+  // 👇 ДОБАВЬ ЭТО ДЛЯ TAGS
+  if (req.body.tags && typeof req.body.tags === "string") {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Неверный формат данных для тегов"));
+    }
+  }
+
   next();
 };
 

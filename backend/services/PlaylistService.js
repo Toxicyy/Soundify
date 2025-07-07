@@ -561,7 +561,7 @@ class PlaylistService {
    * @param {string} trackId - Track ID
    * @returns {Object} Updated playlist
    */
-  async addTrackToPlaylist(playlistId, trackId) {
+  async addTrackToPlaylist(playlistId, trackId, userId) {
     if (!playlistId || !trackId) {
       throw new Error("Playlist ID and Track ID are required");
     }
@@ -585,7 +585,7 @@ class PlaylistService {
         $push: { tracks: trackId },
       });
 
-      return await this.getPlaylistById(playlistId);
+      return await this.getPlaylistById(playlistId, userId);
     } catch (error) {
       throw new Error(`Failed to add track to playlist: ${error.message}`);
     }
@@ -625,7 +625,7 @@ class PlaylistService {
    * @param {Array} trackIds - Ordered array of track IDs
    * @returns {Object} Updated playlist
    */
-  async updateTrackOrder(playlistId, trackIds) {
+  async updateTrackOrder(playlistId, trackIds, skipValidation = false) {
     if (!playlistId || !Array.isArray(trackIds)) {
       throw new Error("Playlist ID and track IDs array are required");
     }
@@ -636,12 +636,14 @@ class PlaylistService {
         throw new Error("Playlist not found");
       }
 
-      // Validate that all track IDs exist in the playlist
-      const validTrackIds = trackIds.filter((id) =>
-        playlist.tracks.includes(id)
-      );
-      if (validTrackIds.length !== trackIds.length) {
-        throw new Error("Some track IDs are not part of this playlist");
+      // Проверяем только если не пропускаем валидацию
+      if (!skipValidation) {
+        const validTrackIds = trackIds.filter((id) =>
+          playlist.tracks.includes(id)
+        );
+        if (validTrackIds.length !== trackIds.length) {
+          throw new Error("Some track IDs are not part of this playlist");
+        }
       }
 
       await Playlist.findByIdAndUpdate(

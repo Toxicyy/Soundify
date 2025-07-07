@@ -1,10 +1,19 @@
 import { useState } from "react";
-import type { PlaylistUpdate } from "../types/Playlist";
+
+// Локальный интерфейс для сохранения (без tracks)
+interface PlaylistSaveData {
+  name?: string;
+  description?: string;
+  privacy?: "public" | "private" | "unlisted";
+  category?: string;
+  tags?: string[];
+  cover?: File | null;
+}
 
 export const usePlaylistSave = (playlistId: string) => {
   const [saving, setSaving] = useState(false);
 
-  const saveChanges = async (changes: PlaylistUpdate) => {
+  const saveChanges = async (changes: PlaylistSaveData) => {
     setSaving(true);
     try {
       const formData = new FormData();
@@ -33,6 +42,7 @@ export const usePlaylistSave = (playlistId: string) => {
       );
 
       if (!response.ok) {
+        console.log(changes.tags)
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 

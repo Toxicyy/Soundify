@@ -34,7 +34,7 @@ router.get("/featured", getFeaturedPlaylists);
 router.get("/category/:category", getPlaylistsByCategory);
 router.get("/tag/:tag", getPlaylistsByTag);
 router.get("/:id", authenticate, getPlaylistById);
-router.get("/:id/tracks", getPlaylistTracks);
+router.get("/:id/tracks", authenticate, getPlaylistTracks);
 router.get("/:id/statistics", getPlaylistStats);
 
 router.post(
@@ -54,9 +54,9 @@ router.put(
   updatePlaylist
 );
 router.delete("/:id", authenticate, deletePlaylist);
-router.post("/:id/tracks/:trackId", authenticate, addTrackToPlaylist);
+router.post("/:playlistId/tracks/:trackId", authenticate, addTrackToPlaylist);
 router.delete("/:id/tracks/:trackId", authenticate, removeTrackFromPlaylist);
-router.put("/:id/tracks/order", authenticate, updateTrackOrder);
+router.put("/:playlistId/tracks/order", authenticate, updateTrackOrder);
 router.post("/:id/like", authenticate, likePlaylist);
 router.delete("/:id/like", authenticate, unlikePlaylist);
 

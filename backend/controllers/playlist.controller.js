@@ -280,7 +280,8 @@ export const addTrackToPlaylist = catchAsync(async (req, res) => {
 
   const playlist = await PlaylistService.addTrackToPlaylist(
     playlistId,
-    trackId
+    trackId,
+    req.user.id
   );
 
   res.json(
@@ -320,7 +321,7 @@ export const removeTrackFromPlaylist = catchAsync(async (req, res) => {
  */
 export const updateTrackOrder = catchAsync(async (req, res) => {
   const { playlistId } = req.params;
-  const { trackIds } = req.body;
+  const { trackIds, skipValidation } = req.body;
 
   if (!playlistId) {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
@@ -335,7 +336,11 @@ export const updateTrackOrder = catchAsync(async (req, res) => {
   // Validate ownership
   await PlaylistService.validatePlaylistOwnership(playlistId, req.user.id);
 
-  const playlist = await PlaylistService.updateTrackOrder(playlistId, trackIds);
+  const playlist = await PlaylistService.updateTrackOrder(
+    playlistId,
+    trackIds,
+    skipValidation
+  );
 
   res.json(ApiResponse.success("Track order updated successfully", playlist));
 });

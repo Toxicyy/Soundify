@@ -44,11 +44,13 @@ const ArtistHeader: FC<ArtistHeaderProps> = ({ artist, isLoading = false }) => {
               }
             : undefined
         }
-        title={
-          <span className={titleClassName}>
-            {artist.name || "Unknown Artist"}
-          </span>
-        }
+        title={{
+          text: (
+            <span className={titleClassName}>
+              {artist.name || "Unknown Artist"}
+            </span>
+          ),
+        }}
         subtitle={subtitle}
         isLoading={isLoading}
       />

@@ -8,6 +8,7 @@ import {
   PlaySquareOutlined,
   InfoCircleOutlined,
   ShareAltOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useState, useRef, useEffect } from "react";
 
@@ -20,6 +21,7 @@ interface ContextMenuProps {
   isLiked: boolean;
   isPending?: boolean;
   usePortal?: boolean;
+  showRemoveFromPlaylist?: boolean; // Новый проп для показа опции удаления
 }
 
 export default function ContextMenu({
@@ -31,12 +33,14 @@ export default function ContextMenu({
   isLiked,
   isPending = false,
   usePortal = true,
+  showRemoveFromPlaylist = false,
 }: ContextMenuProps) {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const menuItems = [
+  // Базовые пункты меню
+  const baseMenuItems = [
     {
       icon: isPending ? (
         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -47,38 +51,58 @@ export default function ContextMenu({
       ),
       label: isLiked ? "Убрать из любимых треков" : "Добавить в любимые треки",
       disabled: isPending,
+      className: "",
     },
     {
       icon: <UnorderedListOutlined />,
       label: "Добавить в очередь",
       disabled: false,
+      className: "",
     },
     {
       icon: <EyeInvisibleOutlined />,
       label: "Скрыть трек",
       disabled: false,
+      className: "",
     },
     {
       icon: <UserOutlined />,
       label: "К исполнителю",
       disabled: false,
+      className: "",
     },
     {
       icon: <PlaySquareOutlined />,
       label: "К альбому",
       disabled: false,
+      className: "",
     },
     {
       icon: <InfoCircleOutlined />,
       label: "Посмотреть сведения",
       disabled: false,
+      className: "",
     },
     {
       icon: <ShareAltOutlined />,
       label: "Поделиться",
       disabled: false,
+      className: "",
     },
   ];
+
+  // Добавляем пункт удаления из плейлиста если нужно
+  const menuItems = showRemoveFromPlaylist
+    ? [
+        ...baseMenuItems,
+        {
+          icon: <DeleteOutlined />,
+          label: "Удалить из плейлиста",
+          disabled: false,
+          className: "text-red-400 hover:text-red-300", // Красный цвет для удаления
+        },
+      ]
+    : baseMenuItems;
 
   // Вычисляем позицию меню (только для портала)
   useEffect(() => {
@@ -106,7 +130,7 @@ export default function ContextMenu({
 
       setPosition({ top, left });
     }
-  }, [isOpen, usePortal, anchorRef, isPlaying]);
+  }, [isOpen, usePortal, anchorRef, isPlaying, showRemoveFromPlaylist]);
 
   // Закрытие меню при клике вне его
   useEffect(() => {
@@ -185,40 +209,52 @@ export default function ContextMenu({
       {menuItems
         .map((item, originalIndex) => ({ ...item, originalIndex }))
         .filter((item) => !isPlaying || item.label !== "Добавить в очередь")
-        .map((item, filteredIndex) => (
-          <div
-            key={item.originalIndex}
-            className={`px-4 py-3 text-white text-sm flex items-center gap-3 transition-all duration-200 ${
-              item.disabled
-                ? "opacity-50 cursor-not-allowed"
-                : "cursor-pointer hover:bg-white/5"
-            } ${
-              hoveredMenuItem === filteredIndex && !item.disabled
-                ? "bg-white/10 backdrop-blur-sm"
-                : ""
-            }`}
-            onMouseEnter={() =>
-              !item.disabled && setHoveredMenuItem(filteredIndex)
-            }
-            onMouseLeave={() => setHoveredMenuItem(null)}
-            onClick={() =>
-              handleMenuItemClick(item.originalIndex, item.disabled)
-            }
-          >
-            <span
-              className={`text-base transition-all duration-200 ${
+        .map((item, filteredIndex) => {
+          const isDeleteItem = item.label === "Удалить из плейлиста";
+
+          return (
+            <div
+              key={item.originalIndex}
+              className={`px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200 ${
                 item.disabled
-                  ? "text-white/30"
-                  : hoveredMenuItem === filteredIndex
-                  ? "text-white"
-                  : "text-white/70"
-              }`}
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:bg-white/5"
+              } ${
+                hoveredMenuItem === filteredIndex && !item.disabled
+                  ? "bg-white/10 backdrop-blur-sm"
+                  : ""
+              } ${isDeleteItem ? "border-t border-white/10" : ""}`}
+              onMouseEnter={() =>
+                !item.disabled && setHoveredMenuItem(filteredIndex)
+              }
+              onMouseLeave={() => setHoveredMenuItem(null)}
+              onClick={() =>
+                handleMenuItemClick(item.originalIndex, item.disabled)
+              }
             >
-              {item.icon}
-            </span>
-            <span className="flex-1">{item.label}</span>
-          </div>
-        ))}
+              <span
+                className={`text-base transition-all duration-200 ${
+                  item.disabled
+                    ? "text-white/30"
+                    : isDeleteItem
+                    ? "text-red-400"
+                    : hoveredMenuItem === filteredIndex
+                    ? "text-white"
+                    : "text-white/70"
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={`flex-1 ${
+                  isDeleteItem ? "text-red-400" : "text-white"
+                }`}
+              >
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
     </div>
   );
 

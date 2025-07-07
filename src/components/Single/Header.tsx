@@ -50,7 +50,7 @@ const SingleHeader: FC<SingleHeaderProps> = ({ track, isLoading }) => {
           show: true,
           text: "Single",
         }}
-        title={track.name || "Unknown Track"}
+        title={{ text: track.name || "Unknown Track" }}
         subtitle={subtitle}
         isLoading={isLoading}
       />
