@@ -2,6 +2,41 @@ import { ApiResponse } from "../utils/responses.js";
 import UserService from "../services/UserService.js";
 
 /**
+ * Retrieves user data by ID
+ */
+export const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Optional: Check if user is requesting their own data or has admin permissions
+    // You can modify this based on your authorization requirements
+    const isOwnProfile = req.user.id === userId;
+    const isAdmin = req.user.status === "ADMIN";
+
+    if (!isOwnProfile && !isAdmin) {
+      return res
+        .status(403)
+        .json(ApiResponse.error("Unauthorized to access this user's data"));
+    }
+
+    const userData = await UserService.getUserById(userId);
+
+    res
+      .status(200)
+      .json(ApiResponse.success("User data retrieved successfully", userData));
+  } catch (error) {
+    console.error("Controller error - getUserById:", error);
+
+    // Handle specific error types
+    if (error.message.includes("User not found")) {
+      return res.status(404).json(ApiResponse.error(error.message));
+    }
+
+    res.status(400).json(ApiResponse.error(error.message));
+  }
+};
+
+/**
  * Adds a song to user's liked songs
  */
 export const addLikedSong = async (req, res) => {

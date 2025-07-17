@@ -16,6 +16,7 @@ interface HeaderContentProps {
   };
   badge?: {
     show: boolean;
+    showVerified: boolean;
     text: string;
   };
   title: {
@@ -106,7 +107,9 @@ export const HeaderContent: FC<HeaderContentProps> = ({
         {/* Verified badge */}
         {badge?.show && (
           <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
-            <VerifiedBadge size={24} aria-hidden="true" />
+            {badge.showVerified && (
+              <VerifiedBadge size={24} aria-hidden="true" />
+            )}
             <p className="text-sm sm:text-lg font-medium text-white">
               {badge.text}
             </p>

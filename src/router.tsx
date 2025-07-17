@@ -12,6 +12,7 @@ import Artist from "./Pages/Artist";
 import Album from "./Pages/Album";
 import Single from "./Pages/Single";
 import Playlist from "./Pages/Playlist";
+import Profile from "./Pages/Profile";
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,10 @@ export const router = createBrowserRouter([
             path: "/single/:id",
             element: <Single />,
           },
+          {
+            path: "/profile/:id",
+            element: <Profile />
+          }
         ],
       },
       {

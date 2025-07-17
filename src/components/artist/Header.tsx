@@ -41,6 +41,7 @@ const ArtistHeader: FC<ArtistHeaderProps> = ({ artist, isLoading = false }) => {
             ? {
                 show: true,
                 text: "Confirmed artist",
+                showVerified: true,
               }
             : undefined
         }

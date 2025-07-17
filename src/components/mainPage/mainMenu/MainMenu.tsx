@@ -120,12 +120,12 @@ export default function MainMenu() {
             transition={{ duration: 0.6, ease: "easeInOut" }}
             className="flex items-center justify-center gap-10 mb-6"
           >
-            <div className="cursor-pointer w-[100px] h-[40px] rounded-full bg-transparent border-2 border-black flex items-center justify-center">
+            <div className="cursor-pointer w-[100px] h-[40px] rounded-full bg-transparent border-2 border-black flex items-center justify-center hover:scale-110 transition-all duration-300">
               <Link to={"/signup"}>
                 <h1 className="text-black text-xl font-bold">Sign up</h1>
               </Link>
             </div>
-            <div className="cursor-pointer w-[120px] h-[50px] rounded-full bg-transparent border-2 border-white flex items-center justify-center">
+            <div className="cursor-pointer w-[120px] h-[50px] rounded-full bg-transparent border-2 border-white flex items-center justify-center hover:scale-110 transition-all duration-300">
               <Link to={"/login"}>
                 <h1 className="text-white text-xl font-bold">Log in</h1>
               </Link>
