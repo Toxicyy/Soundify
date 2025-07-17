@@ -1,5 +1,6 @@
 import User from "../models/User.model.js";
 import TrackService from "./TrackService.js";
+import ArtistService from "./ArtistService.js";
 
 /**
  * Service for managing users and their data
@@ -62,6 +63,77 @@ class UserService {
     } catch (error) {
       console.error("Error fetching user data:", error);
       throw new Error(`Failed to fetch user data: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get user's liked artists with pagination
+   * @param {string} userId - User ID
+   * @param {Object} options - Query options
+   * @returns {Object} Liked artists with pagination
+   */
+  async getUserLikedArtists(userId, { page = 1, limit = 20 }) {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    try {
+      const user = await User.findById(userId).select("likedArtists");
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const likedArtistIds = user.likedArtists || [];
+
+      if (likedArtistIds.length === 0) {
+        return {
+          artists: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalArtists: 0,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        };
+      }
+
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+      const total = likedArtistIds.length;
+      const totalPages = Math.ceil(total / limit);
+
+      // Get paginated artist IDs
+      const paginatedArtistIds = likedArtistIds.slice(skip, skip + limit);
+
+      // Fetch artists with full data
+      const artists = await Promise.all(
+        paginatedArtistIds.map(async (artistId) => {
+          try {
+            return await ArtistService.getArtistById(artistId);
+          } catch (error) {
+            console.warn(`Failed to fetch artist ${artistId}:`, error.message);
+            return null;
+          }
+        })
+      );
+
+      // Filter out null values (deleted/not found artists)
+      const validArtists = artists.filter((artist) => artist !== null);
+
+      return {
+        artists: validArtists,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalArtists: total,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching user liked artists:", error);
+      throw new Error(`Failed to fetch liked artists: ${error.message}`);
     }
   }
 

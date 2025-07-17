@@ -38,7 +38,7 @@ export const SignUpModal: React.FC = () => {
       errors.password.length === 0 &&
       errors.check.length === 0
     ) {
-      const response = await api.register(
+      const response = await api.auth.register(
         formData.email,
         formData.password,
         formData.name,

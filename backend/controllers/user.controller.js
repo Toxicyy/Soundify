@@ -37,6 +37,44 @@ export const getUserById = async (req, res) => {
 };
 
 /**
+ * Get user's liked artists with pagination
+ */
+export const getUserLikedArtists = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { page, limit } = req.query;
+
+    // Check if user has access (same as in playlist controller)
+    const isOwnProfile = req.user.id === userId;
+    const isAdmin = req.user.status === "ADMIN";
+
+    // For liked artists, anyone can see them (they're like public subscriptions)
+    // But we still keep the auth check for consistency
+
+    const result = await UserService.getUserLikedArtists(userId, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+
+    res.json(
+      ApiResponse.paginated(
+        "User liked artists retrieved successfully",
+        result.artists,
+        result.pagination
+      )
+    );
+  } catch (error) {
+    console.error("Controller error - getUserLikedArtists:", error);
+
+    if (error.message.includes("User not found")) {
+      return res.status(404).json(ApiResponse.error(error.message));
+    }
+
+    res.status(400).json(ApiResponse.error(error.message));
+  }
+};
+
+/**
  * Adds a song to user's liked songs
  */
 export const addLikedSong = async (req, res) => {

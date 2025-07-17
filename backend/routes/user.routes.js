@@ -5,6 +5,7 @@ import {
   getLikedSongs,
   removeLikedSong,
   getUserById,
+  getUserLikedArtists,
 } from "../controllers/user.controller.js";
 import {
   getLikedPlaylists,
@@ -24,5 +25,8 @@ router.get("/:userId/liked-songs", authenticate, getLikedSongs);
 // User playlists routes
 router.get("/:userId/playlists", authenticate, getUserPlaylists);
 router.get("/:userId/playlists/liked", authenticate, getLikedPlaylists);
+
+// User liked artists routes
+router.get("/:userId/liked-artists", authenticate, getUserLikedArtists);
 
 export default router;

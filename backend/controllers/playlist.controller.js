@@ -143,7 +143,7 @@ export const deletePlaylist = catchAsync(async (req, res) => {
  */
 export const getPlaylistTracks = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const { page, limit} = req.query;
+  const { page, limit } = req.query;
 
   if (!id) {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
@@ -234,8 +234,7 @@ export const getPlaylistsByTag = catchAsync(async (req, res) => {
 });
 
 /**
- * Get playlists by user ID
- * Returns user's playlists with privacy filtering
+ * Get playlists by user ID with privacy filtering
  */
 export const getUserPlaylists = catchAsync(async (req, res) => {
   const { userId } = req.params;
@@ -245,11 +244,15 @@ export const getUserPlaylists = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("User ID is required"));
   }
 
-  const result = await PlaylistService.getUserPlaylists(userId, {
-    page: parseInt(page) || 1,
-    limit: parseInt(limit) || 20,
-    privacy,
-  });
+  const result = await PlaylistService.getUserPlaylists(
+    userId,
+    {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+      privacy,
+    },
+    req.user?.id // Pass requester ID for privacy filtering
+  );
 
   res.json(
     ApiResponse.paginated(

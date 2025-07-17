@@ -326,11 +326,7 @@ class PlaylistService {
    * @param {string} userId - User ID for access control
    * @returns {Object} Tracks with pagination info
    */
-  async getPlaylistTracks(
-    playlistId,
-    { page = 1, limit = 20},
-    userId = null
-  ) {
+  async getPlaylistTracks(playlistId, { page = 1, limit = 20 }, userId = null) {
     if (!playlistId) {
       throw new Error("Playlist ID is required");
     }
@@ -514,12 +510,17 @@ class PlaylistService {
   }
 
   /**
-   * Get playlists by user ID
+   * Get playlists by user ID with privacy filtering
    * @param {string} userId - User ID
    * @param {Object} options - Query options
+   * @param {string} requesterId - ID of user making the request
    * @returns {Object} User's playlists with pagination
    */
-  async getUserPlaylists(userId, { page = 1, limit = 20, privacy = null }) {
+  async getUserPlaylists(
+    userId,
+    { page = 1, limit = 20, privacy = null },
+    requesterId = null
+  ) {
     if (!userId) {
       throw new Error("User ID is required");
     }
@@ -528,9 +529,19 @@ class PlaylistService {
       const skip = (page - 1) * limit;
       const filter = { owner: userId };
 
-      if (privacy) {
+      // Privacy filtering logic
+      const isOwnProfile =
+        requesterId && requesterId.toString() === userId.toString();
+      const isAdmin = false; // You can add admin check here if needed
+
+      if (!isOwnProfile && !isAdmin) {
+        // For other users' profiles, only show public playlists
+        filter.privacy = "public";
+      } else if (privacy) {
+        // For own profile, allow filtering by privacy if specified
         filter.privacy = privacy;
       }
+      // If own profile and no privacy filter specified, show all playlists
 
       const [playlists, total] = await Promise.all([
         Playlist.find(filter)

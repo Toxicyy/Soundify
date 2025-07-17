@@ -1,24 +1,25 @@
 import type { FC } from "react";
+import ProfileContentSlider from "./components/ProfileContentSlider";
+import ProfileArtistsSlider from "./components/ProfileArtistsSlider";
 
 type MainMenuProps = {
-  playlists: string[];
+  userId: string;
   isLoading?: boolean;
-  likedPlaylists: string[];
-  likedArtists: string[];
   access: boolean;
 };
 
-const MainMenu: FC<MainMenuProps> = ({
-  playlists,
-  isLoading,
-  likedPlaylists,
-  likedArtists,
-  access,
-}) => {
+const MainMenu: FC<MainMenuProps> = ({ userId, isLoading = false, access }) => {
   return (
-    <div className="bg-white/10 p-6 sm:p-8 lg:p-10 rounded-3xl border border-white/20">
-      <h1>{access}</h1>
-      <h1 className="text-2xl font-bold mb-4 text-white">Playlists</h1>
+    <div className="bg-white/10 p-6 sm:p-8 lg:p-10 rounded-3xl border border-white/20 space-y-8">
+      {/* Playlists Section */}
+      <ProfileContentSlider
+        userId={userId}
+        isLoading={isLoading}
+        hasAccess={access}
+      />
+
+      {/* Artists Section */}
+      <ProfileArtistsSlider userId={userId} isLoading={isLoading} />
     </div>
   );
 };
