@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../shared/api";
 
 export const useQuickPlaylist = () => {
   const navigate = useNavigate();
@@ -9,23 +10,7 @@ export const useQuickPlaylist = () => {
     setCreating(true);
 
     try {
-        
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Authentication required. Please log in.");
-      }
-
-      const response = await fetch(
-        "http://localhost:5000/api/playlists/quick",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await api.playlist.createQuick();
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

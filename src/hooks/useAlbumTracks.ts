@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 import type { Album } from "../types/AlbumData";
 
@@ -57,7 +58,6 @@ export const useAlbumTracks = (
 
   /**
    * Main data fetching function with comprehensive error handling
-   * Manages request lifecycle, response validation, and state updates
    */
   const loadAlbumTracks = useCallback(
     async (
@@ -82,25 +82,12 @@ export const useAlbumTracks = (
       setError(null);
 
       try {
-        const queryParams = new URLSearchParams({
-          page: pageNum.toString(),
-          limit: limitNum.toString(),
+        const response = await api.album.getTracks(id, {
+          page: pageNum,
+          limit: limitNum,
           sortBy: sortByParam,
-          sortOrder: sortOrderParam.toString(),
+          sortOrder: sortOrderParam,
         });
-
-        const response = await fetch(
-          `http://localhost:5000/api/albums/${encodeURIComponent(
-            id
-          )}/tracks?${queryParams}`,
-          {
-            signal: abortControllerRef.current.signal,
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-          }
-        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -109,11 +96,6 @@ export const useAlbumTracks = (
               errorData.error ||
               `HTTP ${response.status}: ${response.statusText}`
           );
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType?.includes("application/json")) {
-          throw new Error("Invalid response format - expected JSON");
         }
 
         const responseData = await response.json();

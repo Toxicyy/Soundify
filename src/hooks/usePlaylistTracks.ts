@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 import type { Playlist } from "../types/Playlist";
 
@@ -52,7 +53,6 @@ export const usePlaylistTracks = (
 
   /**
    * Main data fetching function with comprehensive error handling
-   * Manages request lifecycle, response validation, and state updates
    */
   const loadPlaylistTracks = useCallback(
     async (id: string, pageNum: number = 1, limitNum: number = 20) => {
@@ -71,31 +71,10 @@ export const usePlaylistTracks = (
       setError(null);
 
       try {
-        const queryParams = new URLSearchParams({
-          page: pageNum.toString(),
-          limit: limitNum.toString(),
+        const response = await api.playlist.getTracks(id, {
+          page: pageNum,
+          limit: limitNum,
         });
-
-        const token = localStorage.getItem("token");
-        const headers: HeadersInit = {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        };
-
-        // Add auth header if token exists
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/${encodeURIComponent(
-            id
-          )}/tracks?${queryParams}`,
-          {
-            signal: abortControllerRef.current.signal,
-            headers,
-          }
-        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 import { useGetUserQuery } from "../state/UserApi.slice";
 
@@ -24,7 +25,6 @@ export const useArtistLikedTracksCount = (
 
   const { data: user } = useGetUserQuery();
   const userId = user?._id || null;
-  const token = localStorage.getItem("token") || null;
 
   // Вычисляем количество треков от конкретного артиста
   const count = useMemo(() => {
@@ -45,7 +45,7 @@ export const useArtistLikedTracksCount = (
 
   const fetchLikedTracks = async () => {
     // Если пользователь не авторизован - возвращаем пустой результат
-    if (!userId || !token) {
+    if (!userId) {
       setLikedTracks([]);
       setIsLoading(false);
       setError(null);
@@ -56,16 +56,7 @@ export const useArtistLikedTracksCount = (
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/users/${userId}/liked-songs`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.user.getLikedSongs(userId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -95,7 +86,7 @@ export const useArtistLikedTracksCount = (
   // Загружаем данные при монтировании компонента или изменении зависимостей
   useEffect(() => {
     fetchLikedTracks();
-  }, [userId, token]);
+  }, [userId]);
 
   return {
     count,

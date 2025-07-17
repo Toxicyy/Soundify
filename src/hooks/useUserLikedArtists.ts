@@ -35,7 +35,11 @@ export const useUserLikedArtists = (
   userId: string,
   options: UseUserLikedArtistsOptions = {}
 ): UseUserLikedArtistsReturn => {
-  const { page = 1, limit = 20, autoFetch = true } = options;
+  const {
+    page = 1,
+    limit = 20,
+    autoFetch = true,
+  } = options;
 
   // State management
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -161,7 +165,11 @@ export const useUserLikedArtists = (
    */
   const loadMore = useCallback(() => {
     if (userId && pagination?.hasNextPage) {
-      loadUserLikedArtists(userId, pagination.currentPage + 1, limit);
+      loadUserLikedArtists(
+        userId,
+        pagination.currentPage + 1,
+        limit
+      );
     }
   }, [userId, pagination, limit, loadUserLikedArtists]);
 

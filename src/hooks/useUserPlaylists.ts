@@ -13,7 +13,7 @@ interface Pagination {
 interface UseUserPlaylistsOptions {
   page?: number;
   limit?: number;
-  privacy?: "public" | "private" | "unlisted";
+  privacy?: 'public' | 'private' | 'unlisted';
   autoFetch?: boolean;
 }
 
@@ -36,7 +36,12 @@ export const useUserPlaylists = (
   userId: string,
   options: UseUserPlaylistsOptions = {}
 ): UseUserPlaylistsReturn => {
-  const { page = 1, limit = 20, privacy, autoFetch = true } = options;
+  const {
+    page = 1,
+    limit = 20,
+    privacy,
+    autoFetch = true,
+  } = options;
 
   // State management
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -168,7 +173,12 @@ export const useUserPlaylists = (
    */
   const loadMore = useCallback(() => {
     if (userId && pagination?.hasNextPage) {
-      loadUserPlaylists(userId, pagination.currentPage + 1, limit, privacy);
+      loadUserPlaylists(
+        userId,
+        pagination.currentPage + 1,
+        limit,
+        privacy
+      );
     }
   }, [userId, pagination, limit, privacy, loadUserPlaylists]);
 

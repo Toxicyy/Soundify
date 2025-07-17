@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api } from "../shared/api";
 import { useImagePreloader } from "./useImagePreloader";
 import type { Track } from "../types/TrackData";
 
@@ -24,16 +25,7 @@ export const useLikedTracksLoader = () => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/users/${userId}/liked-songs`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.user.getLikedSongs(userId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -70,16 +62,7 @@ export const useLikedTracksLoader = () => {
   const refreshLikedTracks = async (userId: string) => {
     // Перезагрузка без сброса текущих данных (для обновления после лайка/дизлайка)
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/users/${userId}/liked-songs`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.user.getLikedSongs(userId);
 
       if (response.ok) {
         const data = await response.json();

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Album } from "../types/AlbumData";
 
 interface Pagination {
@@ -47,7 +48,6 @@ export const useArtistAlbums = (
 
   /**
    * Core data fetching function with error handling and validation
-   * Manages request lifecycle and response processing
    */
   const loadArtistAlbums = useCallback(
     async (id: string, pageNum: number = 1, limitNum: number = 20) => {
@@ -66,23 +66,10 @@ export const useArtistAlbums = (
       setError(null);
 
       try {
-        const queryParams = new URLSearchParams({
-          page: pageNum.toString(),
-          limit: limitNum.toString(),
+        const response = await api.artist.getAlbums(id, {
+          page: pageNum,
+          limit: limitNum,
         });
-
-        const response = await fetch(
-          `http://localhost:5000/api/artists/${encodeURIComponent(
-            id
-          )}/albums?${queryParams}`,
-          {
-            signal: abortControllerRef.current.signal,
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-          }
-        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -91,11 +78,6 @@ export const useArtistAlbums = (
               errorData.error ||
               `HTTP ${response.status}: ${response.statusText}`
           );
-        }
-
-        const contentType = response.headers.get("content-type");
-        if (!contentType?.includes("application/json")) {
-          throw new Error("Invalid response format - expected JSON");
         }
 
         const responseData = await response.json();

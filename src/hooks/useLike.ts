@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { api } from "../shared/api";
 import { useGetUserQuery } from "../state/UserApi.slice";
 import {
   addLike,
@@ -35,18 +36,10 @@ export const useLike = (trackId: string) => {
         dispatch(addLike(trackId));
       }
 
-      // Отправка запроса на сервер
-      const url = `http://localhost:5000/api/users/${user._id}/${
-        wasLiked ? "unlike" : "like"
-      }/${trackId}`;
-
-      const response = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      // Отправка запроса на сервер через API
+      const response = wasLiked
+        ? await api.user.unlikeSong(user._id, trackId)
+        : await api.user.likeSong(user._id, trackId);
 
       if (response.ok) {
         // Подтверждаем успешное обновление

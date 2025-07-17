@@ -1,5 +1,5 @@
-// hooks/usePlaylist.ts
 import { useState, useEffect, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Playlist } from "../types/Playlist";
 
 interface UsePlaylistReturn {
@@ -29,22 +29,7 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await fetch(
-        `http://localhost:5000/api/playlists/${id}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await api.playlist.getById(id);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -85,12 +70,11 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
     setHasUnsavedChanges(false);
   }, []);
 
-  // ✅ ИСПРАВЛЕНИЕ: Убираем hasUnsavedChanges из функции и правильно указываем зависимости
   const updateLocal = useCallback((updates: Partial<Playlist>) => {
     setLocalChanges((prev) => ({ ...prev, ...updates }));
     console.log("updateLocal called with:", updates);
     setHasUnsavedChanges(true);
-  }, []); // Теперь массив зависимостей корректный
+  }, []);
 
   // Получаем текущее состояние (оригинал + локальные изменения)
   const currentPlaylist: Playlist | null =

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api } from "../shared/api";
 import { useImagePreloader } from "./useImagePreloader";
 import type { Artist } from "../types/ArtistData";
 import type { Track } from "../types/TrackData";
@@ -21,14 +22,12 @@ export const useDailyArtistsDataLoader = () => {
     try {
       // Ваша функция загрузки данных
       const getArtistsTrack = async (slug: string) => {
-        const artistResponse = await fetch(
-          `http://localhost:5000/api/artists/slug/${slug}`
-        );
+        const artistResponse = await api.artist.getBySlug(slug);
         const artistData = await artistResponse.json();
-        const trackResponse = await fetch(
-          `http://localhost:5000/api/artists/${artistData.data._id}/tracks`
-        );
+
+        const trackResponse = await api.artist.getTracks(artistData.data._id);
         const trackData = await trackResponse.json();
+
         return {
           artist: artistData.data,
           tracks: trackData.data,
@@ -68,7 +67,7 @@ export const useDailyArtistsDataLoader = () => {
 
   return {
     dailyTracks,
-    isLoading: !isFullyLoaded, 
+    isLoading: !isFullyLoaded,
     loadArtistsData,
   };
 };

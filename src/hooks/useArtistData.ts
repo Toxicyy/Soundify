@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { api } from "../shared/api";
 import type { Artist } from "../types/ArtistData";
 
 interface UseArtistDataReturn {
@@ -37,17 +38,7 @@ export const useArtistData = (artistId: string): UseArtistDataReturn => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/artists/${encodeURIComponent(id)}`,
-        {
-          signal: abortControllerRef.current.signal,
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            // Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.artist.getById(id);
 
       // Проверка статуса ответа
       if (!response.ok) {

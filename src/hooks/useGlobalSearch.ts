@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { api } from "../shared/api";
 
 interface SearchResults {
   tracks: any[];
@@ -24,17 +25,11 @@ export const useGlobalSearch = () => {
       setError(null);
 
       try {
-        const params = new URLSearchParams({
-          q: query,
-          limit: String(options.limit || 10),
-        });
+        const response = await api.search.global(query, options);
 
-        const response = await fetch(`http://localhost:5000/api/search?${params}`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const data = await response.json();
 
@@ -44,6 +39,7 @@ export const useGlobalSearch = () => {
           setError(data.message || "Ошибка поиска");
         }
       } catch (err) {
+        console.error("Error during global search:", err);
         setError("Ошибка сети");
       } finally {
         setIsLoading(false);
@@ -54,15 +50,17 @@ export const useGlobalSearch = () => {
 
   const getPopularContent = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch("/api/search/popular", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await api.search.getPopular();
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
+
       if (data.success) {
         setSearchResults({
           tracks: data.data.tracks || [],
@@ -76,8 +74,11 @@ export const useGlobalSearch = () => {
             (data.data.playlists?.length || 0),
           query: "",
         });
+      } else {
+        setError(data.message || "Ошибка получения популярного контента");
       }
     } catch (err) {
+      console.error("Error fetching popular content:", err);
       setError("Ошибка получения популярного контента");
     } finally {
       setIsLoading(false);

@@ -1,4 +1,4 @@
-const BASEURL = "http://localhost:5000";
+export const BASEURL = "http://localhost:5000";
 
 // Helper function to get auth headers
 const getAuthHeaders = (includeAuth = true) => {
@@ -356,6 +356,12 @@ export const api = {
     global: async (query: string, options: { limit?: number } = {}) => {
       const params = buildQueryString({ q: query, ...options });
       return fetch(`${BASEURL}/api/search${params}`, {
+        headers: getAuthHeaders(),
+      });
+    },
+
+    getPopular: async () => {
+      return fetch(`${BASEURL}/api/search/popular`, {
         headers: getAuthHeaders(),
       });
     },

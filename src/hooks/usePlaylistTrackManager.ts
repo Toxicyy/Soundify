@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 
 interface UsePlaylistTrackManagerOptions {
@@ -30,17 +31,6 @@ export const usePlaylistTrackManager = ({
   const [isAdding, setIsAdding] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
-
-  /**
-   * Получение токена авторизации
-   */
-  const getAuthToken = useCallback(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      throw new Error("Authentication required. Please log in.");
-    }
-    return token;
-  }, []);
 
   /**
    * Обработка ошибок API
@@ -78,18 +68,7 @@ export const usePlaylistTrackManager = ({
       setIsAdding(true);
 
       try {
-        const token = getAuthToken();
-
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/${playlistId}/tracks/${track._id}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await api.playlist.addTrack(playlistId, track._id);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -114,7 +93,7 @@ export const usePlaylistTrackManager = ({
         setIsAdding(false);
       }
     },
-    [playlistId, getAuthToken, handleApiError, onTrackAdded, onError]
+    [playlistId, handleApiError, onTrackAdded, onError]
   );
 
   /**
@@ -129,18 +108,7 @@ export const usePlaylistTrackManager = ({
       setIsRemoving(true);
 
       try {
-        const token = getAuthToken();
-
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/${playlistId}/tracks/${trackId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await api.playlist.removeTrack(playlistId, trackId);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -165,7 +133,7 @@ export const usePlaylistTrackManager = ({
         setIsRemoving(false);
       }
     },
-    [playlistId, getAuthToken, handleApiError, onTrackRemoved, onError]
+    [playlistId, handleApiError, onTrackRemoved, onError]
   );
 
   /**
@@ -180,18 +148,9 @@ export const usePlaylistTrackManager = ({
       setIsReordering(true);
 
       try {
-        const token = getAuthToken();
-
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/${playlistId}/tracks/order`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ trackIds }),
-          }
+        const response = await api.playlist.updateTrackOrder(
+          playlistId,
+          trackIds
         );
 
         if (!response.ok) {
@@ -216,7 +175,7 @@ export const usePlaylistTrackManager = ({
         setIsReordering(false);
       }
     },
-    [playlistId, getAuthToken, handleApiError, onError]
+    [playlistId, handleApiError, onError]
   );
 
   return {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api } from "../shared/api";
 
 // Локальный интерфейс для сохранения (без tracks)
 interface PlaylistSaveData {
@@ -29,20 +30,10 @@ export const usePlaylistSave = (playlistId: string) => {
       // Добавляем файл, если есть
       if (changes.cover) formData.append("cover", changes.cover);
 
-      const response = await fetch(
-        `http://localhost:5000/api/playlists/${playlistId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            // НЕ ДОБАВЛЯЙ Content-Type! Браузер сам установит multipart/form-data с boundary
-          },
-          body: formData, // FormData вместо JSON
-        }
-      );
+      const response = await api.playlist.update(playlistId, formData);
 
       if (!response.ok) {
-        console.log(changes.tags)
+        console.log(changes.tags);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 
 interface UseArtistTracksReturn {
@@ -38,18 +39,7 @@ export const useArtistTracks = (artistId: string): UseArtistTracksReturn => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/artists/${encodeURIComponent(id)}/tracks`,
-        {
-          signal: abortControllerRef.current.signal,
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            // Добавьте Authorization если требуется
-            // Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.artist.getTracks(id);
 
       // Проверка статуса ответа
       if (!response.ok) {

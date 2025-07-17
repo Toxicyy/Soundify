@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { api } from "../shared/api";
 import type { User } from "../types/User";
 
 interface UseUserDataReturn {
@@ -25,7 +26,6 @@ export const useUserData = (userId: string): UseUserDataReturn => {
 
   /**
    * Core data fetching function with comprehensive error handling
-   * Manages request lifecycle, response validation, and state updates
    */
   const loadUserData = useCallback(async (id: string) => {
     // Input validation
@@ -43,17 +43,7 @@ export const useUserData = (userId: string): UseUserDataReturn => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/users/${encodeURIComponent(id)}`,
-        {
-          signal: abortControllerRef.current.signal,
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.user.getById(id);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -79,7 +69,7 @@ export const useUserData = (userId: string): UseUserDataReturn => {
       // Early return if component unmounted
       if (!isMountedRef.current) return;
 
-      // Extract user data (adapt to your API response structure)
+      // Extract user data
       const userData = responseData.data || responseData;
 
       if (!userData || typeof userData !== "object") {
