@@ -121,6 +121,44 @@ export const api = {
         headers: getAuthHeaders(),
       });
     },
+
+    // New follow/like methods
+    followArtist: async (userId: string, artistId: string) => {
+      return fetch(`${BASEURL}/api/users/${userId}/follow/artist/${artistId}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+      });
+    },
+
+    unfollowArtist: async (userId: string, artistId: string) => {
+      return fetch(
+        `${BASEURL}/api/users/${userId}/unfollow/artist/${artistId}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
+    },
+
+    likePlaylist: async (userId: string, playlistId: string) => {
+      return fetch(
+        `${BASEURL}/api/users/${userId}/like/playlist/${playlistId}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
+    },
+
+    unlikePlaylist: async (userId: string, playlistId: string) => {
+      return fetch(
+        `${BASEURL}/api/users/${userId}/unlike/playlist/${playlistId}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+        }
+      );
+    },
   },
 
   artist: {

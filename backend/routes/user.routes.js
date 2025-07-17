@@ -6,6 +6,10 @@ import {
   removeLikedSong,
   getUserById,
   getUserLikedArtists,
+  followArtist,
+  unfollowArtist,
+  likePlaylist,
+  unlikePlaylist,
 } from "../controllers/user.controller.js";
 import {
   getLikedPlaylists,
@@ -28,5 +32,11 @@ router.get("/:userId/playlists/liked", authenticate, getLikedPlaylists);
 
 // User liked artists routes
 router.get("/:userId/liked-artists", authenticate, getUserLikedArtists);
+router.put("/:userId/follow/artist/:artistId", authenticate, followArtist);
+router.put("/:userId/unfollow/artist/:artistId", authenticate, unfollowArtist);
+
+// User liked playlists routes  
+router.put("/:userId/like/playlist/:playlistId", authenticate, likePlaylist);
+router.put("/:userId/unlike/playlist/:playlistId", authenticate, unlikePlaylist);
 
 export default router;

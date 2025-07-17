@@ -1,4 +1,6 @@
 import User from "../models/User.model.js";
+import Artist from "../models/Artist.model.js";
+import Playlist from "../models/Playlist.model.js";
 import TrackService from "./TrackService.js";
 import ArtistService from "./ArtistService.js";
 
@@ -263,6 +265,206 @@ class UserService {
     } catch (error) {
       console.error("Error updating user profile:", error);
       throw new Error(`Failed to update user profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Follow an artist
+   * @param {string} userId - User ID
+   * @param {string} artistId - Artist ID to follow
+   * @returns {Promise<Object>} Updated user data
+   */
+  async followArtist(userId, artistId) {
+    if (!userId || !artistId) {
+      throw new Error("User ID and Artist ID are required");
+    }
+
+    try {
+      // Check if artist exists
+      const artist = await Artist.findById(artistId);
+      if (!artist) {
+        throw new Error("Artist not found");
+      }
+
+      // Check if user exists and is not already following the artist
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.likedArtists.includes(artistId)) {
+        throw new Error("User is already following this artist");
+      }
+
+      // Add artist to user's liked artists and increment artist's follower count
+      await Promise.all([
+        User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { likedArtists: artistId } },
+          { new: true }
+        ),
+        Artist.findByIdAndUpdate(
+          artistId,
+          { $inc: { followerCount: 1 } },
+          { new: true }
+        ),
+      ]);
+
+      return {
+        artistId,
+        isFollowing: true,
+        message: "Artist followed successfully",
+      };
+    } catch (error) {
+      console.error("Error following artist:", error);
+      throw new Error(`Failed to follow artist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Unfollow an artist
+   * @param {string} userId - User ID
+   * @param {string} artistId - Artist ID to unfollow
+   * @returns {Promise<Object>} Updated user data
+   */
+  async unfollowArtist(userId, artistId) {
+    if (!userId || !artistId) {
+      throw new Error("User ID and Artist ID are required");
+    }
+
+    try {
+      // Check if user exists and is following the artist
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (!user.likedArtists.includes(artistId)) {
+        throw new Error("User is not following this artist");
+      }
+
+      // Remove artist from user's liked artists and decrement artist's follower count
+      await Promise.all([
+        User.findByIdAndUpdate(
+          userId,
+          { $pull: { likedArtists: artistId } },
+          { new: true }
+        ),
+        Artist.findByIdAndUpdate(
+          artistId,
+          { $inc: { followerCount: -1 } },
+          { new: true }
+        ),
+      ]);
+
+      return {
+        artistId,
+        isFollowing: false,
+        message: "Artist unfollowed successfully",
+      };
+    } catch (error) {
+      console.error("Error unfollowing artist:", error);
+      throw new Error(`Failed to unfollow artist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Like a playlist
+   * @param {string} userId - User ID
+   * @param {string} playlistId - Playlist ID to like
+   * @returns {Promise<Object>} Updated user data
+   */
+  async likePlaylist(userId, playlistId) {
+    if (!userId || !playlistId) {
+      throw new Error("User ID and Playlist ID are required");
+    }
+
+    try {
+      // Check if playlist exists
+      const playlist = await Playlist.findById(playlistId);
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      // Check if user exists and hasn't already liked the playlist
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.likedPlaylists.includes(playlistId)) {
+        throw new Error("User has already liked this playlist");
+      }
+
+      // Add playlist to user's liked playlists and increment playlist's like count
+      await Promise.all([
+        User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { likedPlaylists: playlistId } },
+          { new: true }
+        ),
+        Playlist.findByIdAndUpdate(
+          playlistId,
+          { $inc: { likeCount: 1 } },
+          { new: true }
+        ),
+      ]);
+
+      return {
+        playlistId,
+        isLiked: true,
+        message: "Playlist liked successfully",
+      };
+    } catch (error) {
+      console.error("Error liking playlist:", error);
+      throw new Error(`Failed to like playlist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Unlike a playlist
+   * @param {string} userId - User ID
+   * @param {string} playlistId - Playlist ID to unlike
+   * @returns {Promise<Object>} Updated user data
+   */
+  async unlikePlaylist(userId, playlistId) {
+    if (!userId || !playlistId) {
+      throw new Error("User ID and Playlist ID are required");
+    }
+
+    try {
+      // Check if user exists and has liked the playlist
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (!user.likedPlaylists.includes(playlistId)) {
+        throw new Error("User has not liked this playlist");
+      }
+
+      // Remove playlist from user's liked playlists and decrement playlist's like count
+      await Promise.all([
+        User.findByIdAndUpdate(
+          userId,
+          { $pull: { likedPlaylists: playlistId } },
+          { new: true }
+        ),
+        Playlist.findByIdAndUpdate(
+          playlistId,
+          { $inc: { likeCount: -1 } },
+          { new: true }
+        ),
+      ]);
+
+      return {
+        playlistId,
+        isLiked: false,
+        message: "Playlist unliked successfully",
+      };
+    } catch (error) {
+      console.error("Error unliking playlist:", error);
+      throw new Error(`Failed to unlike playlist: ${error.message}`);
     }
   }
 }

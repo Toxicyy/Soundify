@@ -7,6 +7,7 @@ import { useArtistData } from "../hooks/useArtistData";
 import { useArtistTracks } from "../hooks/useArtistTracks";
 import { useArtistAlbums } from "../hooks/useArtistAlbums";
 import { useImagePreloader } from "../hooks/useImagePreloader";
+import { useFollowArtist } from "../hooks/useFollowArtist";
 
 /**
  * Artist page component displaying artist information, tracks, and albums
@@ -33,6 +34,13 @@ const Artist = () => {
     error: tracksError,
   } = useArtistTracks(artist?._id || "");
 
+  const {
+    isFollowing,
+    isLoading: isFollowingLoading,
+    error: followError,
+    toggleFollow,
+  } = useFollowArtist(artist?._id || "");
+
   // Fetch artist albums
   const { albums, isLoading: albumsLoading } = useArtistAlbums(
     artist?._id || "",
@@ -52,9 +60,14 @@ const Artist = () => {
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
   // Determine overall loading state
-  const isDataLoading = artistLoading || tracksLoading || albumsLoading;
+  const isDataLoading = artistLoading || tracksLoading || albumsLoading || isFollowingLoading;
   const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
   const isOverallLoading = isDataLoading || isImagesLoading;
+
+  const isDataError = artistError || tracksError || followError;
+  const isImageError = !allImagesLoaded && imagesToPreload.length === 0;
+
+  const isOverallError = isDataError || isImageError;
 
   // Show loading state while any data or images are loading
   if (isOverallLoading) {
@@ -67,13 +80,15 @@ const Artist = () => {
           albums={[]}
           tracks={[]}
           tracksError={null}
+          isFollowing={false}
+          toggleFollow={() => Promise.resolve()}
         />
       </div>
     );
   }
 
   // Show error state if artist loading failed
-  if (artistError) {
+  if (isOverallError) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
         <div className="flex flex-col items-center gap-6 text-center max-w-md">
@@ -96,14 +111,14 @@ const Artist = () => {
 
           <div>
             <h2 className="text-white text-xl font-semibold mb-2">
-              {artistError.includes("не найден") ||
-              artistError.includes("not found")
+              {artistError?.includes("не найден") ||
+              artistError?.includes("not found")
                 ? "Artist not found"
                 : "Loading error"}
             </h2>
             <p className="text-white/70 text-sm mb-1">
-              {artistError.includes("не найден") ||
-              artistError.includes("not found")
+              {artistError?.includes("не найден") ||
+              artistError?.includes("not found")
                 ? `Artist with ID "${artistId}" doesn't exist or has been removed`
                 : artistError}
             </p>
@@ -176,6 +191,8 @@ const Artist = () => {
         tracksError={tracksError}
         artist={artist}
         albums={albums}
+        isFollowing={isFollowing}
+        toggleFollow={toggleFollow}
       />
     </main>
   );
