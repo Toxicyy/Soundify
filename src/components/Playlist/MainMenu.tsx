@@ -1,4 +1,4 @@
-import { useCallback, type FC, memo } from "react";
+import { useCallback, type FC, memo, useEffect } from "react";
 import type { Playlist } from "../../types/Playlist";
 import type { Track } from "../../types/TrackData";
 import DraggableTracksList from "./components/DraggableTracksList";
@@ -40,7 +40,6 @@ const MainMenu: FC<MainMenuProps> = ({
   const handleAddTrackLocal = useCallback(
     (track: Track) => {
       if (!playlist) return;
-
       // Проверяем, нет ли уже такого трека в плейлисте
       const isAlreadyInPlaylist = tracks.some(
         (existingTrack) => existingTrack._id === track._id

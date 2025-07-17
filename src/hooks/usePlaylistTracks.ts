@@ -37,12 +37,7 @@ export const usePlaylistTracks = (
   playlistId: string,
   options: UsePlaylistTracksOptions = {}
 ): UsePlaylistTracksReturn => {
-  const {
-    page = 1,
-    limit = 20,
-    sortBy = "createdAt",
-    sortOrder = -1,
-  } = options;
+  const { page = 1, limit = 20, sortOrder = -1 } = options;
 
   // State management
   const [playlist, setPlaylist] = useState<Playlist>({} as Playlist);
@@ -60,13 +55,7 @@ export const usePlaylistTracks = (
    * Manages request lifecycle, response validation, and state updates
    */
   const loadPlaylistTracks = useCallback(
-    async (
-      id: string,
-      pageNum: number = 1,
-      limitNum: number = 20,
-      sortByParam: string = "createdAt",
-      sortOrderParam: number = -1
-    ) => {
+    async (id: string, pageNum: number = 1, limitNum: number = 20) => {
       // Input validation
       if (!id?.trim()) {
         setError("Invalid playlist ID");
@@ -85,8 +74,6 @@ export const usePlaylistTracks = (
         const queryParams = new URLSearchParams({
           page: pageNum.toString(),
           limit: limitNum.toString(),
-          sortBy: sortByParam,
-          sortOrder: sortOrderParam.toString(),
         });
 
         const token = localStorage.getItem("token");
@@ -205,29 +192,23 @@ export const usePlaylistTracks = (
    */
   const refetch = useCallback(() => {
     if (playlistId) {
-      loadPlaylistTracks(playlistId, page, limit, sortBy, sortOrder);
+      loadPlaylistTracks(playlistId, page, limit);
     }
-  }, [playlistId, page, limit, sortBy, sortOrder, loadPlaylistTracks]);
+  }, [playlistId, page, limit, loadPlaylistTracks]);
 
   /**
    * Load next page of data if available
    */
   const loadMore = useCallback(() => {
     if (playlistId && pagination?.hasNextPage) {
-      loadPlaylistTracks(
-        playlistId,
-        pagination.currentPage + 1,
-        limit,
-        sortBy,
-        sortOrder
-      );
+      loadPlaylistTracks(playlistId, pagination.currentPage + 1, limit);
     }
-  }, [playlistId, pagination, limit, sortBy, sortOrder, loadPlaylistTracks]);
+  }, [playlistId, pagination, limit, loadPlaylistTracks]);
 
   // Initial data loading effect
   useEffect(() => {
     if (playlistId) {
-      loadPlaylistTracks(playlistId, page, limit, sortBy, sortOrder);
+      loadPlaylistTracks(playlistId, page, limit);
     } else {
       // Reset state when no playlist ID provided
       setPlaylist({} as Playlist);
@@ -240,7 +221,7 @@ export const usePlaylistTracks = (
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, [playlistId, page, limit, sortBy, sortOrder, loadPlaylistTracks]);
+  }, [playlistId, page, limit, sortOrder, loadPlaylistTracks]);
 
   // Component lifecycle management
   useEffect(() => {

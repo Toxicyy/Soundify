@@ -9,6 +9,7 @@ interface UsePlaylistReturn {
   error: string | null;
   updateLocal: (updates: Partial<Playlist>) => void;
   fetchPlaylist: (id: string) => Promise<void>;
+  switchUnsavedChangesToFalse: () => void;
 }
 
 export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
@@ -18,7 +19,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Загружаем плейлист
   useEffect(() => {
     if (playlistId) {
       fetchPlaylist(playlistId);
@@ -60,7 +60,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
       }
 
       const data = await response.json();
-
       if (data.success) {
         setPlaylist(data.data);
         setLocalChanges({});
@@ -73,7 +72,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
         err instanceof Error ? err.message : "Failed to load playlist";
       setError(errorMessage);
 
-      // Если ошибка авторизации, можно перенаправить на логин
       if (errorMessage.includes("Authentication")) {
         // localStorage.removeItem('token');
         // navigate('/login');
@@ -83,11 +81,16 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
     }
   };
 
-  // Оптимистичное обновление локального состояния
+  const switchUnsavedChangesToFalse = useCallback(() => {
+    setHasUnsavedChanges(false);
+  }, []);
+
+  // ✅ ИСПРАВЛЕНИЕ: Убираем hasUnsavedChanges из функции и правильно указываем зависимости
   const updateLocal = useCallback((updates: Partial<Playlist>) => {
     setLocalChanges((prev) => ({ ...prev, ...updates }));
+    console.log("updateLocal called with:", updates);
     setHasUnsavedChanges(true);
-  }, []);
+  }, []); // Теперь массив зависимостей корректный
 
   // Получаем текущее состояние (оригинал + локальные изменения)
   const currentPlaylist: Playlist | null =
@@ -102,5 +105,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
     error,
     updateLocal,
     fetchPlaylist,
+    switchUnsavedChangesToFalse,
   };
 };

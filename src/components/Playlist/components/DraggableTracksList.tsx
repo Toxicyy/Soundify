@@ -89,7 +89,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
       const newTracks = [...tracks];
       const [movedTrack] = newTracks.splice(fromIndex, 1);
       newTracks.splice(toIndex, 0, movedTrack);
-
       // Обновляем плейлист локально
       updateLocal({
         tracks: newTracks as Track[] | string[], // Приводим к нужному типу
@@ -378,7 +377,7 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
           ? renderEmptyState()
           : filteredTracks.map((track, index) => (
               <DraggableTrackTemplate
-                key={track._id}
+                key={index}
                 track={track}
                 index={index}
                 allTracks={filteredTracks}

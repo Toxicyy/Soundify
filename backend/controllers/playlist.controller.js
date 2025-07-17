@@ -143,7 +143,7 @@ export const deletePlaylist = catchAsync(async (req, res) => {
  */
 export const getPlaylistTracks = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const { page, limit, sortBy, sortOrder } = req.query;
+  const { page, limit} = req.query;
 
   if (!id) {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
@@ -154,8 +154,6 @@ export const getPlaylistTracks = catchAsync(async (req, res) => {
     {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 20,
-      sortBy: sortBy || "createdAt",
-      sortOrder: parseInt(sortOrder) || -1,
     },
     req.user?.id
   );
@@ -332,14 +330,14 @@ export const updateTrackOrder = catchAsync(async (req, res) => {
       .status(400)
       .json(ApiResponse.error("Track IDs array is required"));
   }
-
   // Validate ownership
   await PlaylistService.validatePlaylistOwnership(playlistId, req.user.id);
 
   const playlist = await PlaylistService.updateTrackOrder(
     playlistId,
     trackIds,
-    skipValidation
+    skipValidation,
+    req.user.id
   );
 
   res.json(ApiResponse.success("Track order updated successfully", playlist));

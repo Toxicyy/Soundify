@@ -328,7 +328,7 @@ class PlaylistService {
    */
   async getPlaylistTracks(
     playlistId,
-    { page = 1, limit = 20, sortBy = "createdAt", sortOrder = -1 },
+    { page = 1, limit = 20},
     userId = null
   ) {
     if (!playlistId) {
@@ -350,16 +350,22 @@ class PlaylistService {
       }
 
       const skip = (page - 1) * limit;
-      const sort = { [sortBy]: sortOrder };
+      const total = playlist.tracks.length;
 
-      const [tracks, total] = await Promise.all([
-        Track.find({ _id: { $in: playlist.tracks } })
-          .populate("artist", "name avatar")
-          .sort(sort)
-          .skip(skip)
-          .limit(limit),
-        Track.countDocuments({ _id: { $in: playlist.tracks } }),
-      ]);
+      const trackIdsForPage = playlist.tracks.slice(skip, skip + limit);
+
+      const foundTracks = await Track.find({
+        _id: { $in: trackIdsForPage },
+      }).populate("artist", "name avatar");
+
+      const trackMap = new Map();
+      foundTracks.forEach((track) => {
+        trackMap.set(track._id.toString(), track);
+      });
+
+      const tracks = trackIdsForPage
+        .map((trackId) => trackMap.get(trackId.toString()))
+        .filter(Boolean); // Убираем треки, которые не найдены (удаленные треки)
 
       const totalPages = Math.ceil(total / limit);
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
@@ -625,7 +631,7 @@ class PlaylistService {
    * @param {Array} trackIds - Ordered array of track IDs
    * @returns {Object} Updated playlist
    */
-  async updateTrackOrder(playlistId, trackIds, skipValidation = false) {
+  async updateTrackOrder(playlistId, trackIds, skipValidation = false, userId) {
     if (!playlistId || !Array.isArray(trackIds)) {
       throw new Error("Playlist ID and track IDs array are required");
     }
@@ -652,7 +658,7 @@ class PlaylistService {
         { new: true }
       );
 
-      return await this.getPlaylistById(playlistId);
+      return await this.getPlaylistById(playlistId, userId);
     } catch (error) {
       throw new Error(`Failed to update track order: ${error.message}`);
     }

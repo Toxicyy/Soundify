@@ -341,11 +341,10 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden group/cover">
           {/* Track cover image */}
           <img
-            src={track?.coverUrl || "/default-cover.jpg"}
+            src={track?.coverUrl || ""}
             alt={`${track?.name} cover`}
             className="w-full h-full object-cover rounded-lg transition-opacity duration-200"
             onError={handleImageError}
-            loading="lazy"
           />
 
           {/* Play/pause overlay on hover */}
