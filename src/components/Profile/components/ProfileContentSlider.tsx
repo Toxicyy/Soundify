@@ -123,10 +123,7 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
         <div className="flex gap-5 px-2">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
-              <ProfilePlaylistTemplate
-                playlist={{} as any}
-                isLoading={true}
-              />
+              <ProfilePlaylistTemplate playlist={{} as any} isLoading={true} />
             </div>
           ))}
         </div>

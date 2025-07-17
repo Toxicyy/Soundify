@@ -8,7 +8,7 @@ import { useGetUserQuery } from "../state/UserApi.slice";
 export default function Profile() {
   const location = useLocation();
   const userId = location.pathname.split("/")[2];
-  const { data, isLoading, error, refetch, hasData } = useUserData(userId);
+  const { data, isLoading, error, refetch } = useUserData(userId);
   const { data: currentUser } = useGetUserQuery();
 
   // Determine access level
@@ -47,7 +47,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="w-full mainMenu pl-[22vw] pr-[2vw] flex flex-col gap-5">
+    <div className="min-h-screen w-full mainMenu pl-[22vw] pr-[2vw] flex flex-col gap-5 pb-5">
       <Header
         imageSrc={data?.avatar || Anonym}
         username={data?.username || ""}

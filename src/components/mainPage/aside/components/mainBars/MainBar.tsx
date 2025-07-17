@@ -28,8 +28,8 @@ export const MainBar: FC<MainBarProps> = ({
   const [hover, setHover] = useState(false);
   const icons = {
     Home: <HomeOutlined />,
-    Radio: <ApartmentOutlined />,
-    Library: <InsertRowRightOutlined />,
+    Playlists: <ApartmentOutlined />,
+    Artists: <InsertRowRightOutlined />,
     "Liked Songs": <HeartFilled />,
     Recently: <ClockCircleOutlined />,
     "New Playlist": <FolderOutlined />,

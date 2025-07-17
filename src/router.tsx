@@ -13,6 +13,9 @@ import Album from "./Pages/Album";
 import Single from "./Pages/Single";
 import Playlist from "./Pages/Playlist";
 import Profile from "./Pages/Profile";
+import UserPlaylistsPage from "./Pages/Profile/UserPlaylistsPage";
+import UserLikedPlaylistsPage from "./Pages/Profile/UserLikedPlaylistsPage";
+import UserLikedArtistsPage from "./Pages/Profile/UserLikedArtistsPage";
 
 export const router = createBrowserRouter([
   {
@@ -61,8 +64,21 @@ export const router = createBrowserRouter([
           },
           {
             path: "/profile/:id",
-            element: <Profile />
-          }
+            element: <Profile />,
+          },
+          // Переместил дочерние роуты профиля на один уровень с основным роутом профиля
+          {
+            path: "/profile/:id/playlists",
+            element: <UserPlaylistsPage />,
+          },
+          {
+            path: "/profile/:id/liked-playlists",
+            element: <UserLikedPlaylistsPage />,
+          },
+          {
+            path: "/profile/:id/artists",
+            element: <UserLikedArtistsPage />,
+          },
         ],
       },
       {
