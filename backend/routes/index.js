@@ -6,6 +6,7 @@ import artistRoutes from "./artist.routes.js";
 import userRoutes from "./user.routes.js";
 import albumRoutes from "./album.routes.js";
 import globalSearchRoutes from "./globalSearch.routes.js";
+import chartRoutes from "./chart.routes.js";
 /**
  * Main API routes configuration
  * Combines all feature-specific route modules
@@ -21,6 +22,7 @@ router.use("/artists", artistRoutes);              // Artist management & discov
 router.use("/users", userRoutes);
 router.use("/albums" , albumRoutes);
 router.use("/search", globalSearchRoutes);
+router.use('/api/charts', chartRoutes);
 
 // API health check endpoint
 router.get("/", (req, res) => {

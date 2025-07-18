@@ -1,6 +1,6 @@
 import geoip from "geoip-lite";
 import { v4 as uuidv4 } from "uuid";
-import { ListenEvent } from "../models/ChartModels.js";
+import { ListenEvent } from "../models/Chart.model.js";
 import Track from "../models/Track.model.js";
 import { ApiResponse } from "../utils/responses.js";
 import { catchAsync } from "../utils/helpers.js";
