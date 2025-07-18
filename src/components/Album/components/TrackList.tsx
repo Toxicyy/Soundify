@@ -223,9 +223,9 @@ const TracksList: FC<TracksListProps> = ({
    */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
-      <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-col sm:flex-row">
+      <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-row">
         {/* Left side - Playback controls */}
-        <div className="flex items-center gap-4 order-2 sm:order-1">
+        <div className="flex items-center gap-4">
           {/* Play/Pause button */}
           <button
             className="bg-white/40 rounded-full w-[65px] h-[65px] flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-white/20"

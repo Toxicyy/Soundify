@@ -72,7 +72,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
    */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
-      <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-col sm:flex-row">
+      <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-row">
         {/* Left side - Playback controls */}
         <div className="flex items-center gap-4 order-2 sm:order-1">
           {/* Play all button */}

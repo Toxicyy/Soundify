@@ -89,6 +89,8 @@ export const useNotification = () => {
    * Show playlist limit error with custom styling
    */
   const showPlaylistLimitError = (currentCount: number, limit: number) => {
+    const isUserStatus = limit === 5;
+
     return toast.custom(
       (t) => (
         <div
@@ -120,9 +122,16 @@ export const useNotification = () => {
                 <p className="mt-1 text-sm text-white/80">
                   У вас уже {currentCount} из {limit} возможных плейлистов
                 </p>
-                <p className="mt-1 text-xs text-white/60">
-                  Удалите ненужные плейлисты или обновитесь до Premium
-                </p>
+                {isUserStatus ? (
+                  <p className="mt-1 text-xs text-white/60">
+                    Удалите ненужные плейлисты или обновитесь до Premium для
+                    увеличения лимита до 15 плейлистов
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-white/60">
+                    Удалите ненужные плейлисты для создания новых
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -137,7 +146,7 @@ export const useNotification = () => {
         </div>
       ),
       {
-        duration: 6000,
+        duration: 8000, // Увеличиваем время показа для важного сообщения
       }
     );
   };

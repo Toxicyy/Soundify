@@ -1,6 +1,7 @@
 import { type FC, memo, useCallback } from "react";
 import type { Playlist } from "../../../types/Playlist";
 import { Link } from "react-router-dom";
+import PlayListDefaultImage from "../../../images/Playlist/playlistDef.png";
 
 interface ProfilePlaylistTemplateProps {
   playlist: Playlist;
@@ -87,13 +88,12 @@ const ProfilePlaylistTemplate: FC<ProfilePlaylistTemplateProps> = ({
             />
           ) : (
             <div className="w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] mb-1 rounded-lg bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-              <svg
-                className="w-12 h-12 text-gray-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <img
+                src={PlayListDefaultImage}
+                alt="Default playlist cover"
+                className="w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] mb-1 rounded-lg cursor-pointer object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
             </div>
           )}
 

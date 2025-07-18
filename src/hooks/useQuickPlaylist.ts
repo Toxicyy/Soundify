@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../shared/api";
-import { useGetUserQuery } from "../state/UserApi.slice";
 import { useNotification } from "./useNotification";
+
+interface PlaylistLimitError {
+  errorCode: string;
+  currentCount: number;
+  limit: number;
+  userStatus: string;
+}
 
 export const useQuickPlaylist = () => {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
 
-  // Get user data for limits check
-  const { data: user } = useGetUserQuery();
   const {
     showPlaylistLimitError,
     showSuccess,
@@ -18,41 +22,7 @@ export const useQuickPlaylist = () => {
     dismiss,
   } = useNotification();
 
-  /**
-   * Check if user can create more playlists based on their status
-   */
-  const checkPlaylistLimit = (): boolean => {
-    if (!user) {
-      showError("Необходимо авторизоваться для создания плейлистов");
-      return false;
-    }
-
-    // Define limits based on user status
-    const limits = {
-      USER: 5,
-      PREMIUM: 15,
-      ADMIN: 15,
-    };
-
-    const userStatus = user.status as keyof typeof limits;
-    const limit = limits[userStatus] || limits.USER; // Default to USER limit if status is unknown
-    const currentCount = user.playlists?.length || 0;
-    console.log(currentCount, limit);
-    // Check if limit is exceeded
-    if (currentCount >= limit) {
-      showPlaylistLimitError(currentCount, limit);
-      return false;
-    }
-
-    return true;
-  };
-
   const createQuickPlaylist = async () => {
-    // Check limits before proceeding
-    if (!checkPlaylistLimit()) {
-      return;
-    }
-
     setCreating(true);
 
     // Show loading notification
@@ -61,8 +31,34 @@ export const useQuickPlaylist = () => {
     try {
       const response = await api.playlist.createQuick();
 
+      // Handle different response statuses
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+
+        // Handle playlist limit exceeded (403 status)
+        if (
+          response.status === 403 &&
+          errorData.data?.errorCode === "PLAYLIST_LIMIT_EXCEEDED"
+        ) {
+          const limitData = errorData.data as PlaylistLimitError;
+
+          // Dismiss loading toast
+          dismiss(loadingToast);
+
+          // Show custom limit error notification
+          showPlaylistLimitError(limitData.currentCount, limitData.limit);
+          return;
+        }
+
+        // Handle authentication errors
+        if (response.status === 401) {
+          throw new Error("Необходимо войти в аккаунт для создания плейлистов");
+        }
+
+        // Handle other errors
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
@@ -87,32 +83,14 @@ export const useQuickPlaylist = () => {
     } catch (error) {
       console.error("Failed to create playlist:", error);
 
-      // Dismiss loading and show error
+      // Dismiss loading toast
       dismiss(loadingToast);
 
       const errorMessage =
         error instanceof Error ? error.message : "Неизвестная ошибка";
 
-      // Handle specific error cases
-      if (
-        errorMessage.includes("Authentication") ||
-        errorMessage.includes("401")
-      ) {
-        showError("Необходимо войти в аккаунт для создания плейлистов");
-      } else if (errorMessage.includes("403")) {
-        showError("Недостаточно прав для создания плейлистов");
-      } else if (
-        errorMessage.includes("limit") ||
-        errorMessage.includes("лимит")
-      ) {
-        // This case is already handled by checkPlaylistLimit, but just in case backend also checks
-        const user = useGetUserQuery().data;
-        const limit = user?.status === "USER" ? 5 : 15;
-        const current = user?.playlists?.length || 0;
-        showPlaylistLimitError(current, limit);
-      } else {
-        showError(`Ошибка создания плейлиста: ${errorMessage}`);
-      }
+      // Show appropriate error message
+      showError(errorMessage);
 
       throw error;
     } finally {
@@ -123,6 +101,5 @@ export const useQuickPlaylist = () => {
   return {
     createQuickPlaylist,
     creating,
-    checkPlaylistLimit, // Export for potential use in other components
   };
 };

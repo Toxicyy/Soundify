@@ -46,7 +46,7 @@ export const BaseHeader: FC<BaseHeaderProps> = ({
   className = "",
 }) => (
   <div
-    className={`w-full h-[30vh] mt-12 bg-white/10 p-6 sm:p-8 lg:p-10 rounded-3xl border border-white/20 ${className}`}
+    className={`w-full h-[24vh] xl:h-[30vh] mt-12 bg-white/10 p-6 sm:p-8 lg:p-10 rounded-3xl border border-white/20 ${className}`}
   >
     {children}
   </div>
@@ -65,7 +65,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="flex gap-3 sm:gap-5 items-end flex-col sm:flex-row">
+      <div className="flex gap-3 sm:gap-5 items-end flex-row">
         {/* Image skeleton */}
         <div
           className={`${image.className} bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 relative overflow-hidden`}
@@ -93,7 +93,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
   }
 
   return (
-    <div className="flex gap-3 sm:gap-5 items-end flex-col sm:flex-row">
+    <div className="flex gap-3 sm:gap-5 items-end flex-row">
       {/* Main image */}
       <img
         src={image.src}

@@ -421,15 +421,46 @@ export const getPlaylistStats = catchAsync(async (req, res) => {
 });
 
 export const createQuickPlaylist = catchAsync(async (req, res) => {
-  const playlist = await PlaylistService.createQuickPlaylist(req.user.id);
+  try {
+    const userId = req.user.id;
+    const userStatus = req.user.status || "USER";
 
-  res.status(201).json(
-    ApiResponse.success("Quick playlist created successfully", {
-      id: playlist._id,
-      name: playlist.name,
-      isDraft: playlist.isDraft,
-    })
-  );
+    const playlist = await PlaylistService.createQuickPlaylist(
+      userId,
+      userStatus
+    );
+
+    res.status(201).json(
+      ApiResponse.success("Quick playlist created successfully", {
+        id: playlist._id,
+        name: playlist.name,
+        isDraft: playlist.isDraft,
+      })
+    );
+  } catch (error) {
+    console.error("Error creating quick playlist:", error);
+
+    // Handle playlist limit exceeded error
+    if (error.message.startsWith("PLAYLIST_LIMIT_EXCEEDED")) {
+      const [, currentCount, limit] = error.message.split(":");
+
+      return res.status(403).json(
+        ApiResponse.error("Playlist limit exceeded", {
+          errorCode: "PLAYLIST_LIMIT_EXCEEDED",
+          currentCount: parseInt(currentCount),
+          limit: parseInt(limit),
+          userStatus: req.user.status || "USER",
+        })
+      );
+    }
+
+    // Handle other errors
+    if (error.message.includes("Authentication")) {
+      return res.status(401).json(ApiResponse.error("Authentication required"));
+    }
+
+    res.status(400).json(ApiResponse.error(error.message));
+  }
 });
 
 // Также добавить метод для превращения черновика в полноценный плейлист

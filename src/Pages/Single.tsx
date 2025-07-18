@@ -99,7 +99,7 @@ const Single = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
+      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5">
         <Header track={{} as Track} isLoading={true} />
         <MainMenu track={{} as Track} isLoading={true} />
       </div>
@@ -183,7 +183,7 @@ const Single = () => {
   // Show message if no track data available
   if (!track || !track.name) {
     return (
-      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
+      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="text-white/60 text-lg">Track data unavailable</div>
           <button
@@ -200,7 +200,7 @@ const Single = () => {
 
   // Main content render - track data loaded successfully
   return (
-    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
+    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5">
       <Header track={track} isLoading={false} />
       <MainMenu track={track} isLoading={false} />
     </main>

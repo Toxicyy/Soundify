@@ -72,7 +72,7 @@ const Artist = () => {
   // Show loading state while any data or images are loading
   if (isOverallLoading) {
     return (
-      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
+      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
         <Header artist={{} as Artist} isLoading={true} />
         <MainMenu
           isLoading={true}
@@ -166,7 +166,7 @@ const Artist = () => {
   // Show message if no artist data available
   if (!artist) {
     return (
-      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
+      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="text-white/60 text-lg">Artist data unavailable</div>
           <button
@@ -183,7 +183,7 @@ const Artist = () => {
 
   // Main content render - all data loaded successfully
   return (
-    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex flex-col gap-5">
+    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
       <Header artist={artist} isLoading={false} />
       <MainMenu
         isLoading={false}

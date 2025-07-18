@@ -34,7 +34,7 @@ const ArtistHeader: FC<ArtistHeaderProps> = ({ artist, isLoading = false }) => {
           src: artist.avatar,
           alt: artist.name || "Artist avatar",
           className:
-            "w-[120px] h-[120px] sm:w-[8vw] sm:h-[8vw] lg:w-[10vw] lg:h-[10vw] rounded-full mx-auto sm:mx-0",
+            "w-[120px] h-[120px] lg:w-[12vw] lg:h-[12vw] xl:w-[10vw] xl:h-[10vw] rounded-full mx-auto sm:mx-0",
         }}
         badge={
           artist.isVerified

@@ -109,9 +109,36 @@ class PlaylistService {
     }
   }
 
-  // Новый метод для создания быстрого плейлиста
-  async createQuickPlaylist(userId) {
+  /**
+   * Create quick playlist with user limits check
+   * @param {string} userId - User ID
+   * @param {string} userStatus - User status (USER, PREMIUM, ADMIN)
+   * @returns {Object} Created playlist
+   */
+  async createQuickPlaylist(userId, userStatus) {
     try {
+      // Define limits based on user status
+      const limits = {
+        USER: 5,
+        PREMIUM: 15,
+        ADMIN: 15,
+      };
+
+      const limit = limits[userStatus] || limits.USER;
+
+      // Count current user playlists
+      const currentPlaylistCount = await Playlist.countDocuments({
+        owner: userId,
+      });
+
+      // Check if limit is exceeded
+      if (currentPlaylistCount >= limit) {
+        throw new Error(
+          `PLAYLIST_LIMIT_EXCEEDED:${currentPlaylistCount}:${limit}`
+        );
+      }
+
+      // Generate unique playlist name
       const playlistName = await this.generateUniquePlaylistName(userId);
 
       const playlistData = {
@@ -125,8 +152,15 @@ class PlaylistService {
         isDraft: true, // Добавляем флаг черновика
       };
 
-      return await this.createPlaylist(playlistData, null);
+      const playlist = await this.createPlaylist(playlistData, null);
+
+      return playlist;
     } catch (error) {
+      // Re-throw limit errors as-is for special handling
+      if (error.message.startsWith("PLAYLIST_LIMIT_EXCEEDED")) {
+        throw error;
+      }
+
       throw new Error(`Quick playlist creation failed: ${error.message}`);
     }
   }

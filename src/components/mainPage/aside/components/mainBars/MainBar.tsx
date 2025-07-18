@@ -52,7 +52,7 @@ export const MainBar: FC<MainBarProps> = ({
         <div className="text-lg font-semibold">
           {icons[text as keyof typeof icons]}
         </div>
-        <h1 className="font-semibold tracking-wider">{text}</h1>
+        <h1 className="font-semibold tracking-wider truncate">{text}</h1>
       </motion.div>
     </Link>
   );
