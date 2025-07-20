@@ -1,5 +1,6 @@
 import SearchInput from "./components/SearchInput";
 import UserIcon from "./components/UserIcon";
+import SettingsMenu from "./components/SettingsMenu"; // Новый импорт
 import userAvatar from "../../../images/User/Anonym.jpg";
 import {
   LeftOutlined,
@@ -16,19 +17,31 @@ import type { AppState } from "../../../store";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../../state/UserApi.slice";
-import { useEffect } from "react";
+import { useEffect, useState } from "react"; // Добавлен useState
 import { useDailyArtistsDataLoader } from "../../../hooks/useDailyArtistDataLoader";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
   const { data: user, isFetching } = useGetUserQuery();
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false); // Новое состояние
 
   // Используем новый хук
-  const { dailyTracks, isLoading, loadArtistsData } = useDailyArtistsDataLoader();
+  const { dailyTracks, isLoading, loadArtistsData } =
+    useDailyArtistsDataLoader();
 
   useEffect(() => {
     loadArtistsData();
   }, []);
+
+  // Функция для переключения меню настроек
+  const toggleSettingsMenu = () => {
+    setIsSettingsMenuOpen(!isSettingsMenuOpen);
+  };
+
+  // Функция для закрытия меню настроек
+  const closeSettingsMenu = () => {
+    setIsSettingsMenuOpen(false);
+  };
 
   return (
     <div className="h-screen w-full mainMenu pl-[22vw] pt-6 flex gap-10 overflow-hidden">
@@ -87,7 +100,7 @@ export default function MainMenu() {
       <div className="w-[35%] flex flex-col gap-0">
         {!isFetching && user ? (
           <motion.div
-            className="flex items-center justify-between mr-10 mb-4"
+            className="flex items-center justify-between mr-10 mb-4 relative" // Добавлен relative
             initial={{ opacity: 1, height: 0, y: -400 }}
             animate={
               !queueOpen
@@ -103,10 +116,23 @@ export default function MainMenu() {
                 <span className="username">{user.username}</span>
               </div>
             </h1>
-            <SettingOutlined
-              style={{ color: "white", fontSize: "36px" }}
-              className="cursor-pointer transition-all duration-300 hover:scale-110"
-            />
+
+            {/* Обновленная кнопка настроек */}
+            <div className="relative">
+              <SettingOutlined
+                style={{ color: "white", fontSize: "36px" }}
+                className={`cursor-pointer transition-all duration-300 hover:scale-110 ${
+                  isSettingsMenuOpen ? "scale-110 text-blue-400" : ""
+                }`}
+                onClick={toggleSettingsMenu}
+              />
+
+              {/* Контекстное меню */}
+              <SettingsMenu
+                isOpen={isSettingsMenuOpen}
+                onClose={closeSettingsMenu}
+              />
+            </div>
           </motion.div>
         ) : (
           <motion.div

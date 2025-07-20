@@ -115,3 +115,22 @@ export const getPopularArtists = catchAsync(async (req, res) => {
 
   res.json(ApiResponse.success("Популярные артисты успешно получены", result));
 });
+
+export const becomeArtist = catchAsync(async (req, res) => {
+  const userId = req.user.id;
+  console.log(userId)
+
+  // Вызываем новый метод сервиса для создания артиста пользователю
+  const artist = await ArtistService.createArtistForUser(
+    userId,
+    req.body,
+    req.file
+  );
+
+  res.status(201).json(
+    ApiResponse.success("Вы успешно стали артистом!", {
+      artist,
+      message: "Теперь вы можете создавать треки и альбомы",
+    })
+  );
+});

@@ -11,11 +11,13 @@ import {
   deleteArtist,
   searchArtists,
   getPopularArtists,
+  becomeArtist,
 } from "../controllers/artist.controller.js";
 import { uploadAvatar } from "../middleware/upload.middleware.js";
 import {
   validateArtistCreation,
   validateArtistUpdate,
+  validateBecomeArtist,
 } from "../middleware/validation.middleware.js";
 
 /**
@@ -41,6 +43,14 @@ router.post(
   uploadAvatar,                // Handle avatar file upload
   validateArtistCreation,      // Validate artist creation data
   createArtist                 // Create new artist
+);
+
+router.post(
+  "/become-artist",
+  authenticate,                    // Verify user authentication
+  uploadAvatar,                   // Handle avatar file upload  
+  validateBecomeArtist,           // Validate become artist data (адаптированная валидация)
+  becomeArtist                    // New controller function
 );
 
 router.put(

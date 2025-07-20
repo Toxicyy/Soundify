@@ -1,3 +1,5 @@
+import type { ArtistCreate } from "../Pages/BecomeAnArtist";
+
 export const BASEURL = "http://localhost:5000";
 
 // Helper function to get auth headers
@@ -227,6 +229,22 @@ export const api = {
       const query = buildQueryString(options);
       return fetch(`${BASEURL}/api/artists/popular${query}`, {
         headers: getAuthHeaders(false),
+      });
+    },
+
+    becomeAnArtist: async (artistData: ArtistCreate) => {
+      const newArtist = {
+        name: artistData.name,
+        bio: artistData.bio,
+        genres: artistData.genres,
+        socialLinks: artistData.socialLinks,
+        imageFile: artistData.imageFile,
+      }
+
+      return fetch(`${BASEURL}/api/artists/become-artist`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newArtist),
       });
     },
   },

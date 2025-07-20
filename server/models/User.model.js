@@ -37,8 +37,16 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["USER", "ARTIST", "ADMIN"],
+      enum: ["USER", "PREMIUM", "ADMIN"],
       default: "USER",
+    },
+    // NEW: Artist profile reference
+    artistProfile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Artist",
+      default: null,
+      unique: true, // One user can have only one artist profile
+      sparse: true, // Allows multiple null values
     },
     playlists: [
       {
@@ -73,5 +81,14 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Virtual for checking if user is an artist
+userSchema.virtual("isArtist").get(function () {
+  return this.artistProfile !== null;
+});
+
+// Ensure virtuals are included when converting to JSON
+userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true });
 
 export default mongoose.model("User", userSchema);

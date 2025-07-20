@@ -6,12 +6,20 @@ const artistSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
-    index: true, // Индекс для быстрого поиска
+    index: true,
   },
   slug: {
     type: String,
     unique: true,
-    index: true, // URL-friendly версия имени
+    index: true,
+  },
+  // NEW: Owner reference (user who owns this artist profile)
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: [true, "Artist must have an owner"],
+    unique: true, // One artist profile per user
+    index: true,
   },
   bio: String,
   avatar: String,
@@ -40,5 +48,26 @@ artistSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Virtual for checking if artist has an owner
+artistSchema.virtual("hasOwner").get(function () {
+  return this.owner !== null;
+});
+
+// Virtual for checking if current user owns this artist (needs to be populated)
+artistSchema.virtual("isOwnedBy").get(function () {
+  return function (userId) {
+    return this.owner && this.owner.toString() === userId.toString();
+  };
+});
+
+// Method to check ownership
+artistSchema.methods.isOwnedByUser = function (userId) {
+  return this.owner && this.owner.toString() === userId.toString();
+};
+
+// Ensure virtuals are included when converting to JSON
+artistSchema.set("toJSON", { virtuals: true });
+artistSchema.set("toObject", { virtuals: true });
 
 export default mongoose.model("Artist", artistSchema);

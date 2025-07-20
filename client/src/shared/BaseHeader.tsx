@@ -128,7 +128,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
 
         {/* Subtitle/metadata */}
         {subtitle && (
-          <div className="text-sm sm:text-lg text-white/80">{subtitle}</div>
+          <div className="text-sm sm:text-lg text-white/80 truncate">{subtitle}</div>
         )}
       </div>
     </div>

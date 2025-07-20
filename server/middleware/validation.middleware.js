@@ -2,6 +2,7 @@ import { body, validationResult } from "express-validator";
 import { ApiResponse } from "../utils/responses.js";
 import Artist from "../models/Artist.model.js";
 import Album from "../models/Album.model.js";
+import User from "../models/User.model.js";
 
 export const validateTrackCreation = [
   body("name")
@@ -770,6 +771,126 @@ export const validatePlaylistUpdate = [
       return res
         .status(400)
         .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];
+
+export const validateBecomeArtist = [
+  // Добавляем парсинг JSON в начало цепочки middleware
+  parseFormDataJSON,
+
+  // Валидация имени
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Имя артиста обязательно")
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Имя должно быть от 2 до 100 символов")
+    .custom(async (value, { req }) => {
+      // Проверка на уникальность имени
+      const existingArtist = await Artist.findOne({
+        name: new RegExp(`^${value}$`, "i"),
+      });
+      if (existingArtist) {
+        throw new Error("Артист с таким именем уже существует");
+      }
+
+      // Проверка что у пользователя еще нет артиста
+      console.log(req.user.id);
+      const user = await User.findById(req.user.id);
+      if (user.artistProfile) {
+        throw new Error("У вас уже есть профиль артиста");
+      }
+
+      return true;
+    }),
+
+  // Валидация биографии - ОПЦИОНАЛЬНА для become artist (в отличие от admin создания)
+  body("bio")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Биография не может быть длиннее 1000 символов"),
+
+  // Валидация жанров - опциональна
+  body("genres")
+    .optional()
+    .isArray()
+    .withMessage("Жанры должны быть массивом")
+    .custom((value) => {
+      if (value && value.length > 10) {
+        throw new Error("Максимум 10 жанров");
+      }
+      return true;
+    }),
+
+  body("genres.*")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 30 })
+    .withMessage("Каждый жанр должен быть от 2 до 30 символов"),
+
+  // Валидация социальных ссылок - опциональна
+  body("socialLinks")
+    .optional()
+    .isObject()
+    .withMessage("Социальные ссылки должны быть объектом"),
+
+  body("socialLinks.spotify")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^https?:\/\/(open\.)?spotify\.com\/(artist|user)\/[a-zA-Z0-9]+/)
+    .withMessage("Неверный формат ссылки Spotify"),
+
+  body("socialLinks.instagram")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+/)
+    .withMessage("Неверный формат ссылки Instagram"),
+
+  body("socialLinks.twitter")
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^https?:\/\/(www\.)?(twitter|x)\.com\/[a-zA-Z0-9_]+/)
+    .withMessage("Неверный формат ссылки Twitter/X"),
+
+  // Middleware для проверки файла аватара - ОПЦИОНАЛЕН для become artist
+  (req, res, next) => {
+    if (req.file) {
+      const allowedImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Неподдерживаемый формат изображения"));
+      }
+
+      // Проверка размера файла (макс 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (req.file.size > maxSize) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error("Размер изображения не должен превышать 5MB")
+          );
+      }
+    }
+    next();
+  },
+
+  // Финальная проверка ошибок
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Ошибки валидации", errors.array()));
     }
     next();
   },

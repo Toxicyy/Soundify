@@ -6,6 +6,7 @@ import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import TrackService from "./TrackService.js";
 import mongoose from "mongoose";
 import AlbumService from "./AlbumService.js";
+import User from "../models/User.model.js";
 
 class ArtistService {
   async createArtist(artistData, avatarFile) {
@@ -277,7 +278,9 @@ class ArtistService {
 
       const total = await Album.countDocuments({ artist: artistId });
       const totalPages = Math.ceil(total / limit);
-      const albumsWithSignedUrls = await AlbumService.addSignedUrlsToAlbums(albums);
+      const albumsWithSignedUrls = await AlbumService.addSignedUrlsToAlbums(
+        albums
+      );
 
       return {
         albumsWithSignedUrls,
@@ -389,6 +392,92 @@ class ArtistService {
           };
 
       return fallbackResult;
+    }
+  }
+
+  async createArtistForUser(userId, artistData, avatarFile) {
+    const { name, bio, genres, socialLinks } = artistData;
+
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    if (!name) {
+      throw new Error("Artist name is required");
+    }
+
+    try {
+      // Проверка что пользователь существует и у него нет артиста
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.artistProfile) {
+        throw new Error("User already has an artist profile");
+      }
+
+      // Проверка на уникальность имени артиста
+      const existingArtist = await Artist.findOne({
+        name: new RegExp(`^${name}$`, "i"),
+      });
+
+      if (existingArtist) {
+        throw new Error("Артист с таким именем уже существует");
+      }
+
+      // Загрузка аватара, если есть
+      let avatarUrl = null;
+      let avatarFileId = null;
+      if (avatarFile) {
+        const uploadResult = await uploadToB2(avatarFile, "artistAvatars");
+        if (typeof uploadResult === "string") {
+          avatarUrl = uploadResult; // старый формат
+        } else {
+          avatarUrl = uploadResult.url; // новый формат
+          avatarFileId = uploadResult.fileId;
+        }
+      }
+
+      // Парсинг данных если нужно
+      let parsedGenres = genres;
+      if (typeof genres === "string") {
+        try {
+          parsedGenres = JSON.parse(genres);
+        } catch (e) {
+          parsedGenres = genres.split(",").map((g) => g.trim());
+        }
+      }
+
+      let parsedSocialLinks = socialLinks;
+      if (typeof socialLinks === "string") {
+        try {
+          parsedSocialLinks = JSON.parse(socialLinks);
+        } catch (e) {
+          parsedSocialLinks = null;
+        }
+      }
+
+      // Создание артиста с owner
+      const newArtist = new Artist({
+        name: name.trim(),
+        owner: userId,
+        bio: bio?.trim(),
+        avatar: avatarUrl,
+        avatarFileId: avatarFileId,
+        genres: parsedGenres || [],
+        socialLinks: parsedSocialLinks,
+      });
+
+      await newArtist.save();
+
+      await User.findByIdAndUpdate(userId, {
+        artistProfile: newArtist._id,
+      });
+
+      return await this.addSignedUrlsToArtists(newArtist);
+    } catch (error) {
+      throw new Error(`Ошибка при создании профиля артиста: ${error.message}`);
     }
   }
 }

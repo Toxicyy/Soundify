@@ -16,6 +16,7 @@ import Profile from "./Pages/Profile";
 import UserPlaylistsPage from "./Pages/Profile/UserPlaylistsPage";
 import UserLikedPlaylistsPage from "./Pages/Profile/UserLikedPlaylistsPage";
 import UserLikedArtistsPage from "./Pages/Profile/UserLikedArtistsPage";
+import BecomeAnArtist from "./Pages/BecomeAnArtist";
 
 export const router = createBrowserRouter([
   {
@@ -79,6 +80,10 @@ export const router = createBrowserRouter([
             path: "/profile/:id/artists",
             element: <UserLikedArtistsPage />,
           },
+          {
+            path: "/become-an-artist",
+            element: <BecomeAnArtist />,
+          }
         ],
       },
       {
