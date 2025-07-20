@@ -7,10 +7,30 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env*
+client/.env*
+
+# Dependencies
 node_modules
+server/node_modules
+client/node_modules
+
+# Build outputs
 dist
 dist-ssr
+build
+client/dist
+client/build
+server/dist
+server/build
+
+# Local files
 *.local
 
 # Editor directories and files
@@ -23,3 +43,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Specific to your audio project
+uploads/
+temp/
+server/uploads/
+server/temp/
+*.mp3
+*.mp4
+*.wav
+*.flac
+*.m4a
+*.ogg
+
+# TypeScript
+*.tsbuildinfo
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
