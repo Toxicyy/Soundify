@@ -6,6 +6,7 @@ export type User = {
   avatar: string;
   status: "USER" | "PREMIUM" | "ADMIN";
   playlists: string[];
+  artistProfile: string | null;
   likedSongs: string[];
   likedPlaylists: string[];
   likedArtists: string[];

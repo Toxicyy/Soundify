@@ -3,8 +3,8 @@ import { Input, Select, Button, message, Space } from "antd";
 import {
   DeleteOutlined,
   InstagramOutlined,
-  TwitterOutlined,
   SpotifyOutlined,
+  XOutlined,
 } from "@ant-design/icons";
 import styled from "styled-components";
 import type { ArtistCreate } from "../../Pages/BecomeAnArtist";
@@ -46,40 +46,6 @@ const StyledInput = styled(Input)`
       background-color: rgba(255, 255, 255, 0.12) !important;
       border-color: rgba(255, 255, 255, 0.3) !important;
     }
-  }
-`;
-
-const StyledSelect = styled(Select<string>)`
-  .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 8px !important;
-  }
-
-  .ant-select-selection-search-input {
-    color: white !important;
-  }
-
-  .ant-select-selection-placeholder {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  &.ant-select-focused .ant-select-selector {
-    border-color: #1db954 !important;
-    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
-    background-color: rgba(255, 255, 255, 0.15) !important;
-  }
-
-  &:hover .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-  }
-
-  .ant-select-selection-item {
-    background-color: rgba(29, 185, 84, 0.8) !important;
-    border: 1px solid rgba(29, 185, 84, 0.4) !important;
-    color: white !important;
   }
 `;
 
@@ -205,8 +171,8 @@ const socialPlatforms = [
   },
   {
     key: "twitter",
-    label: "Twitter",
-    icon: <TwitterOutlined />,
+    label: "Twitter(X)",
+    icon: <XOutlined />,
     prefix: "https://twitter.com/",
     placeholder: "username",
   },

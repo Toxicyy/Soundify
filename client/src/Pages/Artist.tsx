@@ -37,7 +37,6 @@ const Artist = () => {
   const {
     isFollowing,
     isLoading: isFollowingLoading,
-    error: followError,
     toggleFollow,
   } = useFollowArtist(artist?._id || "");
 
@@ -59,14 +58,14 @@ const Artist = () => {
 
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
-  // Determine overall loading state
-  const isDataLoading = artistLoading || tracksLoading || albumsLoading || isFollowingLoading;
+  // Determine overall loading state (исключаем isFollowingLoading)
+  const isDataLoading = artistLoading || tracksLoading || albumsLoading;
   const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
   const isOverallLoading = isDataLoading || isImagesLoading;
 
-  const isDataError = artistError || tracksError || followError;
+  // Ошибки (followError обрабатываем отдельно в компонентах)
+  const isDataError = artistError || tracksError;
   const isImageError = !allImagesLoaded && imagesToPreload.length === 0;
-
   const isOverallError = isDataError || isImageError;
 
   // Show loading state while any data or images are loading
@@ -192,6 +191,7 @@ const Artist = () => {
         artist={artist}
         albums={albums}
         isFollowing={isFollowing}
+        isFollowingLoading={isFollowingLoading}
         toggleFollow={toggleFollow}
       />
     </main>

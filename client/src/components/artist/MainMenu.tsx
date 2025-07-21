@@ -19,6 +19,7 @@ interface ArtistMainMenuProps {
   albums: Album[];
   isFollowing: boolean;
   toggleFollow: () => Promise<void>;
+  isFollowingLoading?: boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
   albums,
   isFollowing,
   toggleFollow,
+  isFollowingLoading = false,
 }) => {
   // Redux state
   const { shuffle } = useSelector((state: AppState) => state.queue);
@@ -61,11 +63,11 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
   }, [tracks, dispatch]);
 
   /**
-   * Handle follow/unfollow artist (placeholder for future implementation)
+   * Handle follow/unfollow artist - ИСПРАВЛЕНО: добавил toggleFollow в зависимости
    */
   const handleFollowArtist = useCallback(() => {
     toggleFollow();
-  }, []);
+  }, [toggleFollow]);
 
   /**
    * Render control panel with play, shuffle, and follow buttons
@@ -122,11 +124,16 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
             </div>
           ) : (
             <button
-              className={`bg-transparent border-2 border-white/60 rounded-full px-4 py-2 text-white hover:scale-105 hover:bg-white/10 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20`}
+              className={`bg-transparent border-2 border-white/60 rounded-full px-4 py-2 text-white hover:scale-105 hover:bg-white/10 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={handleFollowArtist}
-              aria-label="Follow artist"
+              disabled={isFollowingLoading}
+              aria-label={isFollowing ? "Unfollow artist" : "Follow artist"}
             >
-              {isFollowing ? "Following" : "Follow"}
+              {isFollowingLoading
+                ? "Wait..."
+                : isFollowing
+                ? "Following"
+                : "Follow"}
             </button>
           )}
         </div>

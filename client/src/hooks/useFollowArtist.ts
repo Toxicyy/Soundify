@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { api } from "../shared/api";
 import { useGetUserQuery } from "../state/UserApi.slice";
 
@@ -13,17 +13,20 @@ interface UseFollowArtistReturn {
  * Hook for following/unfollowing artists
  * Manages follow state and provides toggle functionality
  */
-export const useFollowArtist = (
-  artistId: string,
-  initialFollowState = false
-): UseFollowArtistReturn => {
-  const { data: user } = useGetUserQuery();
-  const [isFollowing, setIsFollowing] = useState(initialFollowState);
+export const useFollowArtist = (artistId: string): UseFollowArtistReturn => {
+  const { data: user, isLoading: isUserLoading } = useGetUserQuery();
+  const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user && artistId) {
+      setIsFollowing(user.likedArtists.includes(artistId));
+    }
+  }, [user, artistId]);
+
   const toggleFollow = useCallback(async () => {
-    if (!user?._id || !artistId || isLoading) return;
+    if (!user?._id || !artistId || isLoading || isUserLoading) return;
 
     setIsLoading(true);
     setError(null);
@@ -53,7 +56,7 @@ export const useFollowArtist = (
     } finally {
       setIsLoading(false);
     }
-  }, [user?._id, artistId, isFollowing, isLoading]);
+  }, [user?._id, artistId, isFollowing, isLoading, isUserLoading]);
 
   return {
     isFollowing,

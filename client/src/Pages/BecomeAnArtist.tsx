@@ -5,6 +5,7 @@ import Anonym from "../images/User/Anonym.jpg";
 import { api } from "../shared/api";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../hooks/useNotification";
+import { useGetUserQuery } from "../state/UserApi.slice";
 
 export type ArtistCreate = {
   name: string;
@@ -28,23 +29,25 @@ const DEFAULT_ARTIST: ArtistCreate = {
 };
 
 export default function BecomeAnArtist() {
+  const { refetch } = useGetUserQuery();
   const [artist, setArtist] = useState<ArtistCreate>(DEFAULT_ARTIST);
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
 
   const handleSaveArtist = async (artistData: ArtistCreate) => {
     try {
-        const response = await api.artist.becomeAnArtist(artistData);
-        const data = await response.json();
+      const response = await api.artist.becomeAnArtist(artistData);
+      const data = await response.json();
 
-        // Для демонстрации используем console.log
-        console.log("Saving artist data:", artistData);
-        if (!data.success) {
-          showError("Failed to create artist profile. Please try again.");
-        } else {
-          navigate("/");
-          showSuccess("Artist profile created successfully!");
-        }
+      // Для демонстрации используем console.log
+      console.log("Saving artist data:", artistData);
+      if (!data.success) {
+        showError("Failed to create artist profile. Please try again.");
+      } else {
+        refetch();
+        navigate("/");
+        showSuccess("Artist profile created successfully!");
+      }
     } catch (error) {
       console.error("Failed to save artist:", error);
       showError("Failed to create artist profile. Please try again.");

@@ -233,18 +233,20 @@ export const api = {
     },
 
     becomeAnArtist: async (artistData: ArtistCreate) => {
-      const newArtist = {
-        name: artistData.name,
-        bio: artistData.bio,
-        genres: artistData.genres,
-        socialLinks: artistData.socialLinks,
-        imageFile: artistData.imageFile,
+      const formData = new FormData();
+      formData.append("name", artistData.name);
+      formData.append("bio", artistData.bio);
+      formData.append("genres", JSON.stringify(artistData.genres));
+      formData.append("socialLinks", JSON.stringify(artistData.socialLinks));
+      if (artistData.imageFile) {
+        formData.append("avatar", artistData.imageFile);
       }
-
       return fetch(`${BASEURL}/api/artists/become-artist`, {
         method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newArtist),
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
       });
     },
   },
