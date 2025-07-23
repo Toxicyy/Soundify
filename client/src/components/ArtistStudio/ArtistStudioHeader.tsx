@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import UploadTrackModal from "./components/UploadTrackModal";
 import EditProfileModal from "./components/EditProfileModal";
 import AdvancedSettingsModal from "./components/AdvancedSettingsModal";
+import { useNavigate } from "react-router-dom";
 
 interface Artist {
   _id: string;
@@ -68,6 +69,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Форматируем числа для красивого отображения
   const formatNumber = (num: number): string => {
@@ -152,7 +154,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
         <ActionButton
           icon={<UnorderedListOutlined />}
           text="Create Album"
-          onClick={() => console.log("Create Album - Coming soon!")}
+          onClick={() => navigate("/artist-studio/create-album")}
           variant="secondary"
         />
         <ActionButton
