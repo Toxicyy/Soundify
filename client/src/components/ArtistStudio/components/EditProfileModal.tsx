@@ -2,8 +2,8 @@ import { useState, useRef } from "react";
 import { Modal, Input } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import styled from "styled-components";
-import TextArea from "antd/es/input/TextArea";
 import { useNotification } from "../../../hooks/useNotification";
+import TextArea from "antd/es/input/TextArea";
 
 interface Artist {
   _id: string;
@@ -56,28 +56,26 @@ const StyledInput = styled(Input)`
 `;
 
 const StyledTextArea = styled(TextArea)`
-  &.ant-input {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 8px;
-    height: 75%;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 8px;
+  height: 75%;
 
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.6) !important;
-      opacity: 1 !important;
-    }
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+    opacity: 1 !important;
+  }
 
-    &:focus {
-      border-color: #1db954 !important;
-      box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
-      background-color: rgba(255, 255, 255, 0.15) !important;
-    }
+  &:focus {
+    border-color: #1db954 !important;
+    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+  }
 
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.12) !important;
-      border-color: rgba(255, 255, 255, 0.3) !important;
-    }
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
   }
 `;
 

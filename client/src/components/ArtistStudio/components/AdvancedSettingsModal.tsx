@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Input, Select } from "antd";
 import {
   CloseOutlined,
   DeleteOutlined,
   SpotifyOutlined,
   InstagramOutlined,
-  TwitterOutlined,
+  XOutlined,
 } from "@ant-design/icons";
 import styled from "styled-components";
 import { useNotification } from "../../../hooks/useNotification";
@@ -138,21 +138,21 @@ const socialPlatforms = [
   {
     key: "spotify",
     label: "Spotify",
-    icon: <SpotifyOutlined />,
+    icon: <SpotifyOutlined style={{ color: "white", fontSize: "16px" }} />,
     prefix: "https://open.spotify.com/artist/",
     placeholder: "your-artist-id",
   },
   {
     key: "instagram",
     label: "Instagram",
-    icon: <InstagramOutlined />,
+    icon: <InstagramOutlined style={{ color: "white", fontSize: "16px" }} />,
     prefix: "https://instagram.com/",
     placeholder: "username",
   },
   {
     key: "twitter",
-    label: "Twitter",
-    icon: <TwitterOutlined />,
+    label: "Twitter(X)",
+    icon: <XOutlined style={{ color: "white", fontSize: "16px" }} />,
     prefix: "https://twitter.com/",
     placeholder: "username",
   },
@@ -166,11 +166,19 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
 }) => {
   const { showSuccess, showError } = useNotification();
 
-  const [tempGenres, setTempGenres] = useState<string[]>(artist.genres || []);
-  const [tempSocialLinks, setTempSocialLinks] = useState(
-    artist.socialLinks || {}
+  const [tempGenres, setTempGenres] = useState<string[]>([]);
+  const [tempSocialLinks, setTempSocialLinks] = useState<Artist["socialLinks"]>(
+    {}
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  // Инициализация состояния при открытии модального окна
+  useEffect(() => {
+    if (isOpen) {
+      setTempGenres(artist.genres || []);
+      setTempSocialLinks(artist.socialLinks || {});
+    }
+  }, [isOpen, artist]);
 
   const handleSocialLinkChange = (
     platform: keyof Artist["socialLinks"],
@@ -244,15 +252,14 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
 
   const handleClose = () => {
     if (!isLoading) {
-      resetModal();
       onClose();
     }
   };
 
-  const resetModal = () => {
-    setTempGenres(artist.genres || []);
-    setTempSocialLinks(artist.socialLinks || {});
-  };
+  // Подсчет актуальных социальных ссылок (только с валидными значениями)
+  const activeSocialLinksCount = Object.values(tempSocialLinks).filter(
+    (link) => link && link.trim() !== ""
+  ).length;
 
   const hasChanges =
     JSON.stringify(tempGenres) !== JSON.stringify(artist.genres) ||
@@ -349,7 +356,8 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                       </span>
                       {currentFullUrl && (
                         <DeleteOutlined
-                          className="text-red-400 cursor-pointer hover:text-red-300 transition-colors ml-auto"
+                          className="cursor-pointer hover:text-red-300 transition-colors ml-auto"
+                          style={{ color: "white" }}
                           onClick={() =>
                             removeSocialLink(
                               platform.key as keyof Artist["socialLinks"]
@@ -408,8 +416,8 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
             <div>
               <span className="text-white/60">Social Links:</span>
               <p className="text-white font-medium">
-                {Object.keys(tempSocialLinks).length
-                  ? `${Object.keys(tempSocialLinks).length} links added`
+                {activeSocialLinksCount
+                  ? `${activeSocialLinksCount} links added`
                   : "None added"}
               </p>
             </div>

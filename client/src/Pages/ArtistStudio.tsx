@@ -251,19 +251,19 @@ export default function ArtistStudio() {
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <h3 className="text-white font-semibold">Total Tracks</h3>
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold text-white/70">
                   {tracksCount}
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <h3 className="text-white font-semibold">Followers</h3>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-2xl font-bold text-white/70">
                   {artistData.followerCount.toLocaleString()}
                 </p>
               </div>
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <h3 className="text-white font-semibold">Status</h3>
-                <p className="text-2xl font-bold text-purple-400">
+                <p className="text-2xl font-bold text-white/70">
                   {artistData.isVerified ? "Verified" : "Unverified"}
                 </p>
               </div>
