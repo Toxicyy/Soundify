@@ -9,19 +9,7 @@ import {
 } from "@ant-design/icons";
 import styled from "styled-components";
 import { useNotification } from "../../hooks/useNotification";
-
-interface LocalTrack {
-  tempId: string;
-  file: File;
-  metadata: {
-    name: string;
-    genre: string;
-    tags: string[];
-  };
-  coverFile: File;
-  audioUrl: string;
-  duration?: number;
-}
+import type { LocalTrack } from "../../types/LocalTrack";
 
 interface UploadTrackToAlbumModalProps {
   isOpen: boolean;
@@ -362,6 +350,7 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
 
     // Create LocalTrack object
     const newTrack: LocalTrack = {
+      index: existingTracks.length,
       tempId: crypto.randomUUID(),
       file: audioFile,
       metadata: {

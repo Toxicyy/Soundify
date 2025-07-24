@@ -1,35 +1,20 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Modal } from "antd";
 import {
   LoadingOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   CloseOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotification } from "../../hooks/useNotification";
-
-interface LocalTrack {
-  tempId: string;
-  file: File;
-  metadata: {
-    name: string;
-    genre: string;
-    tags: string[];
-  };
-  coverFile: File;
-  audioUrl: string;
-  duration?: number;
-}
-
-interface AlbumData {
-  name: string;
-  description: string;
-  releaseDate: Date | null;
-  type: "album" | "ep" | "single";
-  coverFile: File | null;
-  coverPreview: string | null;
-}
+import {
+  createBatchAlbum,
+  BatchProgressTracker,
+  cancelBatchCreation,
+} from "../../shared/batchAlbumApi";
+import type { LocalTrack, AlbumData } from "../../types/LocalTrack";
 
 interface BatchSaveModalProps {
   isOpen: boolean;
@@ -41,10 +26,12 @@ interface BatchSaveModalProps {
 
 interface TrackProgress {
   tempId: string;
+  index: number;
   name: string;
   status: "pending" | "uploading" | "processing" | "completed" | "error";
   progress: number;
   error?: string;
+  message?: string;
 }
 
 type SavePhase = "album" | "tracks" | "finalization" | "completed" | "error";
@@ -57,6 +44,9 @@ interface SaveProgress {
   overallProgress: number;
   message: string;
   tracks: TrackProgress[];
+  albumName: string;
+  sessionId: string;
+  status: "processing" | "completed" | "failed";
 }
 
 const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
@@ -67,16 +57,21 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
   onSuccess,
 }) => {
   const { showSuccess, showError } = useNotification();
+  const progressTrackerRef = useRef<BatchProgressTracker | null>(null);
 
   const [progress, setProgress] = useState<SaveProgress>({
+    sessionId: "",
+    status: "processing",
     phase: "album",
-    currentTrack: 0,
-    totalTracks: tracks.length,
-    currentTrackProgress: 0,
-    overallProgress: 0,
     message: "Initializing...",
+    albumName: albumData.name,
+    totalTracks: tracks.length,
+    currentTrack: 0,
+    overallProgress: 0,
+    currentTrackProgress: 0,
     tracks: tracks.map((track) => ({
       tempId: track.tempId,
+      index: track.index,
       name: track.metadata.name,
       status: "pending",
       progress: 0,
@@ -86,168 +81,126 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
   const [canCancel, setCanCancel] = useState(true);
   const [saveStarted, setSaveStarted] = useState(false);
 
-  // Update totalTracks when tracks prop changes
-  useEffect(() => {
-    setProgress((prev) => ({
-      ...prev,
-      totalTracks: tracks.length,
-    }));
-  }, [tracks.length]);
-
-  // Start save process when modal opens
-  useEffect(() => {
-    if (isOpen && !saveStarted) {
-      setSaveStarted(true);
-      startSaveProcess();
-    }
-  }, [isOpen, saveStarted]);
-
-  // Simulate the save process
+  // Start save process with real API
   const startSaveProcess = useCallback(async () => {
     try {
-      setCanCancel(false);
-
-      // Phase 1: Create album
       setProgress((prev) => ({
         ...prev,
-        phase: "album",
-        message: "Creating album...",
+        message: "Starting album creation...",
         overallProgress: 5,
       }));
 
-      await simulateDelay(1000);
+      // Start batch creation
+      const response = await createBatchAlbum(albumData, tracks);
 
-      // Determine most common genre for album
-      const genreCounts = tracks.reduce((acc, track) => {
-        const genre = track.metadata.genre;
-        acc[genre] = (acc[genre] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to start album creation");
+      }
 
-      const albumGenre =
-        Object.entries(genreCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ||
-        "Various";
+      const { sessionId } = response.data;
 
-      console.log("Album genre determined:", albumGenre);
-
-      // Phase 2: Upload tracks
       setProgress((prev) => ({
         ...prev,
-        phase: "tracks",
-        message: "Uploading tracks...",
+        sessionId,
+        message: "Album creation started. Connecting to progress...",
         overallProgress: 10,
       }));
 
-      // Process each track
-      for (let i = 0; i < tracks.length; i++) {
-        const track = tracks[i];
-
-        // Update current track
-        setProgress((prev) => ({
-          ...prev,
-          currentTrack: i + 1,
-          message: `Uploading "${track.metadata.name}"...`,
-          tracks: prev.tracks.map((t) =>
-            t.tempId === track.tempId ? { ...t, status: "uploading" } : t
-          ),
-        }));
-
-        // Simulate track upload progress
-        for (
-          let progressVal = 0;
-          progressVal <= 70;
-          progressVal += Math.random() * 10 + 5
-        ) {
-          const clampedProgress = Math.min(progressVal, 70);
-
-          setProgress((prev) => ({
-            ...prev,
-            currentTrackProgress: clampedProgress,
-            overallProgress: 10 + (i * 70 + clampedProgress) / tracks.length,
-            tracks: prev.tracks.map((t) =>
-              t.tempId === track.tempId
-                ? { ...t, progress: clampedProgress }
-                : t
-            ),
-          }));
-
-          await simulateDelay(200 + Math.random() * 300);
-        }
-
-        // Switch to processing phase
-        setProgress((prev) => ({
-          ...prev,
-          message: `Converting "${track.metadata.name}" to HLS...`,
-          tracks: prev.tracks.map((t) =>
-            t.tempId === track.tempId ? { ...t, status: "processing" } : t
-          ),
-        }));
-
-        // Simulate HLS conversion
-        for (
-          let progressVal = 70;
-          progressVal <= 100;
-          progressVal += Math.random() * 8 + 2
-        ) {
-          const clampedProgress = Math.min(progressVal, 100);
-
-          setProgress((prev) => ({
-            ...prev,
-            currentTrackProgress: clampedProgress,
-            overallProgress: 10 + (i * 100 + clampedProgress) / tracks.length,
-            tracks: prev.tracks.map((t) =>
-              t.tempId === track.tempId
-                ? { ...t, progress: clampedProgress }
-                : t
-            ),
-          }));
-
-          await simulateDelay(300 + Math.random() * 500);
-        }
-
-        // Mark track as completed
-        setProgress((prev) => ({
-          ...prev,
-          tracks: prev.tracks.map((t) =>
-            t.tempId === track.tempId
-              ? { ...t, status: "completed", progress: 100 }
-              : t
-          ),
-        }));
-      }
-
-      // Phase 3: Finalization
-      setProgress((prev) => ({
-        ...prev,
-        phase: "finalization",
-        message: "Finalizing album...",
-        overallProgress: 90,
-        currentTrackProgress: 0,
-      }));
-
-      await simulateDelay(1500);
-
-      // Phase 4: Completed
-      setProgress((prev) => ({
-        ...prev,
-        phase: "completed",
-        message: `Album "${albumData.name}" created successfully!`,
-        overallProgress: 100,
-      }));
-
-      await simulateDelay(1000);
-
-      showSuccess(
-        `🎵 Album "${albumData.name}" created with ${tracks.length} tracks!`
+      // Start progress tracking via SSE
+      const tracker = new BatchProgressTracker(
+        sessionId,
+        handleProgressUpdate,
+        handleComplete,
+        handleError
       );
-      onSuccess();
-    } catch (error) {
-      console.error("Save process failed:", error);
 
+      progressTrackerRef.current = tracker;
+      tracker.start();
+    } catch (error) {
+      console.error("Failed to start save process:", error);
+      handleError(
+        error instanceof Error
+          ? error.message
+          : "Failed to start album creation"
+      );
+    }
+  }, [albumData, tracks]);
+
+  // Handle progress updates from SSE
+  const handleProgressUpdate = useCallback((newProgress: any) => {
+    setProgress((prev) => ({
+      ...prev,
+      sessionId: newProgress.sessionId || prev.sessionId,
+      status: newProgress.status || prev.status,
+      phase:
+        newProgress.phase === "completed"
+          ? "completed"
+          : newProgress.phase === "tracks"
+          ? "tracks"
+          : newProgress.phase === "album"
+          ? "album"
+          : prev.phase,
+      message: newProgress.message || prev.message,
+      albumName: newProgress.albumName || prev.albumName,
+      totalTracks: newProgress.totalTracks || prev.totalTracks,
+      currentTrack: newProgress.currentTrack || prev.currentTrack,
+      overallProgress: newProgress.overallProgress || prev.overallProgress,
+      currentTrackProgress:
+        newProgress.currentTrackProgress || prev.currentTrackProgress,
+      tracks: newProgress.tracks
+        ? newProgress.tracks.map((track: any) => ({
+            tempId: track.tempId,
+            index: track.index,
+            name: track.name,
+            status: track.status,
+            progress: track.progress || 0,
+            message: track.message,
+            error: track.error,
+          }))
+        : prev.tracks,
+    }));
+
+    // Disable cancel once we're in completion phase
+    if (newProgress.phase === "completed" || newProgress.overallProgress > 90) {
+      setCanCancel(false);
+    }
+  }, []);
+
+  // Handle completion
+  const handleComplete = useCallback(
+    (success: boolean, message?: string) => {
+      setCanCancel(false);
+
+      if (success) {
+        setProgress((prev) => ({
+          ...prev,
+          status: "completed",
+          phase: "completed",
+          message: message || "Album created successfully!",
+          overallProgress: 100,
+        }));
+
+        showSuccess("Album created successfully!");
+
+        // Auto-close after 2 seconds
+        setTimeout(() => {
+          onSuccess();
+        }, 2000);
+      } else {
+        handleError(message || "Album creation failed");
+      }
+    },
+    [showSuccess, onSuccess]
+  );
+
+  // Handle errors
+  const handleError = useCallback(
+    (error: string) => {
       setProgress((prev) => ({
         ...prev,
+        status: "failed",
         phase: "error",
-        message: "Failed to create album. Please try again.",
+        message: error,
         tracks: prev.tracks.map((t) =>
           t.status === "uploading" || t.status === "processing"
             ? { ...t, status: "error", error: "Upload failed" }
@@ -255,14 +208,109 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
         ),
       }));
 
-      showError("Failed to create album. Please try again.");
-      setCanCancel(true);
-    }
-  }, [albumData, tracks, showSuccess, showError, onSuccess]);
+      setCanCancel(false);
+      showError(error);
+    },
+    [showError]
+  );
 
-  // Simulate network delay
-  const simulateDelay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  // Handle cancel
+  const handleCancel = useCallback(async () => {
+    if (!canCancel || !progress.sessionId) return;
+
+    try {
+      setProgress((prev) => ({
+        ...prev,
+        message: "Cancelling album creation...",
+      }));
+
+      const cancelled = await cancelBatchCreation(progress.sessionId);
+
+      if (cancelled) {
+        setProgress((prev) => ({
+          ...prev,
+          status: "failed",
+          phase: "error",
+          message: "Album creation cancelled by user",
+        }));
+
+        showSuccess("Album creation cancelled");
+      } else {
+        showError("Failed to cancel album creation");
+      }
+    } catch (error) {
+      showError("Failed to cancel album creation");
+    }
+
+    setCanCancel(false);
+  }, [canCancel, progress.sessionId, showSuccess, showError]);
+
+  // Update totalTracks when tracks prop changes
+  useEffect(() => {
+    setProgress((prev) => ({
+      ...prev,
+      totalTracks: tracks.length,
+      tracks: tracks.map((track) => ({
+        tempId: track.tempId,
+        index: track.index,
+        name: track.metadata.name,
+        status: "pending",
+        progress: 0,
+      })),
+    }));
+  }, [tracks]);
+
+  // Start save process when modal opens
+  useEffect(() => {
+    if (isOpen && !saveStarted) {
+      setSaveStarted(true);
+      setCanCancel(true);
+      startSaveProcess();
+    }
+  }, [isOpen, saveStarted, startSaveProcess]);
+
+  // Cleanup on unmount or modal close
+  useEffect(() => {
+    return () => {
+      if (progressTrackerRef.current) {
+        progressTrackerRef.current.stop();
+        progressTrackerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSaveStarted(false);
+      setCanCancel(true);
+
+      if (progressTrackerRef.current) {
+        progressTrackerRef.current.stop();
+        progressTrackerRef.current = null;
+      }
+
+      // Reset progress
+      setProgress({
+        sessionId: "",
+        status: "processing",
+        phase: "album",
+        message: "Initializing...",
+        albumName: albumData.name,
+        totalTracks: tracks.length,
+        currentTrack: 0,
+        overallProgress: 0,
+        currentTrackProgress: 0,
+        tracks: tracks.map((track) => ({
+          tempId: track.tempId,
+          index: track.index,
+          name: track.metadata.name,
+          status: "pending",
+          progress: 0,
+        })),
+      });
+    }
+  }, [isOpen, albumData.name, tracks]);
 
   // Handle close
   const handleClose = useCallback(() => {
@@ -276,7 +324,7 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
   }, [canCancel, progress.phase, onClose]);
 
   // Get phase color
-  const getPhaseColor = (phase: SavePhase) => {
+  const getPhaseColor = (phase: SavePhase): string => {
     switch (phase) {
       case "completed":
         return "text-green-400";
@@ -342,13 +390,26 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
                 : "This may take a few minutes..."}
             </p>
           </div>
-          {(canCancel || isCompleted || hasError) && (
-            <CloseOutlined
-              className="text-2xl cursor-pointer hover:text-white/70 transition-colors"
-              style={{ color: "white" }}
-              onClick={handleClose}
-            />
-          )}
+
+          <div className="flex items-center gap-2">
+            {progress.status === "processing" && canCancel && (
+              <button
+                onClick={handleCancel}
+                className="flex items-center gap-2 px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-colors border border-red-500/30 text-sm"
+              >
+                <StopOutlined />
+                Cancel
+              </button>
+            )}
+
+            {(canCancel || isCompleted || hasError) && (
+              <CloseOutlined
+                className="text-2xl cursor-pointer hover:text-white/70 transition-colors"
+                style={{ color: "white" }}
+                onClick={handleClose}
+              />
+            )}
+          </div>
         </div>
 
         {/* Overall Progress */}
@@ -484,7 +545,7 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
                     {track.name}
                   </h5>
                   <p className="text-white/60 text-xs capitalize">
-                    {track.status}
+                    {track.message || track.status}
                   </p>
                 </div>
               </div>
@@ -546,6 +607,7 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
                     overallProgress: 0,
                     currentTrackProgress: 0,
                     message: "Initializing...",
+                    status: "processing",
                     tracks: prev.tracks.map((t) => ({
                       ...t,
                       status: "pending",

@@ -7,21 +7,9 @@ import {
   DragOutlined,
 } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import { setIsPlaying } from "../../state/CurrentTrack.slice";
+import { setCurrentTrack, setIsPlaying } from "../../state/CurrentTrack.slice";
 import EditTrackModal from "./EditTrackModal";
-
-interface LocalTrack {
-  tempId: string;
-  file: File;
-  metadata: {
-    name: string;
-    genre: string;
-    tags: string[];
-  };
-  coverFile: File;
-  audioUrl: string;
-  duration?: number;
-}
+import { type LocalTrack } from "../../types/LocalTrack";
 
 interface AlbumTrackItemProps {
   track: LocalTrack;
@@ -30,10 +18,10 @@ interface AlbumTrackItemProps {
   onPlay: () => void;
   onRemove: () => void;
   onEdit: (updates: Partial<LocalTrack["metadata"]>) => void;
-  onDragStart: (index: number) => void;
-  onDragEnd: (fromIndex: number, toIndex: number) => void;
-  isDragging: boolean;
-  dragOverIndex: number | null;
+  onDragStart?: (index: number) => void; // Опциональный для случая с одним треком
+  onDragEnd?: (fromIndex: number, toIndex: number) => void; // Опциональный
+  isDragging?: boolean;
+  dragOverIndex?: number | null;
 }
 
 const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
@@ -45,8 +33,8 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
   onEdit,
   onDragStart,
   onDragEnd,
-  isDragging,
-  dragOverIndex,
+  isDragging = false,
+  dragOverIndex = null,
 }) => {
   const dispatch = useDispatch();
   const dragRef = useRef<HTMLDivElement>(null);
@@ -62,11 +50,34 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     (state: any) => state.queue
   );
 
-  // Check both slices for current track (queue slice is more reliable)
+  // Debug: проверяем ID треков
+  console.log("Track Debug:", {
+    trackTempId: track.tempId,
+    expectedId: `temp_${track.tempId}`,
+    currentTrackId: currentTrack?._id,
+    queueCurrentTrackId: queueCurrentTrack?._id,
+    isPlaying,
+  });
+
+  // Check both slices for current track (проверяем разные варианты ID)
   const isCurrentTrack =
+    currentTrack?._id === `temp_${track.tempId}` ||
+    queueCurrentTrack?._id === `temp_${track.tempId}` ||
     currentTrack?._id === track.tempId ||
     queueCurrentTrack?._id === track.tempId;
+
   const isTrackPlaying = isCurrentTrack && isPlaying;
+
+  // Debug: итоговые значения
+  console.log("Track State:", {
+    trackName: track.metadata.name,
+    isCurrentTrack,
+    isTrackPlaying,
+    isPlaying,
+  });
+
+  // Показывать drag только если треков больше одного
+  const shouldShowDrag = totalTracks > 1;
 
   // Format duration
   const formatDuration = useCallback((seconds?: number) => {
@@ -96,9 +107,14 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     }
   }, [isCurrentTrack, isPlaying, onPlay, dispatch]);
 
-  // Drag handlers
+  // Drag handlers (только если drag разрешен)
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
+      if (!shouldShowDrag || !onDragStart) {
+        e.preventDefault();
+        return;
+      }
+
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", index.toString());
 
@@ -116,10 +132,12 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
       setDragStartIndex(index);
       onDragStart(index);
     },
-    [index, onDragStart]
+    [index, onDragStart, shouldShowDrag]
   );
 
   const handleDragEnd = useCallback(() => {
+    if (!shouldShowDrag || !onDragEnd) return;
+
     const fromIndex = dragStartIndex;
     const toIndex = dragOverIndex;
 
@@ -128,15 +146,21 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     }
 
     setDragStartIndex(null);
-  }, [dragStartIndex, dragOverIndex, onDragEnd]);
+  }, [dragStartIndex, dragOverIndex, onDragEnd, shouldShowDrag]);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!shouldShowDrag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    },
+    [shouldShowDrag]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
+      if (!shouldShowDrag || !onDragEnd) return;
+
       e.preventDefault();
       const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
       const toIndex = index;
@@ -145,7 +169,7 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         onDragEnd(fromIndex, toIndex);
       }
     },
-    [index, onDragEnd]
+    [index, onDragEnd, shouldShowDrag]
   );
 
   // Handle remove with confirmation
@@ -153,19 +177,21 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     const confirmed = window.confirm(
       `Remove "${track.metadata.name}" from album?`
     );
+    dispatch(setIsPlaying(false));
+    dispatch(setCurrentTrack(null));
     if (confirmed) {
       onRemove();
     }
   }, [track.metadata.name, onRemove]);
 
+  // Динамические grid колонки в зависимости от наличия drag
+  const gridCols = shouldShowDrag
+    ? "grid-cols-[30px_50px_1fr_100px_80px_40px_40px]"
+    : "grid-cols-[50px_1fr_100px_80px_40px_40px]";
+
   const containerClasses = `
-    grid grid-cols-[30px_50px_1fr_100px_80px_40px_40px] gap-4 items-center px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer
+    grid ${gridCols} gap-4 items-center px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer hover:bg-white/5
     ${isDragging ? "opacity-50 scale-95" : "opacity-100 scale-100"}
-    ${
-      isCurrentTrack
-        ? "bg-green-500/10 border border-green-500/30"
-        : "hover:bg-white/5"
-    }
     ${dragOverIndex === index ? "ring-2 ring-blue-400/50" : ""}
   `;
 
@@ -174,11 +200,11 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
       <div
         ref={dragRef}
         className={containerClasses}
-        draggable
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+        draggable={shouldShowDrag}
+        onDragStart={shouldShowDrag ? handleDragStart : undefined}
+        onDragEnd={shouldShowDrag ? handleDragEnd : undefined}
+        onDragOver={shouldShowDrag ? handleDragOver : undefined}
+        onDrop={shouldShowDrag ? handleDrop : undefined}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={(e) => {
@@ -187,46 +213,58 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         }}
         data-track-index={index}
       >
-        {/* Drag Handle */}
-        <div
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DragOutlined
-            style={{
-              color: "rgba(255, 255, 255, 0.6)",
-              transition: "color 0.2s ease",
-            }}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLElement).style.color = "white")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLElement).style.color =
-                "rgba(255, 255, 255, 0.6)")
-            }
-          />
-        </div>
+        {/* Drag Handle - показываем только если треков больше одного */}
+        {shouldShowDrag && (
+          <div
+            className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DragOutlined
+              style={{
+                color: "rgba(255, 255, 255, 0.6)",
+                fontSize: "18px",
+              }}
+              className="hover:!text-white transition-colors duration-200"
+            />
+          </div>
+        )}
 
         {/* Track Number / Play Button */}
         <div className="text-center">
-          {isHovered || isCurrentTrack ? (
+          {isHovered ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                console.log("Play button clicked:", {
+                  isCurrentTrack,
+                  isPlaying,
+                });
                 handlePlayPause();
               }}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              className={`w-8 h-8 flex items-center justify-center transition-all duration-200
+              }`}
             >
               {isTrackPlaying ? (
-                <PauseOutlined style={{ color: "white" }} />
+                <PauseOutlined
+                  style={{
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: "24px",
+                  }}
+                  className="hover:scale-130 cursor-pointer transition-all duration-300"
+                />
               ) : (
-                <CaretRightOutlined style={{ color: "white" }} />
+                <CaretRightOutlined
+                  style={{
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: "24px",
+                  }}
+                  className="hover:scale-130 cursor-pointer transition-all duration-300"
+                />
               )}
             </button>
           ) : (
             <span
-              className={`text-sm font-medium ${
-                isCurrentTrack ? "text-green-400" : "text-white/60"
+              className={`text-sm font-medium transition-colors duration-200 text-white/60
               }`}
             >
               {index + 1}
@@ -239,15 +277,18 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           <img
             src={URL.createObjectURL(track.coverFile)}
             alt={track.metadata.name}
-            className="w-10 h-10 rounded-md object-cover flex-shrink-0"
+            className={`w-10 h-10 rounded-md object-cover flex-shrink-0 transition-all duration-200
+            }`}
           />
           <div className="min-w-0 flex-1">
             <h4
-              className={`font-medium truncate ${
-                isCurrentTrack ? "text-green-400" : "text-white"
+              className={`font-medium truncate transition-colors duration-200 text-white
               }`}
             >
               {track.metadata.name}
+              {isTrackPlaying && (
+                <span className="ml-2 animate-pulse text-sm">♪ Playing</span>
+              )}
             </h4>
             <div className="flex items-center gap-2 text-xs text-white/60">
               <span>{track.metadata.genre}</span>
@@ -265,12 +306,18 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         </div>
 
         {/* File Size */}
-        <div className="text-white/60 text-sm text-center">
+        <div
+          className={`text-sm text-center transition-colors duration-200 text-white/60
+          }`}
+        >
           {formatFileSize(track.file.size)}
         </div>
 
         {/* Duration */}
-        <div className="text-white/60 text-sm text-center">
+        <div
+          className={`text-sm text-center transition-colors duration-200 text-white/60
+          }`}
+        >
           {formatDuration(track.duration)}
         </div>
 
@@ -280,21 +327,15 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
             e.stopPropagation();
             setIsEditModalOpen(true);
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-all duration-200"
           title="Edit track"
         >
           <EditOutlined
             style={{
               color: "rgba(255, 255, 255, 0.6)",
-              transition: "color 0.2s ease",
+              fontSize: "18px",
             }}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLElement).style.color = "white")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLElement).style.color =
-                "rgba(255, 255, 255, 0.6)")
-            }
+            className="hover:!text-white transition-colors duration-200"
           />
         </button>
 
@@ -304,21 +345,15 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
             e.stopPropagation();
             handleRemove();
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 transition-all duration-200"
           title="Remove track"
         >
           <DeleteOutlined
             style={{
               color: "rgba(248, 113, 113, 1)",
-              transition: "color 0.2s ease",
+              fontSize: "18px",
             }}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLElement).style.color = "rgba(252, 165, 165, 1)")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLElement).style.color =
-                "rgba(248, 113, 113, 1)")
-            }
+            className="hover:!text-red-300 transition-colors duration-200"
           />
         </button>
       </div>

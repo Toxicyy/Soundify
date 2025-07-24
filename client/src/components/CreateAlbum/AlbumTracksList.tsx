@@ -5,40 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import AlbumTrackItem from "./AlbumTrackItem";
 import { playTrackAndQueue } from "../../state/Queue.slice";
 import type { AppDispatch } from "../../store";
-
-interface LocalTrack {
-  tempId: string;
-  file: File;
-  metadata: {
-    name: string;
-    genre: string;
-    tags: string[];
-  };
-  coverFile: File;
-  audioUrl: string;
-  duration?: number;
-}
-
-interface AlbumData {
-  name: string;
-  description: string;
-  releaseDate: Date | null;
-  type: "album" | "ep" | "single";
-  coverFile: File | null;
-  coverPreview: string | null;
-}
-
-interface AlbumTracksListProps {
-  tracks: LocalTrack[];
-  albumData: AlbumData;
-  onTrackRemove: (tempId: string) => void;
-  onTrackReorder: (fromIndex: number, toIndex: number) => void;
-  onTrackEdit: (
-    tempId: string,
-    updates: Partial<LocalTrack["metadata"]>
-  ) => void;
-  onAddTrack: () => void;
-}
+import type {
+  LocalTrack,
+  AlbumTracksListProps,
+} from "../../types/LocalTrack";
 
 const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   tracks,
@@ -247,21 +217,21 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
             onDrop={(e) => e.preventDefault()}
           >
             <AnimatePresence>
-              {tracks.map((track, index) => (
+              {tracks.map((track, arrayIndex) => (
                 <motion.div
-                  key={track.tempId}
+                  key={track.tempId} // Используем tempId как key
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.2 }}
-                  data-track-index={index}
+                  data-track-index={arrayIndex}
                 >
                   <AlbumTrackItem
                     track={track}
-                    index={index}
+                    index={arrayIndex}
                     totalTracks={tracks.length}
-                    onPlay={() => handleTrackPlay(track, index)}
+                    onPlay={() => handleTrackPlay(track, arrayIndex)}
                     onRemove={() => onTrackRemove(track.tempId)}
                     onEdit={(updates) => onTrackEdit(track.tempId, updates)}
                     onDragStart={handleDragStart}
@@ -273,14 +243,14 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
               ))}
             </AnimatePresence>
 
-            {/* Drop indicator
-            {isDragging && dragOverIndex !== null && (
+            {/* Drop indicator - отключен для чистоты дизайна */}
+            {/* {isDragging && dragOverIndex !== null && (
               <motion.div
-                className="h-1 bg-green-400 rounded-full mx-4"
+                className="h-0.5 bg-white/30 rounded-full mx-4 opacity-50"
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 style={{
-                  position: "absolute",
+                  position: 'absolute',
                   top: `${(dragOverIndex + 1) * 80}px`,
                   left: 16,
                   right: 16,
