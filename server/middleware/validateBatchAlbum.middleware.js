@@ -3,12 +3,40 @@ import { ApiResponse } from "../utils/responses.js";
 import Artist from "../models/Artist.model.js";
 import Album from "../models/Album.model.js";
 
-// Парсинг JSON полей из FormData
+/**
+ * Parse JSON objects from FormData
+ * Converts tracks array to individual form fields
+ */
 const parseFormDataJSON = (req, res, next) => {
-  // Парсим теги для каждого трека
+  // Handle tracks JSON object from FormData
+  if (req.body && req.body.tracks) {
+    if (Array.isArray(req.body.tracks)) {
+      req.body.tracks.forEach((track, index) => {
+        // Convert to FormData fields
+        if (track.name) {
+          req.body[`tracks[${index}][name]`] = track.name;
+        }
+        if (track.genre) {
+          req.body[`tracks[${index}][genre]`] = track.genre;
+        }
+        if (track.tags) {
+          if (typeof track.tags === "string") {
+            req.body[`tracks[${index}][tags]`] = [track.tags];
+          } else if (Array.isArray(track.tags)) {
+            req.body[`tracks[${index}][tags]`] = track.tags;
+          }
+        }
+      });
+
+      // Remove original JSON object
+      delete req.body.tracks;
+    }
+  }
+
+  // Parse tags for each track
   if (req.body) {
     Object.keys(req.body).forEach((key) => {
-      // Парсим tags для треков: tracks[0][tags], tracks[1][tags], etc.
+      // Parse track tags
       if (
         key.match(/^tracks\[\d+\]\[tags\]$/) &&
         typeof req.body[key] === "string"
@@ -16,7 +44,6 @@ const parseFormDataJSON = (req, res, next) => {
         try {
           req.body[key] = JSON.parse(req.body[key]);
         } catch (e) {
-          // Если не JSON, пробуем разбить по запятым
           req.body[key] = req.body[key]
             .split(",")
             .map((tag) => tag.trim())
@@ -24,7 +51,7 @@ const parseFormDataJSON = (req, res, next) => {
         }
       }
 
-      // Парсим albumGenre если это строка
+      // Parse albumGenre
       if (key === "albumGenre" && typeof req.body[key] === "string") {
         try {
           req.body[key] = JSON.parse(req.body[key]);
@@ -41,11 +68,13 @@ const parseFormDataJSON = (req, res, next) => {
   next();
 };
 
+/**
+ * Validate batch album creation data
+ */
 export const validateBatchAlbumCreation = [
-  // Добавляем парсинг JSON в начало цепочки middleware
   parseFormDataJSON,
 
-  // Валидация данных альбома
+  // Album validation
   body("albumName")
     .trim()
     .notEmpty()
@@ -91,147 +120,88 @@ export const validateBatchAlbumCreation = [
     .isISO8601()
     .withMessage("Неверный формат даты релиза"),
 
-  // ИСПРАВЛЕННАЯ проверка треков - ищем все треки в req.body динамически
+  // Track validation using indices from uploadBatch middleware
   (req, res, next) => {
-    console.log("=== VALIDATION DEBUG ===");
-    console.log("req.body keys:", Object.keys(req.body));
-    console.log("req.body.tracks:", req.body.tracks);
-    console.log("req.batchInfo:", req.batchInfo);
-
     if (!req.batchInfo || !req.batchInfo.trackIndices) {
       return res
-        .status(400)
-        .json(ApiResponse.error("Информация о треках не найдена"));
+        .status(500)
+        .json(
+          ApiResponse.error(
+            "Информация о треках не найдена. Проверьте порядок middleware."
+          )
+        );
     }
 
     const { trackIndices } = req.batchInfo;
-    console.log("trackIndices from middleware:", trackIndices);
-
     const errors = [];
     const trackNames = new Set();
 
-    // ПРОВЕРЯЕМ: если данные пришли как req.body.tracks (JSON), а не как отдельные поля
-    if (req.body.tracks && typeof req.body.tracks === "object") {
-      console.log("DETECTED: tracks data as JSON object");
-      console.log(
-        "tracks structure:",
-        JSON.stringify(req.body.tracks, null, 2)
-      );
+    trackIndices.forEach((index, arrayIndex) => {
+      const nameKey = `tracks[${index}][name]`;
+      const genreKey = `tracks[${index}][genre]`;
+      const tagsKey = `tracks[${index}][tags]`;
 
-      // Обрабатываем как JSON объект
-      Object.keys(req.body.tracks).forEach((trackKey, arrayIndex) => {
-        const trackData = req.body.tracks[trackKey];
-        console.log(`Processing track ${trackKey}:`, trackData);
+      const trackName = req.body[nameKey];
+      const trackGenre = req.body[genreKey];
+      const trackTags = req.body[tagsKey];
 
-        if (
-          !trackData.name ||
-          typeof trackData.name !== "string" ||
-          trackData.name.trim().length === 0
-        ) {
-          errors.push(`Название трека ${arrayIndex + 1} обязательно`);
-        } else if (trackData.name.trim().length > 100) {
-          errors.push(
-            `Название трека ${
-              arrayIndex + 1
-            } не может быть длиннее 100 символов`
-          );
+      // Validate track name
+      if (
+        !trackName ||
+        typeof trackName !== "string" ||
+        trackName.trim().length === 0
+      ) {
+        errors.push(
+          `Название трека ${arrayIndex + 1} (index ${index}) обязательно`
+        );
+      } else if (trackName.trim().length > 100) {
+        errors.push(
+          `Название трека ${arrayIndex + 1} не может быть длиннее 100 символов`
+        );
+      } else {
+        const trimmedName = trackName.trim().toLowerCase();
+        if (trackNames.has(trimmedName)) {
+          errors.push(`Дублирующееся название трека: "${trackName.trim()}"`);
         } else {
-          const trimmedName = trackData.name.trim().toLowerCase();
-          if (trackNames.has(trimmedName)) {
-            errors.push(
-              `Дублирующееся название трека: "${trackData.name.trim()}"`
-            );
-          } else {
-            trackNames.add(trimmedName);
-            console.log(
-              `SUCCESS: Track ${arrayIndex} name validated: "${trackData.name}"`
-            );
-          }
+          trackNames.add(trimmedName);
         }
-      });
-    } else {
-      // Оригинальная логика для FormData полей
-      console.log("DETECTED: tracks data as separate FormData fields");
+      }
 
-      trackIndices.forEach((index) => {
-        const nameKey = `tracks[${index}][name]`;
-        const genreKey = `tracks[${index}][genre]`;
-        const tagsKey = `tracks[${index}][tags]`;
+      // Validate genre (optional)
+      if (
+        trackGenre &&
+        (typeof trackGenre !== "string" || trackGenre.trim().length > 50)
+      ) {
+        errors.push(
+          `Жанр трека ${arrayIndex + 1} не может быть длиннее 50 символов`
+        );
+      }
 
-        console.log(`Checking track ${index}:`, {
-          nameKey,
-          nameValue: req.body[nameKey],
-          genreValue: req.body[genreKey],
-          tagsValue: req.body[tagsKey],
-        });
-
-        const trackName = req.body[nameKey];
-        const trackGenre = req.body[genreKey];
-        const trackTags = req.body[tagsKey];
-
-        // Проверка имени трека
-        if (
-          !trackName ||
-          typeof trackName !== "string" ||
-          trackName.trim().length === 0
-        ) {
-          errors.push(
-            `Название трека ${index + 1} обязательно (поле: ${nameKey})`
-          );
-          console.log(`ERROR: Track ${index} name missing or invalid`);
-        } else if (trackName.trim().length > 100) {
-          errors.push(
-            `Название трека ${index + 1} не может быть длиннее 100 символов`
-          );
+      // Validate tags (optional)
+      if (trackTags) {
+        if (!Array.isArray(trackTags)) {
+          errors.push(`Теги трека ${arrayIndex + 1} должны быть массивом`);
+        } else if (trackTags.length > 20) {
+          errors.push(`Максимум 20 тегов для трека ${arrayIndex + 1}`);
         } else {
-          const trimmedName = trackName.trim().toLowerCase();
-          if (trackNames.has(trimmedName)) {
-            errors.push(`Дублирующееся название трека: "${trackName.trim()}"`);
-          } else {
-            trackNames.add(trimmedName);
-            console.log(
-              `SUCCESS: Track ${index} name validated: "${trackName}"`
-            );
-          }
+          trackTags.forEach((tag, tagIndex) => {
+            if (typeof tag !== "string" || tag.trim().length === 0) {
+              errors.push(
+                `Тег ${tagIndex + 1} трека ${
+                  arrayIndex + 1
+                } не может быть пустым`
+              );
+            } else if (tag.trim().length > 50) {
+              errors.push(
+                `Тег ${tagIndex + 1} трека ${
+                  arrayIndex + 1
+                } не может быть длиннее 50 символов`
+              );
+            }
+          });
         }
-
-        // Проверка жанра трека (опционально)
-        if (
-          trackGenre &&
-          (typeof trackGenre !== "string" || trackGenre.trim().length > 50)
-        ) {
-          errors.push(
-            `Жанр трека ${index + 1} не может быть длиннее 50 символов`
-          );
-        }
-
-        // Проверка тегов трека (опционально)
-        if (trackTags) {
-          if (!Array.isArray(trackTags)) {
-            errors.push(`Теги трека ${index + 1} должны быть массивом`);
-          } else if (trackTags.length > 20) {
-            errors.push(`Максимум 20 тегов для трека ${index + 1}`);
-          } else {
-            trackTags.forEach((tag, tagIndex) => {
-              if (typeof tag !== "string" || tag.trim().length === 0) {
-                errors.push(
-                  `Тег ${tagIndex + 1} трека ${index + 1} не может быть пустым`
-                );
-              } else if (tag.trim().length > 50) {
-                errors.push(
-                  `Тег ${tagIndex + 1} трека ${
-                    index + 1
-                  } не может быть длиннее 50 символов`
-                );
-              }
-            });
-          }
-        }
-      });
-    }
-
-    console.log("Validation errors:", errors);
-    console.log("=== END VALIDATION DEBUG ===");
+      }
+    });
 
     if (errors.length > 0) {
       return res
@@ -242,31 +212,33 @@ export const validateBatchAlbumCreation = [
     next();
   },
 
-  // Проверка существования артиста и уникальности названия альбома
+  // Artist validation and album uniqueness check
   async (req, res, next) => {
     try {
-      // Проверяем, что у пользователя есть профиль артиста
-      if (!req.user || !req.user.artistProfile) {
+      if (!req.user || !req.user.id) {
         return res
-          .status(400)
-          .json(ApiResponse.error("У пользователя нет профиля артиста"));
+          .status(401)
+          .json(ApiResponse.error("Пользователь не авторизован"));
       }
 
-      const artistId = req.user.artistProfile;
+      // Find artist by owner field
+      const artist = await Artist.findOne({ owner: req.user.id });
 
-      // Проверяем существование артиста
-      const artist = await Artist.findById(artistId);
       if (!artist) {
         return res
           .status(400)
-          .json(ApiResponse.error("Профиль артиста не найден"));
+          .json(
+            ApiResponse.error(
+              "У пользователя нет профиля артиста. Создайте профиль артиста перед загрузкой альбомов."
+            )
+          );
       }
 
-      // Проверяем уникальность названия альбома для данного артиста
+      // Check album name uniqueness for this artist
       const albumName = req.body.albumName.trim();
       const existingAlbum = await Album.findOne({
         name: new RegExp(`^${albumName}$`, "i"),
-        artist: artistId,
+        artist: artist._id,
       });
 
       if (existingAlbum) {
@@ -279,20 +251,19 @@ export const validateBatchAlbumCreation = [
           );
       }
 
-      // Добавляем информацию об артисте в req
+      // Add artist info to request
       req.artistInfo = {
-        artistId,
+        artistId: artist._id,
         artistName: artist.name,
       };
 
       next();
     } catch (error) {
-      console.error("Validation error:", error);
       return res.status(500).json(ApiResponse.error("Ошибка проверки данных"));
     }
   },
 
-  // Финальная проверка ошибок express-validator
+  // Final validation check
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -304,11 +275,18 @@ export const validateBatchAlbumCreation = [
   },
 ];
 
-// Middleware для проверки лимитов системы
+/**
+ * Check system limits for batch processing
+ */
 export const checkSystemLimits = (req, res, next) => {
+  if (!req.batchInfo || typeof req.batchInfo.trackCount === "undefined") {
+    return res
+      .status(500)
+      .json(ApiResponse.error("Информация о количестве треков не найдена"));
+  }
+
   const { trackCount } = req.batchInfo;
 
-  // Проверяем лимиты
   if (trackCount > 50) {
     return res
       .status(400)
@@ -317,10 +295,15 @@ export const checkSystemLimits = (req, res, next) => {
       );
   }
 
-  // Проверяем примерное время обработки (2 минуты на трек максимум)
-  const estimatedProcessingTime = trackCount * 2; // минуты
+  if (trackCount < 2) {
+    return res
+      .status(400)
+      .json(ApiResponse.error("Минимальное количество треков для альбома: 2"));
+  }
+
+  // Check estimated processing time
+  const estimatedProcessingTime = trackCount * 2; // minutes
   if (estimatedProcessingTime > 100) {
-    // 100 минут максимум
     return res
       .status(400)
       .json(
@@ -331,15 +314,15 @@ export const checkSystemLimits = (req, res, next) => {
   next();
 };
 
-// Middleware для генерации session ID для SSE tracking
+/**
+ * Generate session ID for progress tracking
+ */
 export const generateSessionId = (req, res, next) => {
   const sessionId = `batch_${Date.now()}_${Math.random()
     .toString(36)
     .substr(2, 9)}`;
+
   req.sessionId = sessionId;
-
-  // Добавляем заголовок с session ID для клиента
   res.set("X-Session-ID", sessionId);
-
   next();
 };

@@ -26,12 +26,21 @@ interface EditTrackModalProps {
   totalTracks: number;
 }
 
+/**
+ * Styled components with responsive design
+ * Maintained original styling but added responsive breakpoints
+ */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
 
     &::placeholder {
       color: rgba(255, 255, 255, 0.6) !important;
@@ -57,6 +66,11 @@ const StyledSelect = styled(Select<string>)`
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
   }
 
   .ant-select-selection-item {
@@ -85,6 +99,11 @@ const StyledMultiSelect = styled(Select<string[]>)`
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
   }
 
   .ant-select-selection-item {
@@ -117,7 +136,7 @@ const StyledMultiSelect = styled(Select<string[]>)`
   }
 `;
 
-// Genre and tags data (same as UploadTrackToAlbumModal)
+// Genre and tags data
 const genres = [
   "Pop",
   "Rock",
@@ -189,6 +208,10 @@ const predefinedTags = [
   "Downtempo",
 ];
 
+/**
+ * Edit Track Modal Component
+ * Enhanced with responsive design while maintaining original functionality
+ */
 const EditTrackModal: React.FC<EditTrackModalProps> = ({
   isOpen,
   onClose,
@@ -266,26 +289,33 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
       open={isOpen}
       onCancel={handleCancel}
       closable={false}
-      width={550}
+      width="min(90vw, 550px)"
       styles={{
         content: {
           backgroundColor: "rgba(40, 40, 40, 0.95)",
           backdropFilter: "blur(15px)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
           borderRadius: "16px",
+          maxHeight: "90vh",
+          overflow: "hidden",
         },
         header: { display: "none" },
+        body: {
+          padding: "16px",
+          maxHeight: "calc(90vh - 32px)",
+          overflow: "auto",
+        },
       }}
       footer={null}
       maskClosable={false}
     >
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="space-y-4 lg:space-y-6">
+        {/* Header - Responsive layout */}
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <EditOutlined className="text-white text-xl" />
+          <div className="flex items-center gap-2 lg:gap-3">
+            <EditOutlined className="text-white text-lg lg:text-xl" />
             <div>
-              <div className="text-white text-xl font-semibold tracking-wider">
+              <div className="text-white text-lg lg:text-xl font-semibold tracking-wider">
                 Edit Track
               </div>
               <div className="text-white/60 text-sm">
@@ -294,24 +324,26 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             </div>
           </div>
           <CloseOutlined
-            className="text-2xl cursor-pointer hover:text-white/70 transition-colors"
+            className="text-xl lg:text-2xl cursor-pointer hover:text-white/70 transition-colors"
             style={{ color: "white" }}
             onClick={handleCancel}
           />
         </div>
 
-        {/* Track Preview */}
-        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-          <div className="flex items-center gap-3">
+        {/* Track Preview - Responsive layout */}
+        <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
+          <div className="flex items-center gap-2 lg:gap-3">
             <img
               src={URL.createObjectURL(track.coverFile)}
               alt="Track cover"
-              className="w-12 h-12 rounded-lg object-cover"
+              className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg object-cover"
             />
-            <div className="flex-1">
-              <h4 className="text-white font-medium">{track.metadata.name}</h4>
-              <div className="text-white/60 text-sm flex items-center gap-2">
-                <span>{track.file.name}</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-white font-medium text-sm lg:text-base truncate">
+                {track.metadata.name}
+              </h4>
+              <div className="text-white/60 text-xs lg:text-sm flex items-center gap-2">
+                <span className="truncate">{track.file.name}</span>
                 {track.duration && (
                   <>
                     <span>•</span>
@@ -326,7 +358,7 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           {/* Track Name */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
@@ -399,7 +431,7 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
           {/* Changes Summary */}
           {hasChanges && (
             <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
-              <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2">
+              <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2 text-sm lg:text-base">
                 <span>⚠️</span>
                 Pending Changes
               </h4>
@@ -407,7 +439,9 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
                 {editedData.name !== track.metadata.name && (
                   <div className="flex justify-between">
                     <span className="text-white/60">Name:</span>
-                    <span className="text-white">{editedData.name}</span>
+                    <span className="text-white truncate ml-2">
+                      {editedData.name}
+                    </span>
                   </div>
                 )}
                 {editedData.genre !== track.metadata.genre && (
@@ -420,7 +454,7 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
                   JSON.stringify(track.metadata.tags) && (
                   <div className="flex justify-between">
                     <span className="text-white/60">Tags:</span>
-                    <span className="text-white">
+                    <span className="text-white truncate ml-2">
                       {editedData.tags.length > 0
                         ? editedData.tags.join(", ")
                         : "None"}
@@ -431,8 +465,8 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             </div>
           )}
 
-          {/* Current vs New Comparison */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Current vs New Comparison - Responsive grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             <div className="bg-white/5 rounded-lg p-3 border border-white/10">
               <h4 className="text-white/80 font-medium mb-2 text-sm">
                 Current
@@ -512,18 +546,18 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-4">
+        {/* Footer - Responsive button layout */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <button
             onClick={handleCancel}
-            className="px-6 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors"
+            className="px-4 lg:px-6 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors text-sm lg:text-base"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!isFormValid || !hasChanges}
-            className="px-8 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-emerald-500"
+            className="px-6 lg:px-8 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-emerald-500 text-sm lg:text-base"
           >
             Save Changes
           </button>

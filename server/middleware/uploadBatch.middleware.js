@@ -3,20 +3,23 @@ import { UPLOAD_LIMITS } from "../config/constants.js";
 
 const storage = multer.memoryStorage();
 
-// Конфигурация для batch загрузки альбома
+/**
+ * Multer configuration for batch album uploads
+ * Handles up to 50 tracks with audio and cover files plus album cover
+ */
 const batchUpload = multer({
   storage: storage,
   limits: {
-    fileSize: UPLOAD_LIMITS.fileSize, // Размер одного файла
-    files: 101, // Максимум: 1 обложка альбома + 50 треков * 2 файла (аудио + обложка)
-    fieldSize: 10 * 1024 * 1024, // 10MB для текстовых полей
-    fieldNameSize: 200, // Длина имени поля
-    fields: 500, // Количество не-файловых полей
+    fileSize: UPLOAD_LIMITS.fileSize,
+    files: 101, // 1 album cover + 50 tracks * 2 files
+    fieldSize: 10 * 1024 * 1024,
+    fieldNameSize: 200,
+    fields: 500,
   },
   fileFilter: (req, file, cb) => {
     const fieldName = file.fieldname;
 
-    // Обложка альбома
+    // Album cover validation
     if (fieldName === "albumCover") {
       if (UPLOAD_LIMITS.imageFormats.includes(file.mimetype)) {
         cb(null, true);
@@ -26,7 +29,7 @@ const batchUpload = multer({
       return;
     }
 
-    // Аудио файлы треков: tracks[0][audio], tracks[1][audio], etc.
+    // Track audio files validation
     if (fieldName.match(/^tracks\[\d+\]\[audio\]$/)) {
       if (UPLOAD_LIMITS.audioFormats.includes(file.mimetype)) {
         cb(null, true);
@@ -39,7 +42,7 @@ const batchUpload = multer({
       return;
     }
 
-    // Обложки треков: tracks[0][cover], tracks[1][cover], etc.
+    // Track cover files validation
     if (fieldName.match(/^tracks\[\d+\]\[cover\]$/)) {
       if (UPLOAD_LIMITS.imageFormats.includes(file.mimetype)) {
         cb(null, true);
@@ -56,12 +59,14 @@ const batchUpload = multer({
   },
 });
 
-// Middleware для обработки batch загрузки альбома
+/**
+ * Middleware for handling batch album uploads
+ * Creates dynamic fields for up to 50 tracks
+ */
 export const uploadBatchAlbum = (req, res, next) => {
-  // Создаем fields array динамически для до 50 треков
   const fields = [{ name: "albumCover", maxCount: 1 }];
 
-  // Добавляем поля для треков (до 50)
+  // Add fields for tracks (up to 50)
   for (let i = 0; i < 50; i++) {
     fields.push(
       { name: `tracks[${i}][audio]`, maxCount: 1 },
@@ -73,8 +78,6 @@ export const uploadBatchAlbum = (req, res, next) => {
 
   uploadMiddleware(req, res, (err) => {
     if (err) {
-      console.error("Batch upload error:", err);
-
       if (err instanceof multer.MulterError) {
         switch (err.code) {
           case "LIMIT_FILE_SIZE":
@@ -118,9 +121,9 @@ export const uploadBatchAlbum = (req, res, next) => {
       });
     }
 
-    // Проверяем общий размер запроса (500MB лимит)
+    // Check total request size (500MB limit)
     const totalSize = calculateTotalRequestSize(req);
-    const maxTotalSize = 500 * 1024 * 1024; // 500MB
+    const maxTotalSize = 500 * 1024 * 1024;
 
     if (totalSize > maxTotalSize) {
       return res.status(400).json({
@@ -136,12 +139,13 @@ export const uploadBatchAlbum = (req, res, next) => {
   });
 };
 
-// Вспомогательная функция для подсчета общего размера запроса
+/**
+ * Calculate total request size including files and body
+ */
 const calculateTotalRequestSize = (req) => {
   let totalSize = 0;
 
   if (req.files) {
-    // Подсчитываем размер всех файлов
     Object.values(req.files).forEach((fileArray) => {
       if (Array.isArray(fileArray)) {
         fileArray.forEach((file) => {
@@ -153,7 +157,6 @@ const calculateTotalRequestSize = (req) => {
     });
   }
 
-  // Добавляем примерный размер текстовых полей
   if (req.body) {
     const bodySize = JSON.stringify(req.body).length;
     totalSize += bodySize;
@@ -162,7 +165,9 @@ const calculateTotalRequestSize = (req) => {
   return totalSize;
 };
 
-// Middleware для проверки структуры загруженных файлов
+/**
+ * Validate uploaded file structure and create track indices
+ */
 export const validateBatchUploadStructure = (req, res, next) => {
   if (!req.files) {
     return res.status(400).json({
@@ -174,12 +179,12 @@ export const validateBatchUploadStructure = (req, res, next) => {
   const files = req.files;
   const errors = [];
 
-  // Проверяем обложку альбома
+  // Validate album cover
   if (!files.albumCover || !files.albumCover[0]) {
     errors.push("Обложка альбома обязательна");
   }
 
-  // Подсчитываем количество треков
+  // Count tracks and validate structure
   const trackIndices = new Set();
   Object.keys(files).forEach((fieldName) => {
     const match = fieldName.match(/^tracks\[(\d+)\]\[(audio|cover)\]$/);
@@ -198,7 +203,7 @@ export const validateBatchUploadStructure = (req, res, next) => {
     errors.push("Максимальное количество треков: 50");
   }
 
-  // Проверяем, что у каждого трека есть и аудио, и обложка
+  // Validate each track has both audio and cover
   trackIndices.forEach((index) => {
     const audioField = `tracks[${index}][audio]`;
     const coverField = `tracks[${index}][cover]`;
@@ -220,7 +225,7 @@ export const validateBatchUploadStructure = (req, res, next) => {
     });
   }
 
-  // Добавляем информацию о треках в req для последующего использования
+  // Add batch info for subsequent middleware
   req.batchInfo = {
     trackCount,
     trackIndices: Array.from(trackIndices).sort((a, b) => a - b),

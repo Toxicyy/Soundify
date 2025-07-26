@@ -22,12 +22,20 @@ interface AlbumHeaderFormProps {
   tracksCount: number;
 }
 
+/**
+ * Styled components for consistent dark theme across different screen sizes
+ */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
 
     &::placeholder {
       color: rgba(255, 255, 255, 0.6) !important;
@@ -52,6 +60,11 @@ const StyledTextArea = styled(TextArea)`
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 8px;
+  font-size: 14px;
+
+  @media (min-width: 1024px) {
+    font-size: 16px;
+  }
 
   textarea::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
@@ -76,6 +89,11 @@ const StyledSelect = styled(Select<string>)`
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
   }
 
   .ant-select-selection-item {
@@ -105,6 +123,11 @@ const StyledDatePicker = styled(DatePicker)`
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px;
     width: 100%;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
 
     .ant-picker-input > input {
       color: white !important;
@@ -128,6 +151,10 @@ const StyledDatePicker = styled(DatePicker)`
   }
 `;
 
+/**
+ * Album Header Form Component
+ * Responsive form for album metadata input
+ */
 const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
   albumData,
   onChange,
@@ -136,6 +163,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle cover image change
   const handleCoverChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -147,7 +175,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
         alert("Image file size must be less than 5MB");
         return;
       }
@@ -163,6 +190,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     [albumData.coverPreview, onChange]
   );
 
+  // Handle cover removal
   const handleRemoveCover = useCallback(() => {
     if (albumData.coverPreview) {
       URL.revokeObjectURL(albumData.coverPreview);
@@ -173,6 +201,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     }
   }, [albumData.coverPreview, onChange]);
 
+  // Get type color for visual feedback
   const getTypeColor = (type: string) => {
     switch (type) {
       case "single":
@@ -186,6 +215,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     }
   };
 
+  // Get type description
   const getTypeDescription = (type: string) => {
     switch (type) {
       case "single":
@@ -200,29 +230,29 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-      <h2 className="text-xl font-semibold text-white mb-6">
+    <div className="bg-white/5 backdrop-blur-md rounded-lg lg:rounded-2xl p-4 lg:p-6 border border-white/10">
+      <h2 className="text-lg lg:text-xl font-semibold text-white mb-4 lg:mb-6">
         Album Information
       </h2>
 
-      <div className="space-y-6">
-        {/* Album Cover */}
+      <div className="space-y-4 lg:space-y-6">
+        {/* Album Cover - Responsive layout */}
         <div>
-          <label className="block text-white/80 text-sm font-medium mb-3">
+          <label className="block text-white/80 text-sm font-medium mb-2 lg:mb-3">
             Album Cover *
           </label>
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex items-center gap-3 lg:gap-4">
+            <div className="relative flex-shrink-0">
               {albumData.coverPreview ? (
                 <div className="relative">
                   <img
                     src={albumData.coverPreview}
                     alt="Album cover preview"
-                    className="w-24 h-24 rounded-lg object-cover border border-white/20"
+                    className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg object-cover border border-white/20"
                   />
                   <button
                     onClick={handleRemoveCover}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                    className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-red-500 text-white rounded-full w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                   >
                     <DeleteOutlined />
                   </button>
@@ -230,9 +260,9 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
               ) : (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-24 h-24 rounded-lg bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center hover:bg-white/15 transition-colors"
+                  className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-white/10 border-2 border-dashed border-white/30 flex flex-col items-center justify-center hover:bg-white/15 transition-colors"
                 >
-                  <UploadOutlined className="text-white/60 text-xl mb-1" />
+                  <UploadOutlined className="text-white/60 text-lg lg:text-xl mb-1" />
                   <span className="text-white/60 text-xs">Upload</span>
                 </button>
               )}
@@ -244,10 +274,10 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
                 className="hidden"
               />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left truncate"
               >
                 {albumData.coverFile
                   ? albumData.coverFile.name
@@ -299,7 +329,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
               onChange({ type: value as "album" | "ep" | "single" })
             }
             className="w-full"
-            disabled // Auto-determined based on track count
+            disabled
           >
             <Select.Option value="single">Single</Select.Option>
             <Select.Option value="ep">EP</Select.Option>
@@ -320,7 +350,7 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
         {/* Release Date */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">
-            Release Date
+            Release Date (coming soon)
           </label>
           <StyledDatePicker
             placeholder="Select release date"
@@ -330,16 +360,19 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
               onChange({ releaseDate: dayjsDate ? dayjsDate.toDate() : null });
             }}
             format="YYYY-MM-DD"
+            disabled
           />
           <p className="text-white/40 text-xs mt-1">
             Optional - Leave empty for immediate release
           </p>
         </div>
 
-        {/* Album Stats */}
-        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-          <h4 className="text-white font-medium mb-3">Album Summary</h4>
-          <div className="space-y-2 text-sm">
+        {/* Album Stats - Responsive layout */}
+        <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
+          <h4 className="text-white font-medium mb-3 text-sm lg:text-base">
+            Album Summary
+          </h4>
+          <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
               <span className="text-white/60">Tracks:</span>
               <span className="text-white font-medium">{tracksCount}</span>
@@ -351,12 +384,12 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
               </span>
             </div>
             {suggestedGenre && (
-              <div className="flex justify-between">
+              <div className="flex justify-between col-span-2">
                 <span className="text-white/60">Suggested Genre:</span>
                 <span className="text-white font-medium">{suggestedGenre}</span>
               </div>
             )}
-            <div className="flex justify-between">
+            <div className="flex justify-between col-span-2">
               <span className="text-white/60">Status:</span>
               <span className="text-white font-medium">
                 {albumData.name && albumData.coverFile && tracksCount >= 2
@@ -368,8 +401,8 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
         </div>
 
         {/* Requirements */}
-        <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-          <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2">
+        <div className="bg-blue-500/10 rounded-lg p-3 lg:p-4 border border-blue-500/20">
+          <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2 text-sm lg:text-base">
             <span>ℹ️</span>
             Requirements
           </h4>

@@ -18,12 +18,20 @@ interface UploadTrackToAlbumModalProps {
   existingTracks: LocalTrack[];
 }
 
+/**
+ * Responsive styled components for consistent dark theme
+ */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
 
     &::placeholder {
       color: rgba(255, 255, 255, 0.6) !important;
@@ -49,6 +57,11 @@ const StyledSelect = styled(Select<string>)`
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
   }
 
   .ant-select-selection-item {
@@ -77,6 +90,11 @@ const StyledMultiSelect = styled(Select<string[]>)`
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-radius: 8px !important;
+    font-size: 14px;
+
+    @media (min-width: 1024px) {
+      font-size: 16px;
+    }
   }
 
   .ant-select-selection-item {
@@ -181,6 +199,10 @@ const predefinedTags = [
   "Downtempo",
 ];
 
+/**
+ * Upload Track Modal Component
+ * Responsive modal for adding individual tracks to album
+ */
 const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
   isOpen,
   onClose,
@@ -235,7 +257,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       }
 
       if (file.size > 100 * 1024 * 1024) {
-        // 100MB limit
         showError("Audio file size must be less than 100MB");
         return;
       }
@@ -298,7 +319,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
         showError("Image file size must be less than 5MB");
         return;
       }
@@ -373,10 +393,12 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
     coverFile,
     audioPreview,
     duration,
+    existingTracks.length,
     onTrackUpload,
     resetForm,
     onClose,
     showError,
+    showSuccess,
   ]);
 
   // Handle close
@@ -393,27 +415,35 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       open={isOpen}
       onCancel={handleClose}
       closable={false}
-      width={650}
+      width="90vw"
+      style={{ maxWidth: "650px" }}
       styles={{
         content: {
           backgroundColor: "rgba(40, 40, 40, 0.95)",
           backdropFilter: "blur(15px)",
           border: "1px solid rgba(255, 255, 255, 0.1)",
           borderRadius: "16px",
+          maxHeight: "90vh",
+          overflow: "hidden",
         },
         header: { display: "none" },
+        body: {
+          padding: "16px",
+          maxHeight: "calc(90vh - 32px)",
+          overflow: "auto",
+        },
       }}
       footer={null}
       maskClosable={!isAnalyzing}
     >
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="space-y-4 lg:space-y-6">
+        {/* Header - Responsive */}
         <div className="flex justify-between items-center">
-          <div className="text-white text-2xl font-semibold tracking-wider">
+          <div className="text-white text-xl lg:text-2xl font-semibold tracking-wider">
             Add Track to Album
           </div>
           <CloseOutlined
-            className="text-2xl cursor-pointer hover:text-white/70 transition-colors"
+            className="text-xl lg:text-2xl cursor-pointer hover:text-white/70 transition-colors"
             style={{ color: "white" }}
             onClick={handleClose}
           />
@@ -421,17 +451,17 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
 
         {/* Progress indicator */}
         {isAnalyzing && (
-          <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+          <div className="bg-blue-500/10 rounded-lg p-3 lg:p-4 border border-blue-500/20">
             <div className="flex items-center gap-3">
               <LoadingOutlined className="text-blue-400 animate-spin" />
-              <span className="text-blue-400 font-medium">
+              <span className="text-blue-400 font-medium text-sm lg:text-base">
                 Analyzing audio file...
               </span>
             </div>
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           {/* Track Name */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
@@ -447,31 +477,28 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
             />
           </div>
 
-          {/* File Uploads */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* File Uploads - Responsive grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             {/* Audio Upload */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">
                 Audio File * (MP3, WAV)
               </label>
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex items-center gap-2 lg:gap-3">
+                <div className="relative flex-shrink-0">
                   {audioPreview ? (
                     <div className="relative">
                       <button
-                        onClick={() => {
-                          const audio = new Audio(audioPreview);
-                          audio.play();
-                        }}
-                        className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
+                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
                         disabled={isAnalyzing}
                         title="Preview audio"
+                        onClick={() => audioInputRef.current?.click()}
                       >
-                        <PlayCircleOutlined className="text-green-400 text-xl" />
+                        <PlayCircleOutlined className="text-green-400 text-lg lg:text-xl" />
                       </button>
                       <button
                         onClick={removeAudio}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-red-500 text-white rounded-full w-4 h-4 lg:w-5 lg:h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                         disabled={isAnalyzing}
                       >
                         <DeleteOutlined />
@@ -480,7 +507,7 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
                   ) : (
                     <button
                       onClick={() => audioInputRef.current?.click()}
-                      className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
+                      className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
                     >
                       <UploadOutlined className="text-white/60" />
                     </button>
@@ -493,21 +520,21 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
                     className="hidden"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <button
                     onClick={() => audioInputRef.current?.click()}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left "
+                    className="w-full px-2 lg:px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left truncate"
                   >
                     {audioFile
-                      ? audioFile.name.length > 30
-                        ? `${audioFile.name.substring(0, 30)}...`
+                      ? audioFile.name.length > 25
+                        ? `${audioFile.name.substring(0, 25)}...`
                         : audioFile.name
                       : "Select audio file"}
                   </button>
                   {audioFile && (
                     <div className="text-xs text-white/50 mt-1 flex justify-between">
                       <span>
-                        {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                        {(audioFile.size / (1024 * 1024)).toFixed(1)} MB
                       </span>
                       {duration && (
                         <span>
@@ -526,18 +553,18 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
               <label className="block text-white/80 text-sm font-medium mb-2">
                 Cover Image *
               </label>
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex items-center gap-2 lg:gap-3">
+                <div className="relative flex-shrink-0">
                   {coverPreview ? (
                     <div className="relative">
                       <img
                         src={coverPreview}
                         alt="Cover preview"
-                        className="w-12 h-12 rounded-lg object-cover border border-white/20"
+                        className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg object-cover border border-white/20"
                       />
                       <button
                         onClick={removeCover}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-red-500 text-white rounded-full w-4 h-4 lg:w-5 lg:h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                       >
                         <DeleteOutlined />
                       </button>
@@ -545,7 +572,7 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
                   ) : (
                     <button
                       onClick={() => coverInputRef.current?.click()}
-                      className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
+                      className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
                     >
                       <UploadOutlined className="text-white/60" />
                     </button>
@@ -558,16 +585,16 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
                     className="hidden"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <button
                     onClick={() => coverInputRef.current?.click()}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left"
+                    className="w-full px-2 lg:px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left truncate"
                   >
                     {coverFile ? coverFile.name : "Select cover image"}
                   </button>
                   {coverFile && (
                     <span className="text-xs text-white/50 mt-1 block">
-                      {(coverFile.size / (1024 * 1024)).toFixed(2)} MB
+                      {(coverFile.size / (1024 * 1024)).toFixed(1)} MB
                     </span>
                   )}
                 </div>
@@ -631,17 +658,21 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
 
           {/* Track Preview */}
           {audioPreview && coverPreview && trackData.name && (
-            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-              <h4 className="text-white font-medium mb-3">Track Preview</h4>
-              <div className="flex items-center gap-3">
+            <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
+              <h4 className="text-white font-medium mb-3 text-sm lg:text-base">
+                Track Preview
+              </h4>
+              <div className="flex items-center gap-2 lg:gap-3">
                 <img
                   src={coverPreview}
                   alt="Track cover"
-                  className="w-12 h-12 rounded-lg object-cover"
+                  className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg object-cover"
                 />
-                <div className="flex-1">
-                  <h5 className="text-white font-medium">{trackData.name}</h5>
-                  <div className="text-white/60 text-sm flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <h5 className="text-white font-medium text-sm lg:text-base truncate">
+                    {trackData.name}
+                  </h5>
+                  <div className="text-white/60 text-xs lg:text-sm flex items-center gap-2">
                     <span>{trackData.genre}</span>
                     {duration && (
                       <>
@@ -659,19 +690,19 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-4">
+        {/* Footer - Responsive buttons */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <button
             onClick={handleClose}
             disabled={isAnalyzing}
-            className="px-6 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 lg:px-6 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base"
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
             disabled={!isFormValid || isAnalyzing}
-            className="px-8 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-emerald-500"
+            className="px-6 lg:px-8 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-emerald-500 text-sm lg:text-base"
           >
             {isAnalyzing ? "Analyzing..." : "Add to Album"}
           </button>

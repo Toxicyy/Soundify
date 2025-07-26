@@ -18,12 +18,17 @@ interface AlbumTrackItemProps {
   onPlay: () => void;
   onRemove: () => void;
   onEdit: (updates: Partial<LocalTrack["metadata"]>) => void;
-  onDragStart?: (index: number) => void; // Опциональный для случая с одним треком
-  onDragEnd?: (fromIndex: number, toIndex: number) => void; // Опциональный
+  onDragStart?: (index: number) => void;
+  onDragEnd?: (fromIndex: number, toIndex: number) => void;
   isDragging?: boolean;
   dragOverIndex?: number | null;
 }
 
+/**
+ * Album Track Item Component
+ * Individual track display with responsive layout and controls
+ * Supports drag-and-drop, play/pause, edit, and delete actions
+ */
 const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
   track,
   index,
@@ -50,16 +55,7 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     (state: any) => state.queue
   );
 
-  // Debug: проверяем ID треков
-  console.log("Track Debug:", {
-    trackTempId: track.tempId,
-    expectedId: `temp_${track.tempId}`,
-    currentTrackId: currentTrack?._id,
-    queueCurrentTrackId: queueCurrentTrack?._id,
-    isPlaying,
-  });
-
-  // Check both slices for current track (проверяем разные варианты ID)
+  // Check if this track is currently playing
   const isCurrentTrack =
     currentTrack?._id === `temp_${track.tempId}` ||
     queueCurrentTrack?._id === `temp_${track.tempId}` ||
@@ -68,15 +64,7 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
 
   const isTrackPlaying = isCurrentTrack && isPlaying;
 
-  // Debug: итоговые значения
-  console.log("Track State:", {
-    trackName: track.metadata.name,
-    isCurrentTrack,
-    isTrackPlaying,
-    isPlaying,
-  });
-
-  // Показывать drag только если треков больше одного
+  // Show drag handle only if more than one track
   const shouldShowDrag = totalTracks > 1;
 
   // Format duration
@@ -99,15 +87,13 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
   // Handle play/pause click
   const handlePlayPause = useCallback(() => {
     if (isCurrentTrack) {
-      // If this track is currently playing, toggle play/pause
       dispatch(setIsPlaying(!isPlaying));
     } else {
-      // If this is a different track, start playing it
       onPlay();
     }
   }, [isCurrentTrack, isPlaying, onPlay, dispatch]);
 
-  // Drag handlers (только если drag разрешен)
+  // Drag handlers
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       if (!shouldShowDrag || !onDragStart) {
@@ -177,20 +163,20 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     const confirmed = window.confirm(
       `Remove "${track.metadata.name}" from album?`
     );
-    dispatch(setIsPlaying(false));
-    dispatch(setCurrentTrack(null));
     if (confirmed) {
+      dispatch(setIsPlaying(false));
+      dispatch(setCurrentTrack(null));
       onRemove();
     }
-  }, [track.metadata.name, onRemove]);
+  }, [track.metadata.name, onRemove, dispatch]);
 
-  // Динамические grid колонки в зависимости от наличия drag
+  // Responsive grid layout
   const gridCols = shouldShowDrag
-    ? "grid-cols-[30px_50px_1fr_100px_80px_40px_40px]"
-    : "grid-cols-[50px_1fr_100px_80px_40px_40px]";
+    ? "grid-cols-[auto_auto_1fr_auto_auto_auto_auto] lg:grid-cols-[30px_50px_1fr_100px_80px_40px_40px]"
+    : "grid-cols-[auto_1fr_auto_auto_auto_auto] lg:grid-cols-[50px_1fr_100px_80px_40px_40px]";
 
   const containerClasses = `
-    grid ${gridCols} gap-4 items-center px-4 py-3 rounded-lg transition-all duration-200 group cursor-pointer hover:bg-white/5
+    grid ${gridCols} gap-2 lg:gap-4 items-center px-2 lg:px-4 py-2 lg:py-3 rounded-lg transition-all duration-200 group cursor-pointer hover:bg-white/5
     ${isDragging ? "opacity-50 scale-95" : "opacity-100 scale-100"}
     ${dragOverIndex === index ? "ring-2 ring-blue-400/50" : ""}
   `;
@@ -213,7 +199,7 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         }}
         data-track-index={index}
       >
-        {/* Drag Handle - показываем только если треков больше одного */}
+        {/* Drag Handle - Show only if multiple tracks */}
         {shouldShowDrag && (
           <div
             className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
@@ -222,9 +208,9 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
             <DragOutlined
               style={{
                 color: "rgba(255, 255, 255, 0.6)",
-                fontSize: "18px",
+                fontSize: "16px",
               }}
-              className="hover:!text-white transition-colors duration-200"
+              className="hover:!text-white transition-colors duration-200 lg:text-lg"
             />
           </div>
         )}
@@ -235,69 +221,63 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                console.log("Play button clicked:", {
-                  isCurrentTrack,
-                  isPlaying,
-                });
                 handlePlayPause();
               }}
-              className={`w-8 h-8 flex items-center justify-center transition-all duration-200
-              }`}
+              className="w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center transition-all duration-200"
             >
               {isTrackPlaying ? (
                 <PauseOutlined
                   style={{
                     color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "24px",
+                    fontSize: "18px",
                   }}
-                  className="hover:scale-130 cursor-pointer transition-all duration-300"
+                  className="hover:scale-110 cursor-pointer transition-all duration-300 lg:text-2xl"
                 />
               ) : (
                 <CaretRightOutlined
                   style={{
                     color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: "24px",
+                    fontSize: "18px",
                   }}
-                  className="hover:scale-130 cursor-pointer transition-all duration-300"
+                  className="hover:scale-110 cursor-pointer transition-all duration-300 lg:text-2xl"
                 />
               )}
             </button>
           ) : (
-            <span
-              className={`text-sm font-medium transition-colors duration-200 text-white/60
-              }`}
-            >
+            <span className="text-xs lg:text-sm font-medium transition-colors duration-200 text-white/60">
               {index + 1}
             </span>
           )}
         </div>
 
-        {/* Track Info */}
-        <div className="flex items-center gap-3 min-w-0">
+        {/* Track Info - Responsive layout */}
+        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
           <img
             src={URL.createObjectURL(track.coverFile)}
             alt={track.metadata.name}
-            className={`w-10 h-10 rounded-md object-cover flex-shrink-0 transition-all duration-200
-            }`}
+            className="w-8 h-8 lg:w-10 lg:h-10 rounded-md object-cover flex-shrink-0 transition-all duration-200"
           />
           <div className="min-w-0 flex-1">
-            <h4
-              className={`font-medium truncate transition-colors duration-200 text-white
-              }`}
-            >
+            <h4 className="font-medium truncate transition-colors duration-200 text-white text-sm lg:text-base">
               {track.metadata.name}
               {isTrackPlaying && (
-                <span className="ml-2 animate-pulse text-sm">♪ Playing</span>
+                <span className="ml-2 animate-pulse text-xs lg:text-sm">
+                  ♪ Playing
+                </span>
               )}
             </h4>
-            <div className="flex items-center gap-2 text-xs text-white/60">
-              <span>{track.metadata.genre}</span>
+            <div className="flex items-center gap-1 lg:gap-2 text-xs text-white/60">
+              <span className="truncate">{track.metadata.genre}</span>
               {track.metadata.tags.length > 0 && (
                 <>
-                  <span>•</span>
-                  <span>{track.metadata.tags.slice(0, 2).join(", ")}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="hidden sm:inline truncate">
+                    {track.metadata.tags.slice(0, 2).join(", ")}
+                  </span>
                   {track.metadata.tags.length > 2 && (
-                    <span>+{track.metadata.tags.length - 2}</span>
+                    <span className="hidden sm:inline">
+                      +{track.metadata.tags.length - 2}
+                    </span>
                   )}
                 </>
               )}
@@ -305,19 +285,13 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           </div>
         </div>
 
-        {/* File Size */}
-        <div
-          className={`text-sm text-center transition-colors duration-200 text-white/60
-          }`}
-        >
+        {/* File Size - Hidden on small screens */}
+        <div className="text-xs lg:text-sm text-center transition-colors duration-200 text-white/60 hidden sm:block">
           {formatFileSize(track.file.size)}
         </div>
 
         {/* Duration */}
-        <div
-          className={`text-sm text-center transition-colors duration-200 text-white/60
-          }`}
-        >
+        <div className="text-xs lg:text-sm text-center transition-colors duration-200 text-white/60">
           {formatDuration(track.duration)}
         </div>
 
@@ -333,9 +307,9 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           <EditOutlined
             style={{
               color: "rgba(255, 255, 255, 0.6)",
-              fontSize: "18px",
+              fontSize: "14px",
             }}
-            className="hover:!text-white transition-colors duration-200"
+            className="hover:!text-white transition-colors duration-200 lg:text-lg"
           />
         </button>
 
@@ -351,9 +325,9 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           <DeleteOutlined
             style={{
               color: "rgba(248, 113, 113, 1)",
-              fontSize: "18px",
+              fontSize: "14px",
             }}
-            className="hover:!text-red-300 transition-colors duration-200"
+            className="hover:!text-red-300 transition-colors duration-200 lg:text-lg"
           />
         </button>
       </div>

@@ -8,12 +8,11 @@ import { processAudioToHLS } from "../utils/audioProcessor.js";
 import fs from "fs/promises";
 
 /**
- * Simplified service for batch album creation with progress tracking
- * Focus on simplicity and best practices
+ * Service for batch album creation with progress tracking
+ * Handles creating albums with multiple tracks and real-time progress updates
  */
 class BatchAlbumService {
   constructor() {
-    // Simple in-memory storage for progress tracking
     this.progressData = new Map();
 
     // Cleanup old progress data every 10 minutes
@@ -24,13 +23,6 @@ class BatchAlbumService {
 
   /**
    * Create album with multiple tracks in batch
-   * @param {Object} albumData - Album metadata
-   * @param {Object} files - Files from multer
-   * @param {Array} trackData - Array of track metadata with numeric indices
-   * @param {string} sessionId - Session ID for progress tracking
-   * @param {string} userId - User ID
-   * @param {string} artistId - Artist ID
-   * @returns {Promise<Object>} Created album with tracks
    */
   async createBatchAlbum(
     albumData,
@@ -45,8 +37,28 @@ class BatchAlbumService {
     let uploadedFiles = [];
 
     try {
-      // Initialize simple progress tracking
-      this.initializeProgress(sessionId, albumData.name, trackData);
+      // Validate and prepare track data
+      const validatedTrackData = trackData.map((track, index) => ({
+        index: track.index || index,
+        name: track.name || `Track ${index + 1}`,
+        genre: track.genre || "",
+        tags: Array.isArray(track.tags) ? track.tags : [],
+      }));
+
+      // Validate track names
+      for (const trackInfo of validatedTrackData) {
+        if (
+          !trackInfo.name ||
+          trackInfo.name.trim() === "" ||
+          trackInfo.name === `Track ${trackInfo.index + 1}`
+        ) {
+          throw new Error(
+            `Track name is required for track ${trackInfo.index + 1}`
+          );
+        }
+      }
+
+      this.initializeProgress(sessionId, albumData.name, validatedTrackData);
 
       // Step 1: Create album
       this.updateProgress(sessionId, {
@@ -69,20 +81,18 @@ class BatchAlbumService {
       });
 
       // Step 2: Process tracks sequentially
-      for (let i = 0; i < trackData.length; i++) {
-        const trackInfo = trackData[i];
+      for (let i = 0; i < validatedTrackData.length; i++) {
+        const trackInfo = validatedTrackData[i];
         const trackIndex = trackInfo.index;
 
         try {
-          // Update current track
           this.updateProgress(sessionId, {
             currentTrack: i + 1,
             message: `Обработка трека ${i + 1}: ${trackInfo.name}`,
-            overallProgress: 10 + (i / trackData.length) * 80, // 10% album + 80% tracks
+            overallProgress: 10 + (i / validatedTrackData.length) * 80,
             currentTrackProgress: 0,
           });
 
-          // Update track status
           this.updateTrackStatus(
             sessionId,
             i,
@@ -93,7 +103,6 @@ class BatchAlbumService {
           const audioFile = files[`tracks[${trackIndex}][audio]`][0];
           const coverFile = files[`tracks[${trackIndex}][cover]`][0];
 
-          // Create track with detailed progress
           const track = await this.createTrackWithDetailedProgress(
             {
               name: trackInfo.name,
@@ -110,13 +119,12 @@ class BatchAlbumService {
 
           createdTracks.push(track);
 
-          // Collect file IDs for potential cleanup
+          // Collect file IDs for cleanup
           if (track.audioFileId) uploadedFiles.push(track.audioFileId);
           if (track.coverFileId) uploadedFiles.push(track.coverFileId);
           if (track.hlsSegmentFileIds)
             uploadedFiles.push(...track.hlsSegmentFileIds);
 
-          // Mark track as completed
           this.updateTrackStatus(sessionId, i, "completed", "Трек готов");
         } catch (trackError) {
           this.updateTrackStatus(
@@ -139,7 +147,7 @@ class BatchAlbumService {
       const trackIds = createdTracks.map((track) => track._id);
       await Album.findByIdAndUpdate(createdAlbum._id, {
         tracks: trackIds,
-        status: "published", // Mark as published
+        status: "published",
         updatedAt: new Date(),
       });
 
@@ -147,7 +155,6 @@ class BatchAlbumService {
         $addToSet: { albums: createdAlbum._id },
       });
 
-      // Final success
       this.updateProgress(sessionId, {
         phase: "completed",
         status: "completed",
@@ -163,36 +170,25 @@ class BatchAlbumService {
         trackCount: createdTracks.length,
       };
     } catch (error) {
-      console.error("Batch album creation failed:", error);
-
-      // Update progress with user-friendly error
       this.updateProgress(sessionId, {
         status: "failed",
         message: this.getUserFriendlyError(error),
       });
 
-      // Perform cleanup rollback
       await this.performRollback(
         createdAlbum,
         createdTracks,
         uploadedFiles,
         sessionId
       );
-
       throw new Error(`Batch album creation failed: ${error.message}`);
     }
   }
 
   /**
    * Create track with detailed progress updates
-   * @param {Object} trackData - Track metadata
-   * @param {Object} files - Audio and cover files
-   * @param {string} userId - User ID
-   * @param {string} sessionId - Session ID
-   * @param {number} trackIndex - Track index for progress
-   * @returns {Promise<Object>} Created track
    */
-  async   createTrackWithDetailedProgress(
+  async createTrackWithDetailedProgress(
     trackData,
     files,
     userId,
@@ -202,6 +198,20 @@ class BatchAlbumService {
     let tempDir = null;
 
     try {
+      if (!trackData || !trackData.name) {
+        throw new Error(
+          `Invalid track data: missing name for track ${trackIndex + 1}`
+        );
+      }
+
+      if (!files || !files.audio || !files.cover) {
+        throw new Error(
+          `Missing files for track ${trackIndex + 1}: ${trackData.name}`
+        );
+      }
+
+      const safeName = this.sanitizeFileName(trackData.name);
+
       // Step 1: Audio processing
       this.updateProgress(sessionId, { currentTrackProgress: 20 });
       this.updateTrackStatus(
@@ -237,9 +247,7 @@ class BatchAlbumService {
         "Загрузка плейлиста..."
       );
 
-      const hlsFolder = `hls/${Date.now()}-${this.sanitizeFileName(
-        trackData.name
-      )}`;
+      const hlsFolder = `hls/${Date.now()}-${safeName}`;
       const playlistUpload = await uploadToB2(
         {
           buffer: Buffer.from(hlsData.playlist),
@@ -292,7 +300,7 @@ class BatchAlbumService {
           .filter((id) => id !== null),
         coverUrl: coverUpload.url,
         coverFileId: extractFileIdFromUrl(coverUpload.url),
-        genre: trackData.genre?.trim(),
+        genre: trackData.genre?.trim() || "",
         tags: Array.isArray(trackData.tags)
           ? trackData.tags.map((tag) => tag.trim()).filter((tag) => tag)
           : [],
@@ -317,9 +325,6 @@ class BatchAlbumService {
 
   /**
    * Upload HLS segments in batches
-   * @param {Array} segmentFiles - Segment files
-   * @param {string} folder - Target folder
-   * @returns {Promise<Array>} Upload results
    */
   async uploadHLSSegments(segmentFiles, folder) {
     const batchSize = 3;
@@ -334,7 +339,6 @@ class BatchAlbumService {
         );
         uploads.push(...batchResults);
 
-        // Small delay between batches
         if (i + batchSize < segmentFiles.length) {
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
@@ -353,10 +357,6 @@ class BatchAlbumService {
 
   /**
    * Create album with cover image
-   * @param {Object} albumData - Album metadata
-   * @param {Object} coverFile - Cover image file
-   * @param {string} artistId - Artist ID
-   * @returns {Promise<Object>} Created album
    */
   async createAlbumWithCover(albumData, coverFile, artistId) {
     try {
@@ -383,7 +383,7 @@ class BatchAlbumService {
         tracks: [],
         genre: parsedGenres || [],
         type: albumData.type || "album",
-        status: "processing", // Start as processing
+        status: "processing",
       });
 
       return await album.save();
@@ -397,9 +397,7 @@ class BatchAlbumService {
    */
   async performRollback(createdAlbum, createdTracks, uploadedFiles, sessionId) {
     try {
-      this.updateProgress(sessionId, {
-        message: "Отмена изменений...",
-      });
+      this.updateProgress(sessionId, { message: "Отмена изменений..." });
 
       // Delete tracks from database
       if (createdTracks.length > 0) {
@@ -432,10 +430,7 @@ class BatchAlbumService {
   }
 
   /**
-   * Initialize simple progress tracking
-   * @param {string} sessionId - Session ID
-   * @param {string} albumName - Album name
-   * @param {Array} trackData - Track data array
+   * Initialize progress tracking
    */
   initializeProgress(sessionId, albumName, trackData) {
     const progressData = {
@@ -444,18 +439,15 @@ class BatchAlbumService {
       phase: "album",
       message: "Начинаем создание альбома...",
       albumName,
-
       totalTracks: trackData.length,
       currentTrack: 0,
       overallProgress: 0,
       currentTrackProgress: 0,
-
       tracks: trackData.map((track, index) => ({
         index,
         name: track.name,
         status: "pending",
       })),
-
       startTime: new Date(),
       lastUpdate: new Date(),
     };
@@ -464,27 +456,19 @@ class BatchAlbumService {
   }
 
   /**
-   * Update progress with simple structure
-   * @param {string} sessionId - Session ID
-   * @param {Object} updates - Progress updates
+   * Update progress with new data
    */
   updateProgress(sessionId, updates) {
     const data = this.progressData.get(sessionId);
     if (!data) return;
 
-    // Simple merge
     Object.assign(data, updates);
     data.lastUpdate = new Date();
-
     this.progressData.set(sessionId, data);
   }
 
   /**
    * Update individual track status
-   * @param {string} sessionId - Session ID
-   * @param {number} trackIndex - Track index
-   * @param {string} status - Status (pending, processing, completed, failed)
-   * @param {string} message - Status message
    */
   updateTrackStatus(sessionId, trackIndex, status, message = "") {
     const data = this.progressData.get(sessionId);
@@ -495,14 +479,11 @@ class BatchAlbumService {
       data.tracks[trackIndex].message = message;
     }
     data.lastUpdate = new Date();
-
     this.progressData.set(sessionId, data);
   }
 
   /**
-   * Get progress data for SSE
-   * @param {string} sessionId - Session ID
-   * @returns {Object|null} Progress data
+   * Get progress data for session
    */
   getProgress(sessionId) {
     return this.progressData.get(sessionId) || null;
@@ -510,8 +491,6 @@ class BatchAlbumService {
 
   /**
    * Convert technical errors to user-friendly messages
-   * @param {Error} error - Technical error
-   * @returns {string} User-friendly message
    */
   getUserFriendlyError(error) {
     const message = error.message.toLowerCase();
@@ -527,6 +506,9 @@ class BatchAlbumService {
     }
     if (message.includes("space") || message.includes("limit")) {
       return "Недостаточно места на сервере или превышен лимит размера файла.";
+    }
+    if (message.includes("missing name") || message.includes("track name")) {
+      return "Название трека обязательно для заполнения.";
     }
 
     return "Произошла непредвиденная ошибка. Попробуйте позже.";
@@ -548,6 +530,9 @@ class BatchAlbumService {
   // Utility methods
 
   sanitizeFileName(filename) {
+    if (!filename || typeof filename !== "string") {
+      return "unknown-track";
+    }
     return filename.replace(/[^a-zA-Z0-9\-_]/g, "-");
   }
 

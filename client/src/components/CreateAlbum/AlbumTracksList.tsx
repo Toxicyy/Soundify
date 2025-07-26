@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import AlbumTrackItem from "./AlbumTrackItem";
 import { playTrackAndQueue } from "../../state/Queue.slice";
 import type { AppDispatch } from "../../store";
-import type {
-  LocalTrack,
-  AlbumTracksListProps,
-} from "../../types/LocalTrack";
+import type { LocalTrack, AlbumTracksListProps } from "../../types/LocalTrack";
 
+/**
+ * Album Tracks List Component
+ * Displays and manages tracks in album creation
+ * Responsive layout with drag-and-drop reordering
+ */
 const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   tracks,
   albumData,
@@ -68,9 +70,8 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   // Handle track play (integrate with Redux queue)
   const handleTrackPlay = useCallback(
     (_selectedTrack: LocalTrack, trackIndex: number) => {
-      // Create fresh blob URLs for Redux (важно создавать свежие!)
+      // Create fresh blob URLs for Redux
       const convertedTracks = tracks.map((localTrack) => {
-        // Создаем новые blob URLs каждый раз для надежности
         const freshAudioUrl = URL.createObjectURL(localTrack.file);
         const freshCoverUrl = URL.createObjectURL(localTrack.coverFile);
 
@@ -84,7 +85,7 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
           coverUrl: freshCoverUrl,
           audioUrl: freshAudioUrl,
           album: null,
-          preview: freshAudioUrl, // Используем тот же свежий URL
+          preview: freshAudioUrl,
           duration: localTrack.duration || 0,
           genre: localTrack.metadata.genre,
           tags: localTrack.metadata.tags,
@@ -96,11 +97,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
           updatedAt: new Date(),
         };
       });
-
-      console.log(
-        "Playing track with fresh blob URLs:",
-        convertedTracks[trackIndex]
-      );
 
       // Dispatch to Redux queue
       dispatch(
@@ -130,18 +126,20 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
 
   // Empty state component
   const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
-        <SoundOutlined className="text-white/40 text-2xl" />
+    <div className="flex flex-col items-center justify-center py-12 lg:py-16">
+      <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
+        <SoundOutlined className="text-white/40 text-xl lg:text-2xl" />
       </div>
-      <h3 className="text-white/80 font-semibold mb-2">No tracks yet</h3>
-      <p className="text-white/60 text-sm text-center mb-6 max-w-md">
+      <h3 className="text-white/80 font-semibold mb-2 text-lg lg:text-xl">
+        No tracks yet
+      </h3>
+      <p className="text-white/60 text-sm lg:text-base text-center mb-6 max-w-md px-4">
         Start building your album by uploading tracks. Each track needs audio,
         cover art, and metadata.
       </p>
       <button
         onClick={onAddTrack}
-        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 font-semibold"
+        className="flex items-center gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 font-semibold text-sm lg:text-base"
       >
         <PlusOutlined />
         Upload Your First Track
@@ -152,7 +150,7 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   // Header stats component
   const HeaderStats = () =>
     tracks.length > 0 ? (
-      <div className="flex items-center gap-6 text-sm text-white/70">
+      <div className="flex flex-wrap items-center gap-3 lg:gap-6 text-sm text-white/70">
         <span>
           {tracks.length} track{tracks.length > 1 ? "s" : ""}
         </span>
@@ -164,13 +162,13 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   // Footer info component
   const FooterInfo = () =>
     tracks.length > 0 ? (
-      <div className="p-4 border-t border-white/10 bg-white/5">
-        <div className="flex items-center justify-between text-xs text-white/60">
-          <div className="flex items-center gap-4">
+      <div className="p-3 lg:p-4 border-t border-white/10 bg-white/5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/60">
+          <div className="flex flex-wrap items-center gap-3 lg:gap-4">
             <span>💡 Tip: Drag tracks to change their order</span>
             <span>🎵 Click any track to preview</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 lg:gap-4">
             <span>{tracks.length} tracks ready</span>
             {totalDuration > 0 && (
               <span>Total: {formatTotalDuration(totalDuration)}</span>
@@ -181,12 +179,12 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
     ) : null;
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden">
-      {/* Header */}
-      <div className="p-6 border-b border-white/10">
-        <div className="flex items-center justify-between mb-4">
+    <div className="bg-white/5 backdrop-blur-md rounded-lg lg:rounded-2xl border border-white/10 overflow-hidden">
+      {/* Header - Responsive layout */}
+      <div className="p-4 lg:p-6 border-b border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <h2 className="text-lg lg:text-xl font-semibold text-white flex items-center gap-2">
               <SoundOutlined />
               Album Tracks
             </h2>
@@ -196,7 +194,7 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
           </div>
           <button
             onClick={onAddTrack}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500/80 to-emerald-500/80 hover:from-green-500 hover:to-emerald-500 text-white rounded-lg transition-all duration-200 font-medium"
+            className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-gradient-to-r from-green-500/80 to-emerald-500/80 hover:from-green-500 hover:to-emerald-500 text-white rounded-lg transition-all duration-200 font-medium text-sm lg:text-base whitespace-nowrap"
           >
             <PlusOutlined />
             Add Track
@@ -207,19 +205,19 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[300px] lg:min-h-[400px]">
         {tracks.length === 0 ? (
           <EmptyState />
         ) : (
           <div
-            className="space-y-2 p-4"
+            className="space-y-1 lg:space-y-2 p-2 lg:p-4"
             onDragOver={handleContainerDragOver}
             onDrop={(e) => e.preventDefault()}
           >
             <AnimatePresence>
               {tracks.map((track, arrayIndex) => (
                 <motion.div
-                  key={track.tempId} // Используем tempId как key
+                  key={track.tempId}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -242,21 +240,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
                 </motion.div>
               ))}
             </AnimatePresence>
-
-            {/* Drop indicator - отключен для чистоты дизайна */}
-            {/* {isDragging && dragOverIndex !== null && (
-              <motion.div
-                className="h-0.5 bg-white/30 rounded-full mx-4 opacity-50"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                style={{
-                  position: 'absolute',
-                  top: `${(dragOverIndex + 1) * 80}px`,
-                  left: 16,
-                  right: 16,
-                }}
-              />
-            )} */}
           </div>
         )}
       </div>

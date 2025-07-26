@@ -9,10 +9,27 @@ import { catchAsync } from "../utils/helpers.js";
 
 /**
  * Create album with multiple tracks in batch operation
- * Processes multipart form data with album and track metadata
  */
 export const createBatchAlbum = catchAsync(async (req, res) => {
   const { sessionId, artistInfo, batchInfo } = req;
+
+  // Validate required data from middleware
+  if (!sessionId) {
+    return res.status(500).json(ApiResponse.error("Session ID не найден"));
+  }
+
+  if (!artistInfo || !artistInfo.artistId) {
+    return res
+      .status(500)
+      .json(ApiResponse.error("Информация об артисте не найдена"));
+  }
+
+  if (!batchInfo || !batchInfo.trackIndices) {
+    return res
+      .status(500)
+      .json(ApiResponse.error("Информация о треках не найдена"));
+  }
+
   const { artistId } = artistInfo;
   const { trackIndices } = batchInfo;
 
@@ -25,43 +42,71 @@ export const createBatchAlbum = catchAsync(async (req, res) => {
     releaseDate: req.body.releaseDate,
   };
 
-  // Extract track data from request body
-  const trackData = trackIndices.map((index) => ({
-    index,
-    name: req.body[`tracks[${index}][name]`],
-    genre: req.body[`tracks[${index}][genre]`] || "",
-    tags: req.body[`tracks[${index}][tags]`] || [],
-  }));
+  // Extract track data using indices from middleware
+  const trackData = trackIndices.map((index, position) => {
+    const nameField = `tracks[${index}][name]`;
+    const genreField = `tracks[${index}][genre]`;
+    const tagsField = `tracks[${index}][tags]`;
 
-  // Validate files structure
+    const trackName = req.body[nameField];
+    const trackGenre = req.body[genreField];
+    const trackTags = req.body[tagsField];
+
+    // Validate files exist
+    const audioField = `tracks[${index}][audio]`;
+    const coverField = `tracks[${index}][cover]`;
+
+    const hasAudio = !!(
+      req.files &&
+      req.files[audioField] &&
+      req.files[audioField][0]
+    );
+    const hasCover = !!(
+      req.files &&
+      req.files[coverField] &&
+      req.files[coverField][0]
+    );
+
+    if (!hasAudio) {
+      throw new Error(
+        `Audio file missing for track ${position + 1}: ${trackName}`
+      );
+    }
+
+    if (!hasCover) {
+      throw new Error(
+        `Cover file missing for track ${position + 1}: ${trackName}`
+      );
+    }
+
+    return {
+      index,
+      name: trackName || `Track ${position + 1}`,
+      genre: trackGenre || "",
+      tags: Array.isArray(trackTags) ? trackTags : trackTags ? [trackTags] : [],
+    };
+  });
+
+  // Final validation of extracted data
+  for (let i = 0; i < trackData.length; i++) {
+    const track = trackData[i];
+
+    if (
+      !track.name ||
+      track.name.trim() === "" ||
+      track.name === `Track ${i + 1}`
+    ) {
+      return res
+        .status(400)
+        .json(ApiResponse.error(`Название трека ${i + 1} обязательно`));
+    }
+  }
+
+  // Validate album cover
   if (!req.files || !req.files.albumCover || !req.files.albumCover[0]) {
     return res
       .status(400)
       .json(ApiResponse.error("Обложка альбома обязательна"));
-  }
-
-  // Validate that all tracks have required files
-  for (const trackInfo of trackData) {
-    const audioField = `tracks[${trackInfo.index}][audio]`;
-    const coverField = `tracks[${trackInfo.index}][cover]`;
-
-    if (!req.files[audioField] || !req.files[audioField][0]) {
-      return res
-        .status(400)
-        .json(
-          ApiResponse.error(
-            `Аудио файл для трека "${trackInfo.name}" отсутствует`
-          )
-        );
-    }
-
-    if (!req.files[coverField] || !req.files[coverField][0]) {
-      return res
-        .status(400)
-        .json(
-          ApiResponse.error(`Обложка для трека "${trackInfo.name}" отсутствует`)
-        );
-    }
   }
 
   try {
@@ -77,7 +122,7 @@ export const createBatchAlbum = catchAsync(async (req, res) => {
       console.error(`Batch creation failed for session ${sessionId}:`, error);
     });
 
-    // Immediately return response with session ID for progress tracking
+    // Return immediate response with session ID
     res.status(202).json(
       ApiResponse.success("Создание альбома начато", {
         sessionId,
@@ -85,11 +130,12 @@ export const createBatchAlbum = catchAsync(async (req, res) => {
           "Процесс создания альбома запущен. Используйте sessionId для отслеживания прогресса.",
         progressUrl: `/api/albums/batch/progress/${sessionId}`,
         trackCount: trackData.length,
-        estimatedTime: `${Math.ceil(trackData.length * 1.5)} минут`, // Примерная оценка
+        estimatedTime: `${Math.ceil(trackData.length * 1.5)} минут`,
+        albumName: albumData.name,
+        artistName: artistInfo.artistName,
       })
     );
   } catch (error) {
-    console.error("Batch album creation initialization failed:", error);
     return res
       .status(500)
       .json(
@@ -100,7 +146,6 @@ export const createBatchAlbum = catchAsync(async (req, res) => {
 
 /**
  * Get progress for batch album creation via SSE
- * Streams real-time progress updates to client
  */
 export const getBatchProgress = catchAsync(async (req, res) => {
   const { sessionId } = req.params;
@@ -132,7 +177,6 @@ export const getBatchProgress = catchAsync(async (req, res) => {
     const progressData = BatchAlbumService.getProgress(sessionId);
 
     if (!progressData) {
-      // Session not found or expired
       res.write(
         `data: ${JSON.stringify({
           type: "error",
@@ -160,7 +204,6 @@ export const getBatchProgress = catchAsync(async (req, res) => {
       progressData.status === "completed" ||
       progressData.status === "failed"
     ) {
-      // Send final status
       res.write(
         `data: ${JSON.stringify({
           type: "finished",
@@ -191,7 +234,6 @@ export const getBatchProgress = catchAsync(async (req, res) => {
 
 /**
  * Get current progress status (REST endpoint alternative to SSE)
- * Returns current progress state as JSON
  */
 export const getBatchProgressRest = catchAsync(async (req, res) => {
   const { sessionId } = req.params;
@@ -225,7 +267,6 @@ export const getBatchProgressRest = catchAsync(async (req, res) => {
 
 /**
  * Cancel batch album creation
- * Attempts to stop the creation process and perform cleanup
  */
 export const cancelBatchCreation = catchAsync(async (req, res) => {
   const { sessionId } = req.params;
@@ -257,12 +298,10 @@ export const cancelBatchCreation = catchAsync(async (req, res) => {
 
   try {
     // Mark session as cancelled
-    BatchAlbumService.updateProgress(
-      sessionId,
-      "overall",
-      "cancelled",
-      "Создание альбома отменено пользователем"
-    );
+    BatchAlbumService.updateProgress(sessionId, {
+      status: "failed",
+      message: "Создание альбома отменено пользователем",
+    });
 
     res.json(
       ApiResponse.success("Отмена запроса принята", {
@@ -273,7 +312,6 @@ export const cancelBatchCreation = catchAsync(async (req, res) => {
       })
     );
   } catch (error) {
-    console.error("Cancel batch creation failed:", error);
     return res
       .status(500)
       .json(ApiResponse.error("Ошибка отмены", error.message));
@@ -282,23 +320,22 @@ export const cancelBatchCreation = catchAsync(async (req, res) => {
 
 /**
  * Get list of active batch sessions (admin/debug endpoint)
- * Returns information about currently running batch operations
  */
 export const getActiveSessions = catchAsync(async (req, res) => {
   try {
     const sessions = [];
 
-    // Iterate through active progress data
     for (const [sessionId, data] of BatchAlbumService.progressData.entries()) {
       sessions.push({
         sessionId,
         status: data.status,
         startTime: data.startTime,
         lastUpdate: data.lastUpdate,
-        trackCount: Object.keys(data.tracks).length,
-        overallProgress: data.overall.progress || 0,
-        currentStep: data.overall.step,
-        message: data.overall.message,
+        trackCount: data.totalTracks,
+        overallProgress: data.overallProgress || 0,
+        currentStep: data.phase,
+        message: data.message,
+        albumName: data.albumName,
       });
     }
 
@@ -309,7 +346,6 @@ export const getActiveSessions = catchAsync(async (req, res) => {
       })
     );
   } catch (error) {
-    console.error("Get active sessions failed:", error);
     return res
       .status(500)
       .json(
@@ -320,7 +356,6 @@ export const getActiveSessions = catchAsync(async (req, res) => {
 
 /**
  * Cleanup expired sessions (admin endpoint)
- * Manually trigger cleanup of old progress data
  */
 export const cleanupSessions = catchAsync(async (req, res) => {
   try {
@@ -337,7 +372,6 @@ export const cleanupSessions = catchAsync(async (req, res) => {
       })
     );
   } catch (error) {
-    console.error("Cleanup sessions failed:", error);
     return res
       .status(500)
       .json(ApiResponse.error("Ошибка очистки сессий", error.message));
