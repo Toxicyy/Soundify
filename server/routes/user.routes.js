@@ -13,6 +13,7 @@ import {
   unlikePlaylist,
   updateUserProfile,
   getUser,
+  syncSkipData,
 } from "../controllers/user.controller.js";
 import {
   getLikedPlaylists,
@@ -54,5 +55,7 @@ router.put(
   authenticate,
   unlikePlaylist
 );
+
+router.post("/skip-sync", authenticate, syncSkipData);
 
 export default router;

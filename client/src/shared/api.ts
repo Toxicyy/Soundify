@@ -185,6 +185,15 @@ export const api = {
         body: profileData,
       });
     },
+    
+    // Skip tracking
+    syncSkipData: async (skipCount: number) => {
+      return fetch(`${BASEURL}/api/users/skip-sync`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ skipCount }),
+      });
+    },
   },
 
   artist: {

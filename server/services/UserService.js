@@ -58,6 +58,7 @@ class UserService {
           likedPlaylistsCount: user.likedPlaylists?.length || 0,
           likedArtistsCount: user.likedArtists?.length || 0,
         },
+        artistProfile: user.artistProfile,
         // Limited populated data
         playlists: user.playlists || [],
         likedArtists: user.likedArtists || [],
@@ -567,6 +568,163 @@ class UserService {
         ...(user.toObject ? user.toObject() : user),
         avatar: null,
       };
+    }
+  }
+
+  /**
+   * Get current hour timestamp (rounded to hour start)
+   * @returns {number} Unix timestamp for current hour
+   */
+  getCurrentHourTimestamp() {
+    const now = new Date();
+    const hourStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      now.getHours(),
+      0,
+      0,
+      0
+    );
+    return hourStart.getTime();
+  }
+
+  /**
+   * Sync skip data from frontend and validate
+   * @param {string} userId - User ID
+   * @param {number} skipCount - Skip count from frontend
+   * @returns {Promise<Object>} Sync result with validation
+   */
+  async syncSkipData(userId, skipCount) {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    try {
+      const user = await User.findById(userId).select("status skipTracking");
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Premium users don't have skip limits
+      if (user.status === "PREMIUM" || user.status === "ADMIN") {
+        return {
+          success: true,
+          canSkip: true,
+          isUnlimited: true,
+          message: "Premium user - unlimited skips",
+        };
+      }
+
+      const currentHourTimestamp = this.getCurrentHourTimestamp();
+      const FREE_SKIP_LIMIT = 6;
+
+      // Check if user is currently blocked
+      if (
+        user.skipTracking?.blockedUntil &&
+        new Date() < user.skipTracking.blockedUntil
+      ) {
+        const blockEndTime = new Date(user.skipTracking.blockedUntil);
+        return {
+          success: false,
+          blocked: true,
+          canSkip: false,
+          message: `Skip limit exceeded. Try again at ${blockEndTime.toLocaleTimeString()}`,
+          unblockTime: blockEndTime,
+        };
+      }
+
+      // If it's a new hour, reset the counter
+      if (
+        !user.skipTracking?.hourTimestamp ||
+        user.skipTracking.hourTimestamp < currentHourTimestamp
+      ) {
+        await User.findByIdAndUpdate(userId, {
+          "skipTracking.count": Math.min(skipCount, FREE_SKIP_LIMIT), // Don't trust frontend completely
+          "skipTracking.hourTimestamp": currentHourTimestamp,
+          "skipTracking.blockedUntil": null,
+        });
+
+        return {
+          success: true,
+          canSkip: skipCount < FREE_SKIP_LIMIT,
+          remainingSkips: Math.max(0, FREE_SKIP_LIMIT - skipCount),
+          resetTime: new Date(currentHourTimestamp + 60 * 60 * 1000), // Next hour
+          message: "New hour - skip count reset",
+        };
+      }
+
+      // Same hour - validate the data
+      const serverSkipCount = user.skipTracking.count || 0;
+      const frontendSkipCount = skipCount || 0;
+
+      // Anti-cheat: if frontend reports significantly less skips, it's suspicious
+      if (serverSkipCount > frontendSkipCount + 1) {
+        // Allow 1 skip difference for race conditions
+        console.warn(
+          `Suspicious skip activity detected for user ${userId}: server=${serverSkipCount}, frontend=${frontendSkipCount}`
+        );
+
+        // Block user for 1 hour
+        const blockUntil = new Date(Date.now() + 60 * 60 * 1000);
+        await User.findByIdAndUpdate(userId, {
+          "skipTracking.blockedUntil": blockUntil,
+        });
+
+        return {
+          success: false,
+          blocked: true,
+          canSkip: false,
+          message:
+            "Suspicious activity detected. Skip function temporarily disabled.",
+          unblockTime: blockUntil,
+          reason: "anti_cheat",
+        };
+      }
+
+      // Update server count to match frontend (trust frontend if it's higher but reasonable)
+      const newSkipCount = Math.min(
+        Math.max(serverSkipCount, frontendSkipCount),
+        FREE_SKIP_LIMIT + 2
+      ); // Allow slight buffer
+
+      await User.findByIdAndUpdate(userId, {
+        "skipTracking.count": newSkipCount,
+      });
+
+      const remainingSkips = Math.max(0, FREE_SKIP_LIMIT - newSkipCount);
+      const canSkip = remainingSkips > 0;
+
+      // If limit exceeded, block for the rest of the hour
+      if (!canSkip && !user.skipTracking?.blockedUntil) {
+        const blockUntil = new Date(currentHourTimestamp + 60 * 60 * 1000); // Until next hour
+        await User.findByIdAndUpdate(userId, {
+          "skipTracking.blockedUntil": blockUntil,
+        });
+
+        return {
+          success: false,
+          blocked: true,
+          canSkip: false,
+          message: `Skip limit reached (${FREE_SKIP_LIMIT}/hour). Upgrade to Premium for unlimited skips!`,
+          unblockTime: blockUntil,
+          upgradeMessage: true,
+        };
+      }
+
+      return {
+        success: true,
+        canSkip,
+        remainingSkips,
+        totalLimit: FREE_SKIP_LIMIT,
+        resetTime: new Date(currentHourTimestamp + 60 * 60 * 1000),
+        message: canSkip
+          ? `${remainingSkips} skips remaining`
+          : "Skip limit reached",
+      };
+    } catch (error) {
+      console.error("Error syncing skip data:", error);
+      throw new Error(`Failed to sync skip data: ${error.message}`);
     }
   }
 }

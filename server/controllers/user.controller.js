@@ -307,3 +307,29 @@ export const updateUserProfile = catchAsync(async (req, res) => {
     .status(200)
     .json(ApiResponse.success("Profile updated successfully", updatedUser));
 });
+
+/**
+ * Sync skip data from frontend and validate
+ */
+export const syncSkipData = catchAsync(async (req, res) => {
+  const userId = req.user.id;
+  const { skipCount } = req.body;
+
+  // Basic validation
+  if (typeof skipCount !== "number" || skipCount < 0) {
+    return res.status(400).json(ApiResponse.error("Invalid skip count"));
+  }
+
+  const result = await UserService.syncSkipData(userId, skipCount);
+
+  if (result.success) {
+    res
+      .status(200)
+      .json(ApiResponse.success("Skip data synced successfully", result));
+  } else {
+    // Return 429 for rate limiting, but with success response structure
+    res
+      .status(result.blocked ? 429 : 200)
+      .json(ApiResponse.success("Skip sync completed", result));
+  }
+});

@@ -25,18 +25,29 @@ import {
 } from "../../../../../state/Queue.slice";
 import type { AppDispatch, AppState } from "../../../../../store";
 import { useDispatch, useSelector } from "react-redux";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useFormatTime } from "../../../../../hooks/useFormatTime";
 import { setIsPlaying } from "../../../../../state/CurrentTrack.slice";
 import { initializeLikes } from "../../../../../state/LikeUpdate.slice";
 import { useLike } from "../../../../../hooks/useLike";
 import { useGetUserQuery } from "../../../../../state/UserApi.slice";
+import { api } from "../../../../../shared/api";
+import { useNotification } from "../../../../../hooks/useNotification";
 import Hls from "hls.js";
 import { Link } from "react-router-dom";
+import { Modal } from "antd";
 
 /**
- * Main audio player component with HLS streaming support
- * Fixed version with proper track loading and request management
+ * Skip data interface
+ */
+interface SkipData {
+  count: number;
+  hourTimestamp: number;
+  lastUpdate: number;
+}
+
+/**
+ * Main audio player component with HLS streaming support and skip limit logic
  */
 export const Player = () => {
   // UI states
@@ -44,6 +55,12 @@ export const Player = () => {
   const [isLinked, setIsLinked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isShare, setIsShare] = useState(false);
+
+  // Skip limit states
+  const [skipCount, setSkipCount] = useState(0);
+  const [skipBlocked, setSkipBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Audio states
   const [volume, setVolume] = useState(1);
@@ -56,6 +73,61 @@ export const Player = () => {
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const queueState = useSelector((state: AppState) => state.queue);
   const { data: user, isFetching } = useGetUserQuery();
+  // Custom skip limit notification
+  const showSkipLimitNotification = useCallback((remainingSkips: number) => {
+    const { showCustom } = useNotification();
+
+    return showCustom(
+      <div className="max-w-md w-full bg-yellow-500/10 backdrop-blur-lg border border-yellow-500/30 shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-yellow-500/20">
+        <div className="flex-1 w-0 p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-yellow-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-semibold text-white">
+                {remainingSkips > 0
+                  ? `${remainingSkips} skips remaining`
+                  : "Skip limit reached"}
+              </p>
+              <p className="mt-1 text-sm text-white/80">
+                {remainingSkips > 0
+                  ? `You have ${remainingSkips} skips left this hour`
+                  : "You've reached your hourly limit of 6 skips"}
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                Upgrade to Premium for unlimited skips, no ads, and more
+                features
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex border-l border-yellow-500/20">
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="w-full border border-transparent rounded-none rounded-r-xl p-4 flex items-center justify-center text-sm font-medium text-yellow-400 hover:text-yellow-300 transition-colors"
+          >
+            Upgrade
+          </button>
+        </div>
+      </div>,
+      { duration: 6000 }
+    );
+  }, []);
+
+  const { showWarning, showError } = useNotification();
   const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
 
   // Like functionality
@@ -86,6 +158,158 @@ export const Player = () => {
 
   const canSeek = user?.status === "PREMIUM";
   const canGoBack = user?.status === "PREMIUM";
+  const isPremium = user?.status === "PREMIUM" || user?.status === "ADMIN";
+
+  // Skip utility functions
+  const getCurrentHourTimestamp = useCallback(() => {
+    const now = new Date();
+    const hourStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      now.getHours(),
+      0,
+      0,
+      0
+    );
+    return hourStart.getTime();
+  }, []);
+
+  const getSkipData = useCallback((): SkipData => {
+    try {
+      const data = localStorage.getItem("skipData");
+      if (!data) {
+        return {
+          count: 0,
+          hourTimestamp: getCurrentHourTimestamp(),
+          lastUpdate: Date.now(),
+        };
+      }
+      return JSON.parse(data);
+    } catch (error) {
+      console.error("Error reading skip data:", error);
+      return {
+        count: 0,
+        hourTimestamp: getCurrentHourTimestamp(),
+        lastUpdate: Date.now(),
+      };
+    }
+  }, [getCurrentHourTimestamp]);
+
+  const saveSkipData = useCallback(
+    (count: number) => {
+      try {
+        const data: SkipData = {
+          count,
+          hourTimestamp: getCurrentHourTimestamp(),
+          lastUpdate: Date.now(),
+        };
+        localStorage.setItem("skipData", JSON.stringify(data));
+        setSkipCount(count);
+      } catch (error) {
+        console.error("Error saving skip data:", error);
+      }
+    },
+    [getCurrentHourTimestamp]
+  );
+
+  // Initialize skip count from localStorage
+  useEffect(() => {
+    if (!isPremium) {
+      const skipData = getSkipData();
+      const currentHour = getCurrentHourTimestamp();
+
+      // Reset if new hour
+      if (skipData.hourTimestamp < currentHour) {
+        setSkipCount(0);
+        setSkipBlocked(false);
+        saveSkipData(0);
+      } else {
+        setSkipCount(skipData.count);
+        if (skipData.count >= 6) {
+          setSkipBlocked(true);
+          setBlockMessage(
+            "Skip limit reached. Try again next hour or upgrade to Premium!"
+          );
+        }
+      }
+    } else {
+      setSkipCount(0);
+      setSkipBlocked(false);
+    }
+  }, [isPremium, getSkipData, getCurrentHourTimestamp, saveSkipData]);
+
+  // Sync with server every 5 minutes
+  useEffect(() => {
+    if (isPremium) return;
+
+    const syncSkipData = async () => {
+      try {
+        const skipData = getSkipData();
+        const response = await api.user.syncSkipData(skipData.count);
+
+        if (response.ok) {
+          const result = await response.json();
+
+          if (result.data.blocked) {
+            setSkipBlocked(true);
+            setBlockMessage(result.data.message || "Skip limit exceeded");
+            if (result.data.reason === "anti_cheat") {
+              showError(
+                "Suspicious activity detected. Skip function temporarily disabled."
+              );
+            } else {
+              showWarning(result.data.message || "Skip limit exceeded");
+            }
+          } else if (result.data.success) {
+            setSkipBlocked(false);
+            // Update local count if server suggests different value
+            if (result.data.remainingSkips !== undefined) {
+              const serverCount = 6 - result.data.remainingSkips;
+              if (serverCount !== skipData.count) {
+                saveSkipData(serverCount);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Skip sync failed, continuing with offline mode:", error);
+        // Continue with offline mode - don't block user
+      }
+    };
+
+    // Initial sync
+    syncSkipData();
+
+    // Setup interval for periodic sync
+    const syncInterval = setInterval(syncSkipData, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(syncInterval);
+  }, [isPremium, getSkipData, saveSkipData]);
+
+  // Check for hour reset every minute
+  useEffect(() => {
+    if (isPremium) return;
+
+    const checkHourReset = () => {
+      const skipData = getSkipData();
+      const currentHour = getCurrentHourTimestamp();
+
+      if (skipData.hourTimestamp < currentHour) {
+        // New hour - reset counter
+        setSkipCount(0);
+        setSkipBlocked(false);
+        setBlockMessage("");
+        saveSkipData(0);
+        console.log("Skip counter reset for new hour");
+      }
+    };
+
+    // Check every minute
+    const resetInterval = setInterval(checkHourReset, 60 * 1000);
+
+    return () => clearInterval(resetInterval);
+  }, [isPremium, getSkipData, getCurrentHourTimestamp, saveSkipData]);
 
   // Generate streaming URL for current track
   const streamUrl = useMemo(() => {
@@ -134,25 +358,64 @@ export const Player = () => {
     dispatch(setQueueOpen(!isQueueOpen));
   }, [isQueueOpen, dispatch]);
 
+  const showUpgradePrompt = useCallback(() => {
+    setShowUpgradeModal(true);
+    const remainingSkips = Math.max(0, 6 - skipCount);
+    showSkipLimitNotification(remainingSkips);
+  }, [showSkipLimitNotification, skipCount]);
+
+  // Modified handleNext with skip limit logic
   const handleNext = useCallback(() => {
+    // Check skip limit for free users
+    if (!isPremium) {
+      if (skipBlocked) {
+        showUpgradePrompt();
+        return;
+      }
+
+      const skipData = getSkipData();
+      const FREE_SKIP_LIMIT = 6;
+
+      if (skipData.count >= FREE_SKIP_LIMIT) {
+        setSkipBlocked(true);
+        setBlockMessage(
+          `Skip limit reached (${FREE_SKIP_LIMIT}/hour). Upgrade to Premium for unlimited skips!`
+        );
+        showUpgradePrompt();
+        return;
+      }
+
+      // Increment skip count
+      const newCount = skipData.count + 1;
+      saveSkipData(newCount);
+
+      if (newCount >= FREE_SKIP_LIMIT) {
+        setSkipBlocked(true);
+        setBlockMessage(
+          `Skip limit reached (${FREE_SKIP_LIMIT}/hour). Upgrade to Premium for unlimited skips!`
+        );
+        showSkipLimitNotification(0);
+      } else if (newCount >= 4) {
+        // Show warning when approaching limit (at 4th and 5th skip)
+        const remaining = FREE_SKIP_LIMIT - newCount;
+        showSkipLimitNotification(remaining);
+      }
+    }
+
+    // Original next track logic
     if (queue.length === 0 && audioRef.current) {
       console.log("No queue, handling repeat mode:", repeat);
 
       if (repeat === "one" || repeat === "all") {
-        // При repeat сбрасываем время и продолжаем играть
         audioRef.current.currentTime = 0;
         setCurrentTime(0);
         console.log("Repeating current track");
         dispatch(setIsPlaying(true));
       } else {
-        // При repeat = off просто останавливаемся, НЕ сбрасывая время
         isStoppingAtEndRef.current = true;
         dispatch(setIsPlaying(false));
-
-        // Явно останавливаем воспроизведение
         audioRef.current.pause();
 
-        // Опционально: сбрасываем время после паузы
         setTimeout(() => {
           if (audioRef.current && !currentTrack.isPlaying) {
             audioRef.current.currentTime = 0;
@@ -165,7 +428,17 @@ export const Player = () => {
       console.log("Playing next track from queue, queue length:", queue.length);
       dispatch(playNextTrack());
     }
-  }, [dispatch, queue.length, repeat, currentTrack.isPlaying]);
+  }, [
+    isPremium,
+    skipBlocked,
+    getSkipData,
+    saveSkipData,
+    showUpgradePrompt,
+    dispatch,
+    queue.length,
+    repeat,
+    currentTrack.isPlaying,
+  ]);
 
   const handlePrevious = useCallback(() => {
     if (audioRef.current && audioRef.current.currentTime > 3) {
@@ -173,8 +446,6 @@ export const Player = () => {
       audioRef.current.currentTime = 0;
       setCurrentTime(0);
     } else {
-      // УБИРАЕМ ПРОВЕРКУ НА queue.length === 0
-      // Всегда пытаемся перейти к предыдущему треку
       console.log("Attempting to play previous track");
       dispatch(playPreviousTrack());
     }
@@ -606,10 +877,158 @@ export const Player = () => {
   }
 
   const currentTrackData = currentTrack.currentTrack;
-
   return (
     <div className="flex flex-col">
       <audio ref={audioRef} preload="metadata" crossOrigin="anonymous" />
+
+      {/* Skip limit notification - now using toast notifications instead */}
+
+      {/* Upgrade Modal */}
+      <AnimatePresence>
+        <Modal
+          open={showUpgradeModal}
+          onCancel={() => setShowUpgradeModal(false)}
+          footer={null}
+          centered
+          width={400}
+          closable={false}
+          styles={{
+            mask: {
+              backdropFilter: "blur(8px)",
+              backgroundColor: "rgba(0, 0, 0, 0.6)",
+            },
+            content: {
+              background: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "16px",
+              padding: 0,
+            },
+          }}
+        >
+          <div className="p-6 text-center">
+            {/* Icon */}
+            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+
+            <h3 className="text-xl font-bold text-white mb-2">
+              Upgrade to Premium
+            </h3>
+            <p className="text-white/80 mb-6 text-sm">
+              You've reached your skip limit for this hour. Upgrade to Premium
+              for unlimited skips, high quality audio, and ad-free experience!
+            </p>
+
+            {/* Features list */}
+            <div className="mb-6 text-left">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-white/90 text-sm">
+                    Unlimited track skips
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-white/90 text-sm">
+                    Full track navigation
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-white/90 text-sm">
+                    Up to 15 playlists
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-white/90 text-sm">
+                    Priority support
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors border border-white/20"
+              >
+                Maybe Later
+              </button>
+              <button
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  // Navigate to upgrade page
+                  window.location.href = "/upgrade";
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </Modal>
+      </AnimatePresence>
 
       {/* Album cover */}
       <motion.div
@@ -748,9 +1167,13 @@ export const Player = () => {
           )}
         </div>
         <StepBackwardOutlined
-          style={{ color: canGoBack ? "white" : "rgba(255, 255, 255, 0.5)", fontSize: "24px", cursor: canGoBack ? "pointer" : "not-allowed" }}
+          style={{
+            color: canGoBack ? "white" : "rgba(255, 255, 255, 0.3)",
+            fontSize: "24px",
+            cursor: canGoBack ? "pointer" : "not-allowed",
+          }}
           className="hover:scale-110 transition-all duration-200"
-          onClick={canGoBack ? handlePrevious : () => {}}
+          onClick={canGoBack ? handlePrevious : () => setShowUpgradeModal(true)}
         />
 
         <div
@@ -770,8 +1193,13 @@ export const Player = () => {
         </div>
 
         <StepForwardOutlined
-          style={{ color: "white", fontSize: "24px" }}
-          className="cursor-pointer hover:scale-110 transition-all duration-200"
+          style={{
+            color:
+              !isPremium && skipBlocked ? "rgba(255, 255, 255, 0.3)" : "white",
+            fontSize: "24px",
+            cursor: !isPremium && skipBlocked ? "not-allowed" : "pointer",
+          }}
+          className="hover:scale-110 transition-all duration-200"
           onClick={handleNext}
         />
 

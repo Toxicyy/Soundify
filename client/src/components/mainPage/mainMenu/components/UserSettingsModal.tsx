@@ -238,9 +238,9 @@ export default function UserSettingsModal({
                   </h2>
                   <button
                     onClick={handleClose}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    className="p-2 rounded-full w-10 hover:bg-white/10 transition-colors"
                   >
-                    <CloseOutlined className="text-white text-xl" />
+                    <CloseOutlined className="text-xl" style={{ color: "white" }}/>
                   </button>
                 </div>
 

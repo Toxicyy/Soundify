@@ -76,6 +76,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Premium features tracking
+    skipTracking: {
+      count: {
+        type: Number,
+        default: 0,
+      },
+      hourTimestamp: {
+        type: Number,
+        default: null,
+      },
+      blockedUntil: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
