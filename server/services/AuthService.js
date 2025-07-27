@@ -84,20 +84,64 @@ class AuthService {
     };
   }
 
-  async getUserByEmail(email) {
-    const user = await User.findOne({ email }).select("-password");
-    if (!user) {
-      throw new Error("Пользователь не найден");
+  /**
+   * Change user password
+   * @param {string} userId - User ID
+   * @param {string} currentPassword - Current password
+   * @param {string} newPassword - New password
+   * @returns {Promise<Object>} Result object
+   */
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!userId || !currentPassword || !newPassword) {
+      throw new Error(
+        "User ID, current password and new password are required"
+      );
     }
-    return user;
-  }
 
-  async getUserById(id) {
-    const user = await User.findById(id).select("-password");
-    if (!user) {
-      throw new Error("Пользователь не найден");
+    try {
+      // Find user with password field
+      const user = await User.findById(userId).select("+password");
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+      if (!isCurrentPasswordValid) {
+        throw new Error("Current password is incorrect");
+      }
+
+      // Check if new password is different from current password
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        throw new Error("New password must be different from current password");
+      }
+
+      // Hash new password
+      const saltRounds = 12;
+      const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update user password
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          password: hashedNewPassword,
+          updatedAt: new Date(),
+        },
+        { new: true }
+      );
+
+      return {
+        success: true,
+        message: "Password updated successfully",
+      };
+    } catch (error) {
+      console.error("Error changing password:", error);
+      throw new Error(`Failed to change password: ${error.message}`);
     }
-    return user;
   }
 }
 

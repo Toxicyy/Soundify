@@ -84,6 +84,9 @@ export const Player = () => {
   const currentStr = useFormatTime(currentTime);
   const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
 
+  const canSeek = user?.status === "PREMIUM";
+  const canGoBack = user?.status === "PREMIUM";
+
   // Generate streaming URL for current track
   const streamUrl = useMemo(() => {
     if (!currentTrack.currentTrack) return null;
@@ -666,7 +669,10 @@ export const Player = () => {
         </div>
 
         <h2 className="text-white/60 mb-2 truncate">
-          <Link to={`/artist/${currentTrackData.artist?._id}`} className=" hover:underline cursor-pointer">
+          <Link
+            to={`/artist/${currentTrackData.artist?._id}`}
+            className=" hover:underline cursor-pointer"
+          >
             {currentTrackData.artist?.name || "Unknown Artist"}
           </Link>
         </h2>
@@ -707,7 +713,7 @@ export const Player = () => {
             max={currentTrackData.duration || 0}
             value={currentTime}
             onChange={handleSeek}
-            disabled={isLoading}
+            disabled={isLoading || !canSeek}
             className="w-full h-[3px] rounded-lg appearance-none bg-transparent z-10 relative accent-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white/90 [&::-webkit-slider-thumb]:shadow focus:outline-none"
           />
           <div className="flex justify-between mt-2 relative z-10">
@@ -741,11 +747,10 @@ export const Player = () => {
             </div>
           )}
         </div>
-
         <StepBackwardOutlined
-          style={{ color: "white", fontSize: "24px" }}
-          className="cursor-pointer hover:scale-110 transition-all duration-200"
-          onClick={handlePrevious}
+          style={{ color: canGoBack ? "white" : "rgba(255, 255, 255, 0.5)", fontSize: "24px", cursor: canGoBack ? "pointer" : "not-allowed" }}
+          className="hover:scale-110 transition-all duration-200"
+          onClick={canGoBack ? handlePrevious : () => {}}
         />
 
         <div

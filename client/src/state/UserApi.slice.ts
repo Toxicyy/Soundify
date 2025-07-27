@@ -22,7 +22,7 @@ export const userApiSlice = createApi({
   endpoints: (builder) => {
     return {
       getUser: builder.query<User, void>({
-        query: () => "/api/auth/me",
+        query: () => "/api/users/me",
         transformResponse: (response: ApiResponse<User>) => response.data,
       }),
       updateUser: builder.mutation<User, User>({

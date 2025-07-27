@@ -10,7 +10,8 @@ import { userApiSlice, useGetUserQuery } from "../../../../state/UserApi.slice";
 import { useDispatch } from "react-redux";
 import { type AppDispatch } from "../../../../store";
 import { useNavigate } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import UserSettingsModal from "./UserSettingsModal";
 
 interface SettingsMenuProps {
   isOpen: boolean;
@@ -49,6 +50,8 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
   // Определяем роли пользователя
   const userRoles = useMemo((): UserRole[] => {
     if (!user) return ["user"];
@@ -79,6 +82,17 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     return userRoles.includes(accessFor);
   };
 
+  // Функция для открытия модального окна настроек
+  const openSettingsModal = () => {
+    setIsSettingsModalOpen(true);
+    onClose(); // Закрываем контекстное меню
+  };
+
+  // Функция для закрытия модального окна настроек
+  const closeSettingsModal = () => {
+    setIsSettingsModalOpen(false);
+  };
+
   const menuItems: MenuItemProps[] = [
     {
       icon: <CrownOutlined style={{ color: "#FFD700" }} />,
@@ -94,10 +108,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     {
       icon: <SettingOutlined style={{ color: "#8B5CF6" }} />,
       label: "Settings",
-      onClick: () => {
-        console.log("Settings clicked");
-        onClose();
-      },
+      onClick: openSettingsModal,
       className:
         "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20",
       accessFor: "all",
@@ -276,6 +287,10 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
           </motion.div>
         </>
       )}
+      <UserSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={closeSettingsModal}
+      />
     </AnimatePresence>
   );
 }

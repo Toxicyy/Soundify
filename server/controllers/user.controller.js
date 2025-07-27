@@ -1,5 +1,6 @@
 import { ApiResponse } from "../utils/responses.js";
 import UserService from "../services/UserService.js";
+import { catchAsync } from "../utils/helpers.js";
 
 /**
  * Retrieves user data by ID
@@ -32,6 +33,19 @@ export const getUserById = async (req, res) => {
       return res.status(404).json(ApiResponse.error(error.message));
     }
 
+    res.status(400).json(ApiResponse.error(error.message));
+  }
+};
+
+export const getUser = async (req, res) => {
+  try {
+    const userData = await UserService.getUserById(req.user.id);
+    res.json(ApiResponse.success("User data retrieved successfully", userData));
+  } catch (error) {
+    console.error("Controller error - getUser:", error);
+    if (error.message.includes("User not found")) {
+      return res.status(404).json(ApiResponse.error(error.message));
+    }
     res.status(400).json(ApiResponse.error(error.message));
   }
 };
@@ -266,3 +280,30 @@ export const unlikePlaylist = async (req, res) => {
     res.status(400).json(ApiResponse.error(error.message));
   }
 };
+
+/**
+ * Update user profile data
+ */
+
+export const updateUserProfile = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const updateData = req.body;
+  const avatarFile = req.file;
+
+  // Validate user authorization
+  if (req.user.id !== userId) {
+    return res
+      .status(403)
+      .json(ApiResponse.error("Unauthorized to modify this user's data"));
+  }
+
+  const updatedUser = await UserService.updateUserProfile(
+    userId,
+    updateData,
+    avatarFile
+  );
+
+  res
+    .status(200)
+    .json(ApiResponse.success("Profile updated successfully", updatedUser));
+});

@@ -54,7 +54,7 @@ export default function MainMenu() {
             className="w-[70%] flex items-center justify-between"
           >
             <SearchInput />
-            <UserIcon userIcon={userAvatar} />
+            <UserIcon userIcon={user?.avatar ? user.avatar : userAvatar} />
           </motion.div>
         </div>
 

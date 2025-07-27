@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
+import { uploadAvatar } from "../middleware/upload.middleware.js";
 import {
   addLikedSong,
   getLikedSongs,
@@ -10,16 +11,27 @@ import {
   unfollowArtist,
   likePlaylist,
   unlikePlaylist,
+  updateUserProfile,
+  getUser,
 } from "../controllers/user.controller.js";
 import {
   getLikedPlaylists,
   getUserPlaylists,
 } from "../controllers/playlist.controller.js";
+import { validateUserProfileUpdate } from "../middleware/validation.middleware.js";
 
 const router = express.Router();
 
 // User profile routes
+router.get("/me", authenticate, getUser);
 router.get("/:userId", authenticate, getUserById);
+router.put(
+  "/:userId/profile",
+  authenticate,
+  uploadAvatar,
+  validateUserProfileUpdate,
+  updateUserProfile
+);
 
 // User liked songs routes
 router.patch("/:userId/like/:songId", authenticate, addLikedSong);
@@ -35,8 +47,12 @@ router.get("/:userId/liked-artists", authenticate, getUserLikedArtists);
 router.put("/:userId/follow/artist/:artistId", authenticate, followArtist);
 router.put("/:userId/unfollow/artist/:artistId", authenticate, unfollowArtist);
 
-// User liked playlists routes  
+// User liked playlists routes
 router.put("/:userId/like/playlist/:playlistId", authenticate, likePlaylist);
-router.put("/:userId/unlike/playlist/:playlistId", authenticate, unlikePlaylist);
+router.put(
+  "/:userId/unlike/playlist/:playlistId",
+  authenticate,
+  unlikePlaylist
+);
 
 export default router;

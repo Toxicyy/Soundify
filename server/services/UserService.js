@@ -3,6 +3,8 @@ import Artist from "../models/Artist.model.js";
 import Playlist from "../models/Playlist.model.js";
 import TrackService from "./TrackService.js";
 import ArtistService from "./ArtistService.js";
+import { uploadToB2 } from "../utils/upload.js";
+import { extractFileName, generateSignedUrl } from "../utils/b2SignedUrl.js";
 
 /**
  * Service for managing users and their data
@@ -61,7 +63,9 @@ class UserService {
         likedArtists: user.likedArtists || [],
       };
 
-      return userData;
+      const userWithSignedAvatar = await this.addSignedUrlToUser(userData);
+
+      return userWithSignedAvatar;
     } catch (error) {
       console.error("Error fetching user data:", error);
       throw new Error(`Failed to fetch user data: ${error.message}`);
@@ -465,6 +469,104 @@ class UserService {
     } catch (error) {
       console.error("Error unliking playlist:", error);
       throw new Error(`Failed to unlike playlist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Updates user profile data including avatar
+   * @param {string} userId - The user ID
+   * @param {Object} updateData - Data to update
+   * @param {File} avatarFile - Avatar file (optional)
+   * @returns {Promise<Object>} Updated user data
+   */
+  async updateUserProfile(userId, updateData, avatarFile) {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    try {
+      // Handle avatar upload if provided
+      if (avatarFile) {
+        const uploadResult = await uploadToB2(avatarFile, "userAvatars");
+
+        if (typeof uploadResult === "string") {
+          updateData.avatar = uploadResult; // старый формат
+        } else {
+          updateData.avatar = uploadResult.url; // новый формат
+          updateData.avatarFileId = uploadResult.fileId;
+        }
+      }
+
+      // Remove sensitive fields that shouldn't be updated via this method
+      const {
+        password,
+        status,
+        isVerified,
+        artistProfile,
+        playlists,
+        likedSongs,
+        likedPlaylists,
+        likedArtists,
+        ...safeUpdateData
+      } = updateData;
+
+      // Ensure username is lowercase
+      if (safeUpdateData.username) {
+        safeUpdateData.username = safeUpdateData.username.toLowerCase();
+      }
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            ...safeUpdateData,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true, runValidators: true }
+      ).select("-password");
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Add signed URL for avatar if it exists
+      const userWithSignedAvatar = await this.addSignedUrlToUser(user);
+
+      return userWithSignedAvatar;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw new Error(`Failed to update user profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Add signed URL to user avatar
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} User with signed avatar URL
+   */
+  async addSignedUrlToUser(user) {
+    try {
+      const userObj = user.toObject ? user.toObject() : user;
+
+      if (userObj.avatar) {
+        const fileName = extractFileName(userObj.avatar);
+        if (fileName) {
+          const signedUrl = await generateSignedUrl(fileName, 7200); // 2 hours
+          if (signedUrl) {
+            userObj.avatar = signedUrl;
+          }
+        }
+      }
+
+      return userObj;
+    } catch (error) {
+      console.error("Error creating signed URL for user avatar:", error);
+      // Return user with null avatar if error occurs
+      return {
+        ...(user.toObject ? user.toObject() : user),
+        avatar: null,
+      };
     }
   }
 }

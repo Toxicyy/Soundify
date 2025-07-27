@@ -895,3 +895,130 @@ export const validateBecomeArtist = [
     next();
   },
 ];
+
+export const validateUserProfileUpdate = [
+  // Name validation (optional)
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Name cannot be empty")
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Name must be between 2 and 50 characters"),
+
+  // Username validation (optional)
+  body("username")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Username cannot be empty")
+    .isLength({ min: 2, max: 30 })
+    .withMessage("Username must be between 2 and 30 characters")
+    .matches(/^[a-zA-Z0-9_.-]+$/)
+    .withMessage(
+      "Username can only contain letters, numbers, dots, hyphens and underscores"
+    )
+    .custom(async (value, { req }) => {
+      // Check username uniqueness excluding current user
+      const existingUser = await User.findOne({
+        username: value.toLowerCase(),
+        _id: { $ne: req.user.id },
+      });
+      if (existingUser) {
+        throw new Error("Username already exists");
+      }
+      return true;
+    }),
+
+  // Email validation (optional)
+  body("email")
+    .optional()
+    .trim()
+    .isEmail()
+    .withMessage("Invalid email format")
+    .normalizeEmail()
+    .custom(async (value, { req }) => {
+      // Check email uniqueness excluding current user
+      const existingUser = await User.findOne({
+        email: value,
+        _id: { $ne: req.user.id },
+      });
+      if (existingUser) {
+        throw new Error("Email already exists");
+      }
+      return true;
+    }),
+
+  // Avatar file validation middleware
+  (req, res, next) => {
+    if (req.file) {
+      const allowedImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+      ];
+
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Unsupported image format"));
+      }
+
+      // Check file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (req.file.size > maxSize) {
+        return res
+          .status(400)
+          .json(ApiResponse.error("Image size must not exceed 5MB"));
+      }
+    }
+    next();
+  },
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];
+
+/**
+ * Change password validation middleware
+ */
+export const validatePasswordChange = [
+  body("currentPassword")
+    .notEmpty()
+    .withMessage("Current password is required"),
+
+  body("newPassword")
+    .isLength({ min: 6 })
+    .withMessage("New password must be at least 6 characters long")
+    .matches(/^(?=.*[a-zA-Z])(?=.*\d)/)
+    .withMessage(
+      "New password must contain at least one letter and one number"
+    ),
+
+  body("confirmPassword").custom((value, { req }) => {
+    if (value !== req.body.newPassword) {
+      throw new Error("Password confirmation does not match");
+    }
+    return true;
+  }),
+
+  // Final error checking
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Validation errors", errors.array()));
+    }
+    next();
+  },
+];

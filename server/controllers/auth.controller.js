@@ -36,8 +36,18 @@ export const login = catchAsync(async (req, res) => {
   );
 });
 
-export const getUser = catchAsync(async (req, res) => {
-  const user = await AuthService.getUserByEmail(req.user.email);
+/**
+ * Change user password
+ */
+export const changePassword = catchAsync(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
 
-  res.json(ApiResponse.success("Пользователь получен", user));
+  const result = await AuthService.changePassword(
+    userId,
+    currentPassword,
+    newPassword
+  );
+
+  res.status(200).json(ApiResponse.success(result.message));
 });

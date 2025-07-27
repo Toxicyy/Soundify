@@ -55,6 +55,19 @@ export const api = {
         body: JSON.stringify({ email, password }),
       });
     },
+
+    // Change password
+    changePassword: async (
+      currentPassword: string,
+      newPassword: string,
+      confirmPassword: string
+    ) => {
+      return fetch(`${BASEURL}/api/auth/change-password`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+    },
   },
 
   user: {
@@ -160,6 +173,17 @@ export const api = {
           headers: getAuthHeaders(),
         }
       );
+    },
+
+    // Update user profile
+    updateProfile: async (userId: string, profileData: FormData) => {
+      return fetch(`${BASEURL}/api/users/${userId}/profile`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: profileData,
+      });
     },
   },
 

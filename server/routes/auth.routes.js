@@ -1,6 +1,7 @@
 import express from "express";
-import { register, login, getUser } from "../controllers/auth.controller.js";
+import { register, login, changePassword } from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
+import { validatePasswordChange } from "../middleware/validation.middleware.js";
 
 /**
  * Authentication routes configuration
@@ -12,8 +13,11 @@ const router = express.Router();
 // Public routes - no authentication required
 router.post("/register", register);                // User registration with email/password
 router.post("/login", login);                      // User login with credentials
-
-// Protected routes - require authentication
-router.get("/me", authenticate, getUser);          // Get current user profile data
+router.put(
+  "/change-password", 
+  authenticate, 
+  validatePasswordChange,
+  changePassword
+);
 
 export default router;
