@@ -3,7 +3,6 @@ import {
   HeartOutlined,
   HeartFilled,
   UnorderedListOutlined,
-  EyeInvisibleOutlined,
   UserOutlined,
   PlaySquareOutlined,
   InfoCircleOutlined,
@@ -56,12 +55,6 @@ export default function ContextMenu({
     {
       icon: <UnorderedListOutlined />,
       label: "Добавить в очередь",
-      disabled: false,
-      className: "",
-    },
-    {
-      icon: <EyeInvisibleOutlined />,
-      label: "Скрыть трек",
       disabled: false,
       className: "",
     },

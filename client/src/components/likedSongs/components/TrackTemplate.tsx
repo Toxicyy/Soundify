@@ -17,7 +17,7 @@ import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../state/CurrentTrack.slice";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 type TrackTemplateProps = {
   track: Track;
@@ -51,6 +51,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
   const ellipsisRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Используем кастомный хук для лайков
   const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
@@ -92,6 +93,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const handleEllipsisClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(!menuOpen);
+    setNoClickHover(!menuOpen);
   };
 
   const handleLikeClick = async (e: React.MouseEvent) => {
@@ -104,16 +106,18 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     dispatch(addToQueue(track));
   };
 
-  const handleHideTrack = () => {
-    console.log("Hide track clicked");
-  };
-
   const handleArtistClick = () => {
-    console.log("Artist clicked");
+    if (!track) return;
+    navigate(`/artist/${track.artist._id}`);
   };
 
   const handleAlbumClick = () => {
-    console.log("Album clicked");
+    if (!track) return;
+    if (track.album == "single") {
+      navigate(`/single/${track._id}`);
+    } else {
+      navigate(`/album/${track.album._id}`);
+    }
   };
 
   const handleInfoClick = () => {
@@ -128,7 +132,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     const menuActions = [
       () => handleLikeClick({} as React.MouseEvent),
       handleAddToQueue,
-      handleHideTrack,
       handleArtistClick,
       handleAlbumClick,
       handleInfoClick,
@@ -294,7 +297,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
       {/* Альбом */}
       <div className="text-lg text-white/60 truncate text-center">
-        {track.album || track.name}
+        {track.album == "single" ? track.name : track.album.name}
       </div>
 
       {/* Дата добавления */}

@@ -17,6 +17,7 @@ import {
 } from "../../../../state/CurrentTrack.slice";
 import ContextMenu from "./ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
+import { useNavigate } from "react-router-dom";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -39,6 +40,8 @@ export default function TrackLayout({
 
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
+
+  const navigate = useNavigate();
 
   // Используем кастомный хук для лайков
   const {
@@ -75,16 +78,19 @@ export default function TrackLayout({
     dispatch(addToQueue(track));
   };
 
-  const handleHideTrack = () => {
-    console.log("Hide track clicked");
-  };
-
   const handleArtistClick = () => {
-    console.log("Artist clicked");
+    if (!track) return;
+    navigate(`/artist/${track.artist._id}`);
   };
 
   const handleAlbumClick = () => {
-    console.log("Album clicked");
+    if (!track) return;
+    if (track.album == null) return;
+    if (track.album == "single") {
+      navigate(`/single/${track._id}`);
+    } else {
+      navigate(`/album/${track.album._id}`);
+    }
   };
 
   const handleInfoClick = () => {
@@ -99,7 +105,6 @@ export default function TrackLayout({
     const menuActions = [
       handleLikeClick,
       handleAddToQueue,
-      handleHideTrack,
       handleArtistClick,
       handleAlbumClick,
       handleInfoClick,
@@ -124,6 +129,14 @@ export default function TrackLayout({
       }`}
       onMouseEnter={() => !isLoading && setHover(true)}
       onMouseLeave={() => !isLoading && setHover(false)}
+      onClick={
+        menuOpen
+          ? () => {}
+          : (e) => {
+              e.stopPropagation();
+              togglePlayPause();
+            }
+      }
     >
       <div className="flex gap-3 items-end justify-center">
         <div className="w-[65px] h-[65px] rounded-[10px] flex items-center justify-center relative overflow-hidden group">
@@ -165,10 +178,6 @@ export default function TrackLayout({
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
                       }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        togglePlayPause();
-                      }}
                     />
                   ) : (
                     <CaretRightOutlined
@@ -177,10 +186,6 @@ export default function TrackLayout({
                         fontSize: "32px",
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        togglePlayPause();
                       }}
                     />
                   )}

@@ -17,7 +17,7 @@ export type Track = {
   artist: { _id: string; name: string };
   coverUrl: string;
   audioUrl: string;
-  album: string | null;
+  album: { _id: string; name: string, coverUrl: string } | "single";
   preview: string | null;
   duration: number;
   genre: string | null;

@@ -1,6 +1,7 @@
 import Album from "../models/Album.model.js";
 import Track from "../models/Track.model.js";
 import Artist from "../models/Artist.model.js";
+import mongoose from "mongoose";
 import TrackService from "./TrackService.js";
 import { uploadToB2 } from "../utils/upload.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
@@ -266,7 +267,6 @@ class AlbumService {
     if (!albumId) {
       throw new Error("Album ID is required");
     }
-
     try {
       const album = await Album.findById(albumId).populate("artist", "name");
       if (!album) {
@@ -284,6 +284,24 @@ class AlbumService {
           .limit(limit),
         Track.countDocuments({ _id: { $in: album.tracks } }),
       ]);
+
+      const validAlbumIds = tracks
+        .map((track) => track.album)
+        .filter((albumId) => mongoose.Types.ObjectId.isValid(albumId));
+
+      const albumsData = await Album.find({
+        _id: { $in: validAlbumIds },
+      }).select("_id name coverUrl");
+
+      const albumsMap = new Map(
+        albumsData.map((album) => [album._id.toString(), album])
+      );
+
+      tracks.forEach((track) => {
+        if (mongoose.Types.ObjectId.isValid(track.album)) {
+          track.album = albumsMap.get(track.album.toString()) || track.album;
+        }
+      });
 
       const totalPages = Math.ceil(total / limit);
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(

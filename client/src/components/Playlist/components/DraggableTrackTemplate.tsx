@@ -14,6 +14,7 @@ import type { AppDispatch, AppState } from "../../../store";
 import { useFormatTime } from "../../../hooks/useFormatTime";
 import { useLike } from "../../../hooks/useLike";
 import ContextMenu from "../../mainPage/mainMenu/components/ContextMenu";
+import { useNavigate } from "react-router-dom";
 
 interface DraggableTrackTemplateProps {
   track: Track;
@@ -60,6 +61,7 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   // Computed values
   const isCurrentTrack = currentTrackState.currentTrack?._id === track._id;
   const isPlaying = isCurrentTrack && currentTrackState.isPlaying;
+  const navigate = useNavigate();
 
   // Custom hooks
   const duration = useFormatTime(track?.duration || 0);
@@ -112,21 +114,18 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     [index, isEditable, onDragStart]
   );
 
-  const handleDragEnd = useCallback(
-    () => {
-      if (!isEditable) return;
+  const handleDragEnd = useCallback(() => {
+    if (!isEditable) return;
 
-      const fromIndex = dragStartIndex;
-      const toIndex = dragOverIndex;
+    const fromIndex = dragStartIndex;
+    const toIndex = dragOverIndex;
 
-      if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
-        onDragEnd?.(fromIndex, toIndex);
-      }
+    if (fromIndex !== null && toIndex !== null && fromIndex !== toIndex) {
+      onDragEnd?.(fromIndex, toIndex);
+    }
 
-      setDragStartIndex(null);
-    },
-    [dragStartIndex, dragOverIndex, isEditable, onDragEnd]
-  );
+    setDragStartIndex(null);
+  }, [dragStartIndex, dragOverIndex, isEditable, onDragEnd]);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -193,6 +192,28 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     }
     setIsMenuOpen(false);
   }, [track._id, onRemove]);
+
+  const handleArtistClick = () => {
+    if (!track) return;
+    navigate(`/artist/${track.artist._id}`);
+  };
+
+  const handleAlbumClick = () => {
+    if (!track) return;
+    if (track.album == "single") {
+      navigate(`/single/${track._id}`);
+    } else {
+      navigate(`/album/${track.album}`);
+    }
+  };
+
+  const handleInfoClick = () => {
+    console.log("Info clicked");
+  };
+
+  const handleShareClick = () => {
+    console.log("Share clicked");
+  };
   /**
    * Обработка действий контекстного меню
    */
@@ -201,11 +222,10 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
       const menuActions = [
         () => handleLikeClick({} as React.MouseEvent), // Like/Unlike
         handleAddToQueue, // Add to queue
-        () => console.log("Hide track clicked"), // Hide track
-        () => console.log("Artist clicked"), // Go to artist
-        () => console.log("Album clicked"), // Go to album
-        () => console.log("Info clicked"), // Track info
-        () => console.log("Share clicked"), // Share
+        handleArtistClick, // Go to artist
+        handleAlbumClick, // Go to album
+        handleInfoClick, // Track info
+        handleShareClick, // Share
         () => handleRemoveTrack(), // Remove from playlist (новый пункт)
       ];
 

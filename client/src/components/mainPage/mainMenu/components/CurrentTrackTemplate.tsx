@@ -12,7 +12,7 @@ import { setIsPlaying } from "../../../../state/CurrentTrack.slice";
 import type { Track } from "../../../../types/TrackData";
 import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface CurrentTrackTemplateProps {
   track: Track;
@@ -29,6 +29,7 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isPlaying = currentTrack.isPlaying && isCurrentTrack;
+  const navigate = useNavigate();
 
   // Используем кастомный хук для лайков
   const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
@@ -52,16 +53,17 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     dispatch(addToQueue(track));
   };
 
-  const handleHideTrack = () => {
-    console.log("Hide track clicked");
-  };
-
   const handleArtistClick = () => {
-    console.log("Artist clicked");
+    navigate(`/artist/${track.artist._id}`);
   };
 
   const handleAlbumClick = () => {
-    console.log("Album clicked");
+    if(track.album == "single"){
+      navigate(`/single/${track._id}`);
+    }
+    else{
+      navigate(`/album/${track.album}`);
+    }
   };
 
   const handleInfoClick = () => {
@@ -76,7 +78,6 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     const menuActions = [
       handleLikeClick,
       handleAddToQueue,
-      handleHideTrack,
       handleArtistClick,
       handleAlbumClick,
       handleInfoClick,

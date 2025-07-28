@@ -17,6 +17,7 @@ import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../state/CurrentTrack.slice";
+import { useNavigate } from "react-router-dom";
 
 interface TrackTemplateProps {
   track: Track;
@@ -50,6 +51,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   // Computed values
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
+  const navigate = useNavigate();
 
   // Custom hooks
   const duration = useFormatTime(track?.duration || 0);
@@ -131,6 +133,28 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     dispatch(addToQueue(track));
   }, [track, isLoading, dispatch]);
 
+  const handleArtistClick = () => {
+    if (!track) return;
+    navigate(`/artist/${track.artist._id}`);
+  };
+
+  const handleAlbumClick = () => {
+    if (!track) return;
+    if (track.album == "single") {
+      navigate(`/single/${track._id}`);
+    } else {
+      navigate(`/album/${track.album._id}`);
+    }
+  };
+
+  const handleInfoClick = () => {
+    console.log("Info clicked");
+  };
+
+  const handleShareClick = () => {
+    console.log("Share clicked");
+  };
+
   /**
    * Handle context menu item actions
    */
@@ -139,11 +163,10 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       const menuActions = [
         () => handleLikeClick({} as React.MouseEvent),
         handleAddToQueue,
-        () => console.log("Hide track clicked"),
-        () => console.log("Artist clicked"),
-        () => console.log("Album clicked"),
-        () => console.log("Info clicked"),
-        () => console.log("Share clicked"),
+        handleArtistClick,
+        handleAlbumClick,
+        handleInfoClick,
+        handleShareClick,
       ];
 
       if (index < menuActions.length) {
@@ -229,7 +252,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       className="grid grid-cols-[50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-2 sm:gap-4 items-center px-2 sm:px-4 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={playTrackWithContext}
+      onClick={isMenuOpen ? () => {} : playTrackWithContext}
       role="listitem"
       aria-label={`${track.name} by ${
         typeof track.artist === "string" ? track.artist : track.artist?.name

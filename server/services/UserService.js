@@ -1,10 +1,12 @@
 import User from "../models/User.model.js";
 import Artist from "../models/Artist.model.js";
 import Playlist from "../models/Playlist.model.js";
+import Album from "../models/Album.model.js";
 import TrackService from "./TrackService.js";
 import ArtistService from "./ArtistService.js";
 import { uploadToB2 } from "../utils/upload.js";
 import { extractFileName, generateSignedUrl } from "../utils/b2SignedUrl.js";
+import mongoose from "mongoose";
 
 /**
  * Service for managing users and their data
@@ -211,8 +213,31 @@ class UserService {
         path: "likedSongs",
         populate: {
           path: "artist",
-          select: "name avatar", // Added avatar for complete data
+          select: "name avatar",
         },
+      });
+
+      // Найти все валидные album ID
+      const validAlbumIds = user.likedSongs
+        .map((track) => track.album)
+        .filter((album) => mongoose.Types.ObjectId.isValid(album));
+
+      // Получить данные альбомов одним запросом
+      const albums = await Album.find({ _id: { $in: validAlbumIds } }).select(
+        "_id name coverUrl"
+      );
+
+      // Создать Map для быстрого поиска
+      const albumsMap = new Map(
+        albums.map((album) => [album._id.toString(), album])
+      );
+
+      // Заполнить данные альбомов
+      user.likedSongs.forEach((track) => {
+        if (mongoose.Types.ObjectId.isValid(track.album)) {
+          track.album = albumsMap.get(track.album.toString()) || track.album;
+        }
+        // Если album = "single", он остается строкой
       });
 
       if (!user) {
