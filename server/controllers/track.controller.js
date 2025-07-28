@@ -275,3 +275,17 @@ export const updateTrack = catchAsync(async (req, res) => {
 
   res.json(ApiResponse.success("Track updated successfully", track));
 });
+
+/**
+ * Get track by ID for track page with additional details
+ */
+export const getTrackForPage = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const track = await TrackService.getTrackForPage(id);
+
+  if (!track) {
+    return res.status(404).json(ApiResponse.error("Track not found"));
+  }
+
+  res.json(ApiResponse.success("Track retrieved successfully", track));
+});

@@ -8,6 +8,7 @@ import {
   incrementListenCount,
   deleteTrack,
   updateTrack,
+  getTrackForPage,
 } from "../controllers/track.controller.js";
 import { authenticate, optionalAuth } from "../middleware/auth.middleware.js";
 import { validateTrackCreation } from "../middleware/validation.middleware.js";
@@ -30,6 +31,8 @@ router.get("/:id/stream", streamTrack);                // General streaming endp
 router.get("/", optionalAuth, getAllTracks);           // Get all tracks with optional user context
 router.get("/search", searchTracks);                   // Search tracks by query
 router.get("/:id", getTrackById);                      // Get track metadata by ID
+
+router.get("/:id/page", getTrackForPage);              // Get track metadata for track page
 
 // Interaction routes
 router.patch("/:id/listen", incrementListenCount);     // Manual listen count increment

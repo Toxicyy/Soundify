@@ -11,6 +11,8 @@ import {
   checkB2Connection,
 } from "../utils/b2Utils.js";
 import fs from "fs/promises";
+import mongoose from "mongoose";
+import Album from "../models/Album.model.js";
 
 /**
  * Service for managing tracks and their associated data
@@ -608,6 +610,43 @@ class TrackService {
         `Failed to cleanup temp directory ${dirPath}:`,
         error.message
       );
+    }
+  }
+
+  /**
+   * Get track by ID with additional information for track page
+   * @param {string} trackId - Track ID
+   * @returns {Promise<Object>} Track with detailed information
+   */
+  async getTrackForPage(trackId) {
+    try {
+      const track = await Track.findById(trackId)
+        .populate("uploadedBy", "name username avatar")
+        .populate("artist", "name avatar");
+
+      if (!track) {
+        throw new Error("Track not found");
+      }
+
+      // Handle album field - если это ObjectId, populate данные альбома
+      let trackObj = track.toObject();
+
+      if (trackObj.album && mongoose.Types.ObjectId.isValid(trackObj.album)) {
+        const albumData = await Album.findById(trackObj.album).select(
+          "_id name coverUrl"
+        );
+        if (albumData) {
+          trackObj.album = albumData;
+        }
+      }
+      // Если album = "single", оставляем как есть
+
+      // Add signed URLs
+      const trackWithSignedUrls = await this.addSignedUrlsToTracks(trackObj);
+
+      return trackWithSignedUrls;
+    } catch (error) {
+      throw new Error(`Failed to retrieve track for page: ${error.message}`);
     }
   }
 }

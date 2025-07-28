@@ -185,7 +185,7 @@ export const api = {
         body: profileData,
       });
     },
-    
+
     // Skip tracking
     syncSkipData: async (skipCount: number) => {
       return fetch(`${BASEURL}/api/users/skip-sync`, {
@@ -454,6 +454,19 @@ export const api = {
     getPopular: async () => {
       return fetch(`${BASEURL}/api/search/popular`, {
         headers: getAuthHeaders(),
+      });
+    },
+  },
+  track: {
+    getById: async (trackId: string) => {
+      return fetch(`${BASEURL}/api/tracks/${trackId}`, {
+        headers: getAuthHeaders(false),
+      });
+    },
+
+    getForPage: async (trackId: string) => {
+      return fetch(`${BASEURL}/api/tracks/${trackId}/page`, {
+        headers: getAuthHeaders(false),
       });
     },
   },

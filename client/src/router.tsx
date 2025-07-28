@@ -19,6 +19,7 @@ import UserLikedArtistsPage from "./Pages/Profile/UserLikedArtistsPage";
 import BecomeAnArtist from "./Pages/BecomeAnArtist";
 import ArtistStudio from "./Pages/ArtistStudio";
 import CreateAlbumPage from "./Pages/CreateAlbumPage";
+import TrackPage from "./Pages/TrackPage";
 
 export const router = createBrowserRouter([
   {
@@ -92,8 +93,12 @@ export const router = createBrowserRouter([
           },
           {
             path: "/artist-studio/create-album",
-            element: <CreateAlbumPage />
-          }
+            element: <CreateAlbumPage />,
+          },
+          {
+            path: "/track/:id",
+            element: <TrackPage />,
+          },
         ],
       },
       {

@@ -3,7 +3,7 @@ import {
   CaretRightOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, type FC } from "react";
+import { useState, useRef, type FC, useCallback } from "react";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useLike } from "../../../../hooks/useLike";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,6 +13,7 @@ import type { Track } from "../../../../types/TrackData";
 import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
 import { Link, useNavigate } from "react-router-dom";
+import { useNotification } from "../../../../hooks/useNotification";
 
 interface CurrentTrackTemplateProps {
   track: Track;
@@ -30,6 +31,7 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isPlaying = currentTrack.isPlaying && isCurrentTrack;
   const navigate = useNavigate();
+  const { showError, showSuccess } = useNotification();
 
   // Используем кастомный хук для лайков
   const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
@@ -58,21 +60,57 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
   };
 
   const handleAlbumClick = () => {
-    if(track.album == "single"){
+    if (track.album == "single") {
       navigate(`/single/${track._id}`);
-    }
-    else{
+    } else {
       navigate(`/album/${track.album}`);
     }
   };
 
   const handleInfoClick = () => {
-    console.log("Info clicked");
+    if (!track) return;
+    navigate(`/track/${track._id}`);
   };
 
-  const handleShareClick = () => {
-    console.log("Share clicked");
-  };
+  const handleShareClick = useCallback(async () => {
+    try {
+      if (!track) return;
+      const url = `${window.location.origin}/track/${track._id}`;
+
+      // Проверяем поддержку Web Share API (для мобильных устройств)
+      if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+        const artistName =
+          typeof track.artist === "string" ? track.artist : track.artist?.name;
+
+        await navigator.share({
+          title: `${track.name} - ${artistName}`,
+          text: `Listen to "${track.name}" by ${artistName} on Soundify`,
+          url: url,
+        });
+
+        showSuccess("Track shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      }
+    } catch (error) {
+      // Обработка ошибок
+      if (error === "AbortError") {
+        return;
+      }
+
+      console.error("Share failed:", error);
+
+      try {
+        if (!track) return;
+        const url = `${window.location.origin}/track/${track._id}`;
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      } catch (clipboardError) {
+        showError("Failed to share track. Please copy the URL manually.");
+      }
+    }
+  }, [track, showSuccess, showError]);
 
   const handleMenuItemClick = (index: number) => {
     const menuActions = [

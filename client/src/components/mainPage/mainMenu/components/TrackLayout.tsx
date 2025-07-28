@@ -5,7 +5,7 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { Track } from "../../../../types/TrackData";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useLike } from "../../../../hooks/useLike";
@@ -18,6 +18,7 @@ import {
 import ContextMenu from "./ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
 import { useNavigate } from "react-router-dom";
+import { useNotification } from "../../../../hooks/useNotification";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -42,6 +43,7 @@ export default function TrackLayout({
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
 
   const navigate = useNavigate();
+  const { showError, showSuccess } = useNotification();
 
   // Используем кастомный хук для лайков
   const {
@@ -94,12 +96,49 @@ export default function TrackLayout({
   };
 
   const handleInfoClick = () => {
-    console.log("Info clicked");
+    if (!track) return;
+    navigate(`/track/${track._id}`);
   };
 
-  const handleShareClick = () => {
-    console.log("Share clicked");
-  };
+  const handleShareClick = useCallback(async () => {
+    try {
+      if (!track) return;
+      const url = `${window.location.origin}/track/${track._id}`;
+
+      // Проверяем поддержку Web Share API (для мобильных устройств)
+      if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+        const artistName =
+          typeof track.artist === "string" ? track.artist : track.artist?.name;
+
+        await navigator.share({
+          title: `${track.name} - ${artistName}`,
+          text: `Listen to "${track.name}" by ${artistName} on Soundify`,
+          url: url,
+        });
+
+        showSuccess("Track shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      }
+    } catch (error) {
+      // Обработка ошибок
+      if (error === "AbortError") {
+        return;
+      }
+
+      console.error("Share failed:", error);
+
+      try {
+        if (!track) return;
+        const url = `${window.location.origin}/track/${track._id}`;
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      } catch (clipboardError) {
+        showError("Failed to share track. Please copy the URL manually.");
+      }
+    }
+  }, [track, showSuccess, showError]);
 
   const handleMenuItemClick = (index: number) => {
     const menuActions = [
@@ -130,7 +169,7 @@ export default function TrackLayout({
       onMouseEnter={() => !isLoading && setHover(true)}
       onMouseLeave={() => !isLoading && setHover(false)}
       onClick={
-        menuOpen
+        menuOpen || likeHover
           ? () => {}
           : (e) => {
               e.stopPropagation();
