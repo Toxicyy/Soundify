@@ -55,8 +55,12 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const navigate = useNavigate();
   const { showError, showSuccess } = useNotification();
 
-  // Используем кастомный хук для лайков
-  const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
+  // Используем кастомный хук для лайков только если трек существует
+  const {
+    isLiked,
+    isPending: likePending,
+    toggleLike,
+  } = useLike(track?._id || "");
 
   // Функция для воспроизведения трека с созданием очереди
   const playTrackWithContext = () => {
@@ -100,7 +104,9 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await toggleLike();
+    if (track?._id) {
+      await toggleLike();
+    }
   };
 
   const handleAddToQueue = () => {
@@ -109,27 +115,27 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   };
 
   const handleArtistClick = () => {
-    if (!track) return;
+    if (!track?.artist?._id) return;
     navigate(`/artist/${track.artist._id}`);
   };
 
   const handleAlbumClick = () => {
     if (!track) return;
-    if (track.album == "single") {
+    if (track.album === "single") {
       navigate(`/single/${track._id}`);
     } else {
-      navigate(`/album/${track.album._id}`);
+      navigate(`/album/${track.album?._id}`);
     }
   };
 
   const handleInfoClick = () => {
-    if (!track) return;
+    if (!track?._id) return;
     navigate(`/track/${track._id}`);
   };
 
   const handleShareClick = useCallback(async () => {
     try {
-      if (!track) return;
+      if (!track?._id) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
       // Проверяем поддержку Web Share API (для мобильных устройств)
@@ -157,7 +163,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
       console.error("Share failed:", error);
 
       try {
-        if (!track) return;
+        if (!track?._id) return;
         const url = `${window.location.origin}/track/${track._id}`;
         await navigator.clipboard.writeText(url);
         showSuccess("Track link copied to clipboard!");
@@ -185,6 +191,29 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   const handleCloseMenu = () => {
     setMenuOpen(false);
   };
+
+  // Ранняя проверка на отсутствие трека
+  if (!track) {
+    return (
+      <div className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 py-3 rounded-lg">
+        <div className="text-2xl text-white/50 text-center">-</div>
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-[65px] h-[65px] bg-white/10 rounded-lg"></div>
+          <div className="flex flex-col justify-center min-w-0">
+            <h1 className="text-lg font-medium text-white/50">
+              Track not found
+            </h1>
+            <h1 className="text-lg text-white/30">Unknown artist</h1>
+          </div>
+        </div>
+        <div className="text-lg text-white/30 text-center">-</div>
+        <div className="text-lg text-white/30 text-center">-</div>
+        <div className="flex justify-center"></div>
+        <div className="text-lg text-white/30 text-center">-</div>
+        <div className="flex justify-center"></div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -249,7 +278,7 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
   return (
     <div
-      className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer "
+      className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_40px] gap-4 items-center px-4 pt-3 pb-2 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={noClickHover ? () => {} : playTrackWithContext}
@@ -268,8 +297,8 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         <div className="w-[65px] h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden group">
           {/* Изображение обложки */}
           <img
-            src={track?.coverUrl}
-            alt={track?.name}
+            src={track?.coverUrl || "/default-cover.jpg"}
+            alt={track?.name || "Unknown track"}
             className="w-full h-full object-cover rounded-lg"
             onError={(e) => {
               e.currentTarget.style.display = "none";
@@ -320,28 +349,32 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
 
         <div className="flex flex-col justify-center min-w-0">
           <h1 className="text-lg font-medium truncate transition-colors text-white group-hover:text-white/90">
-            {track.name}
+            {track?.name || "Unknown track"}
           </h1>
-          <Link to={`/artist/${track.artist._id}`} className="mt-1">
-            <h1
-              className="text-lg text-white/60 truncate hover:underline cursor-pointer"
-              onMouseEnter={() => setNoClickHover(true)}
-              onMouseLeave={() => setNoClickHover(false)}
-            >
-              {track.artist.name}
-            </h1>
-          </Link>
+          {track?.artist?._id && (
+            <Link to={`/artist/${track.artist._id}`} className="mt-1">
+              <h1
+                className="text-lg text-white/60 truncate hover:underline cursor-pointer"
+                onMouseEnter={() => setNoClickHover(true)}
+                onMouseLeave={() => setNoClickHover(false)}
+              >
+                {track?.artist?.name || "Unknown artist"}
+              </h1>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Альбом */}
       <div className="text-lg text-white/60 truncate text-center">
-        {track.album == "single" ? track.name : track.album.name}
+        {track?.album === "single"
+          ? track?.name
+          : track?.album?.name || "Unknown album"}
       </div>
 
       {/* Дата добавления */}
       <div className="text-lg text-white/60 text-center">
-        {formatDate(track.createdAt)}
+        {track?.createdAt ? formatDate(track.createdAt) : "-"}
       </div>
 
       {/* Сердечко - показываем состояние лайка */}

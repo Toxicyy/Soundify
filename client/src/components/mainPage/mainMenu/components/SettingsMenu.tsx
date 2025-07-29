@@ -5,6 +5,7 @@ import {
   UserAddOutlined,
   LogoutOutlined,
   BarChartOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { userApiSlice, useGetUserQuery } from "../../../../state/UserApi.slice";
 import { useDispatch } from "react-redux";
@@ -134,6 +135,17 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       className:
         "hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20",
       accessFor: "artist",
+    },
+    {
+      icon: <LockOutlined style={{ color: "#A855F7" }} />,
+      label: "Admin Panel",
+      onClick: () => {
+        navigate("/admin");
+        onClose();
+      },
+      className:
+        "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20 mt-2 pt-4",
+      accessFor: "admin",
     },
     {
       icon: <LogoutOutlined style={{ color: "#EF4444" }} />,

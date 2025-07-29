@@ -29,7 +29,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             Queue
           </h1>
           {active === "Queue" && (
-            <div className="w-15 bg-black h-1 mt-[-5px]"></div>
+            <div className="w-15 bg-white/60 h-1 mt-[-5px]"></div>
           )}
         </div>
         <div className="flex flex-col items-center gap-2">
@@ -43,7 +43,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             Friend Activity
           </h1>
           {active === "Friend Activity" && (
-            <div className="w-35 bg-black h-1 mt-[-5px]"></div>
+            <div className="w-35 bg-white/60 h-1 mt-[-5px]"></div>
           )}
         </div>
       </div>

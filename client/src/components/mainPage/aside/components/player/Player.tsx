@@ -59,7 +59,7 @@ export const Player = () => {
   // Skip limit states
   const [skipCount, setSkipCount] = useState(0);
   const [skipBlocked, setSkipBlocked] = useState(false);
-  const [blockMessage, setBlockMessage] = useState("");
+  const [_blockMessage, setBlockMessage] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Audio states
@@ -156,8 +156,8 @@ export const Player = () => {
   const currentStr = useFormatTime(currentTime);
   const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
 
-  const canSeek = user?.status === "PREMIUM";
-  const canGoBack = user?.status === "PREMIUM";
+  const canSeek = user?.status === "PREMIUM" || user?.status === "ADMIN";
+  const canGoBack = user?.status === "PREMIUM" || user?.status === "ADMIN";
   const isPremium = user?.status === "PREMIUM" || user?.status === "ADMIN";
 
   // Skip utility functions

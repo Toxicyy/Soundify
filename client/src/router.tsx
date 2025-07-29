@@ -20,6 +20,10 @@ import BecomeAnArtist from "./Pages/BecomeAnArtist";
 import ArtistStudio from "./Pages/ArtistStudio";
 import CreateAlbumPage from "./Pages/CreateAlbumPage";
 import TrackPage from "./Pages/TrackPage";
+import AdminPlatformPlaylists from "./Pages/Admin/AdminPlatfromPlaylists";
+import { AdminAnalytics, AdminContent, AdminModeration, AdminReports, AdminUsers } from "./Pages/Admin/AdminComingSoon";
+import AdminGuard from "./Pages/Admin/AdminGuard";
+import AdminPanel from "./Pages/Admin/AdminPanel";
 
 export const router = createBrowserRouter([
   {
@@ -135,6 +139,63 @@ export const router = createBrowserRouter([
             ],
           },
         ],
+      },
+      // Admin Routes - Protected by AdminGuard
+      {
+        path: "/admin",
+        element: (
+          <AdminGuard>
+            <AdminPanel />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/playlists",
+        element: (
+          <AdminGuard>
+            <AdminPlatformPlaylists />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/analytics",
+        element: (
+          <AdminGuard>
+            <AdminAnalytics />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/users",
+        element: (
+          <AdminGuard>
+            <AdminUsers />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/content",
+        element: (
+          <AdminGuard>
+            <AdminContent />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/reports",
+        element: (
+          <AdminGuard>
+            <AdminReports />
+          </AdminGuard>
+        ),
+      },
+      {
+        path: "/admin/moderation",
+        element: (
+          <AdminGuard>
+            <AdminModeration />
+          </AdminGuard>
+        ),
       },
       {
         path: "*",

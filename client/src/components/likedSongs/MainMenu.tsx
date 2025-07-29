@@ -80,7 +80,7 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
       (track) =>
         track.name.toLowerCase().includes(query) ||
         track.artist.name.toLowerCase().includes(query) ||
-        (track.album && track.album.toLowerCase().includes(query))
+        (track.album !== "single" && track.album.name.toLowerCase().includes(query))
     );
   }, [tracks, searchQuery]);
 

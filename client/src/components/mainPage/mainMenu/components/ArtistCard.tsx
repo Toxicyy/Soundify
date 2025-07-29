@@ -42,7 +42,7 @@ export default function ArtistCard({
           </div>
         ) : (
           <Link to={`/artist/${artist?.artist._id}`}>
-            <h1 className="text-black text-lg font-bold tracking-wider hover:underline cursor-pointer">
+            <h1 className="text-white/80 text-lg font-bold tracking-wider hover:underline cursor-pointer">
               {artist?.artist.name}
             </h1>
           </Link>

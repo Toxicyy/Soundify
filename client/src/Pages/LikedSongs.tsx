@@ -17,7 +17,7 @@ export default function LikedSongs() {
   return (
     <div className="h-screen w-full mainMenu pl-[22vw] pr-[2vw] flex flex-col gap-5">
       <Header tracks={likedTracks} />
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 mb-5">
         <MainMenu tracks={likedTracks} isLoading={isLoading} />
       </div>
     </div>

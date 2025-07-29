@@ -1,4 +1,4 @@
-import { useCallback, type FC, memo, useEffect } from "react";
+import { useCallback, type FC, memo } from "react";
 import type { Playlist } from "../../types/Playlist";
 import type { Track } from "../../types/TrackData";
 import DraggableTracksList from "./components/DraggableTracksList";

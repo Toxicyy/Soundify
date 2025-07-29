@@ -112,7 +112,7 @@ export default function MainMenu() {
           >
             <h1 className="text-2xl font-bold text-white tracking-wider flex items-center gap-3">
               Happy listening,{" "}
-              <div className="glass rounded-full px-4 py-2">
+              <div className="bg-white/20  rounded-full px-4 py-2">
                 <span className="username">{user.username}</span>
               </div>
             </h1>
