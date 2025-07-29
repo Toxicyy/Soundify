@@ -90,7 +90,6 @@ const parseFormDataJSON = (req, res, next) => {
     }
   }
 
-  // 👇 ДОБАВЬ ЭТО ДЛЯ TAGS
   if (req.body.tags && typeof req.body.tags === "string") {
     try {
       req.body.tags = JSON.parse(req.body.tags);
@@ -101,11 +100,24 @@ const parseFormDataJSON = (req, res, next) => {
     }
   }
 
+  if (req.body.tracks && typeof req.body.tracks === "string") {
+    try {
+      req.body.tracks = JSON.parse(req.body.tracks);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Неверный формат данных для треков"));
+    }
+  }
+
+  if (req.body.publish && typeof req.body.publish === "string") {
+    req.body.publish = req.body.publish === "true";
+  }
+
   next();
 };
 
 export const validateArtistCreation = [
-  // Добавляем парсинг JSON в начало цепочки middleware
   parseFormDataJSON,
 
   // Валидация имени

@@ -18,7 +18,7 @@ class PlaylistService {
    * @returns {Object} Created playlist document with signed URLs
    */
   async createPlaylist(playlistData, coverFile) {
-    const { name, owner, description, tracks, tags, category, privacy } =
+    const { name, owner, description, tracks, tags, category, privacy, isDraft } =
       playlistData;
 
     if (!name || !owner) {
@@ -57,6 +57,7 @@ class PlaylistService {
         tags: parsedTags || [],
         category: category || "user",
         privacy: privacy || "public",
+        isDraft: isDraft || false,
       });
 
       const savedPlaylist = await newPlaylist.save();
@@ -1031,6 +1032,301 @@ class PlaylistService {
           })();
 
       return fallbackPlaylists;
+    }
+  }
+
+  /**
+   * Get paginated list of playlists with admin-specific options
+   * Enhanced version that supports draft filtering and admin features
+   */
+  async getAllPlaylistsAdmin({
+    page = 1,
+    limit = 20,
+    search,
+    category,
+    privacy = "public",
+    includeDrafts = false,
+    draftsOnly = false,
+  }) {
+    try {
+      const skip = (page - 1) * limit;
+      const filter = { privacy };
+
+      // Фильтр по категории
+      if (category) filter.category = category;
+
+      // Логика для черновиков
+      if (draftsOnly) {
+        filter.isDraft = true;
+      } else if (!includeDrafts) {
+        filter.isDraft = { $ne: true }; // Исключаем черновики для обычных пользователей
+      }
+      // Если includeDrafts = true, то показываем все (и черновики, и опубликованные)
+
+      // Поиск
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { tags: { $in: [new RegExp(search, "i")] } },
+        ];
+      }
+
+      const [playlists, total] = await Promise.all([
+        Playlist.find(filter)
+          .populate("owner", "name avatar username")
+          .sort({
+            // Черновики сначала, потом по дате создания
+            isDraft: -1,
+            createdAt: -1,
+          })
+          .skip(skip)
+          .limit(limit),
+        Playlist.countDocuments(filter),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+      const playlistsWithSignedUrls = await this.addSignedUrlsToPlaylistsSimple(
+        playlists
+      );
+
+      return {
+        playlists: playlistsWithSignedUrls,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalPlaylists: total,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Failed to retrieve playlists: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update the original getAllPlaylists method to use the admin version
+   */
+  async getAllPlaylists(params) {
+    return this.getAllPlaylistsAdmin(params);
+  }
+
+  /**
+   * Validate admin playlist permissions
+   * Checks if user can manage platform playlists
+   */
+  async validateAdminPlaylistAccess(userId, userStatus) {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    if (userStatus !== "ADMIN") {
+      throw new Error("Admin access required for platform playlist management");
+    }
+
+    return true;
+  }
+
+  /**
+   * Create platform playlist with admin-specific logic
+   * Handles draft creation and admin permissions
+   */
+  async createPlatformPlaylist(playlistData, coverFile, adminUserId) {
+    try {
+      // Проверяем админские права
+      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
+
+      // Принудительно устанавливаем параметры для платформенного плейлиста
+      const platformPlaylistData = {
+        ...playlistData,
+        owner: adminUserId,
+        category: "featured",
+        privacy: "public",
+        isDraft: true, // По умолчанию создаем как черновик
+      };
+
+      return await this.createPlaylist(platformPlaylistData, coverFile);
+    } catch (error) {
+      throw new Error(`Platform playlist creation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update platform playlist with admin validation
+   */
+  async updatePlatformPlaylist(playlistId, updateData, coverFile, adminUserId) {
+    try {
+      // Проверяем админские права
+      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
+
+      // Получаем текущий плейлист
+      const existingPlaylist = await Playlist.findById(playlistId);
+      if (!existingPlaylist) {
+        throw new Error("Playlist not found");
+      }
+
+      // Проверяем что это платформенный плейлист
+      if (existingPlaylist.category !== "featured") {
+        throw new Error(
+          "Only platform playlists can be managed through admin interface"
+        );
+      }
+
+      // Принудительно сохраняем важные параметры
+      const platformUpdateData = {
+        ...updateData,
+        category: "featured", // Никогда не меняем категорию
+        privacy: "public", // Платформенные плейлисты всегда публичные
+      };
+
+      return await this.updatePlaylist(
+        playlistId,
+        platformUpdateData,
+        coverFile
+      );
+    } catch (error) {
+      throw new Error(`Platform playlist update failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete platform playlist with admin validation
+   */
+  async deletePlatformPlaylist(playlistId, adminUserId) {
+    try {
+      // Проверяем админские права
+      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
+
+      // Получаем плейлист для проверки
+      const existingPlaylist = await Playlist.findById(playlistId);
+      if (!existingPlaylist) {
+        throw new Error("Playlist not found");
+      }
+
+      // Проверяем что это платформенный плейлист
+      if (existingPlaylist.category !== "featured") {
+        throw new Error(
+          "Only platform playlists can be deleted through admin interface"
+        );
+      }
+
+      return await this.deletePlaylist(playlistId);
+    } catch (error) {
+      throw new Error(`Platform playlist deletion failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Publish platform playlist (convert from draft)
+   */
+  async publishPlatformPlaylist(playlistId, adminUserId) {
+    try {
+      // Проверяем админские права
+      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
+
+      const existingPlaylist = await Playlist.findById(playlistId);
+      if (!existingPlaylist) {
+        throw new Error("Playlist not found");
+      }
+
+      if (existingPlaylist.category !== "featured") {
+        throw new Error("Only platform playlists can be published");
+      }
+
+      if (!existingPlaylist.isDraft) {
+        throw new Error("Playlist is already published");
+      }
+
+      // Валидация перед публикацией
+      if (!existingPlaylist.name || existingPlaylist.name.trim().length === 0) {
+        throw new Error("Playlist name is required for publishing");
+      }
+
+      if (!existingPlaylist.tracks || existingPlaylist.tracks.length === 0) {
+        throw new Error(
+          "Playlist must have at least one track to be published"
+        );
+      }
+
+      // Публикуем плейлист
+      return await this.updatePlaylist(playlistId, {
+        isDraft: false,
+        privacy: "public",
+      });
+    } catch (error) {
+      throw new Error(`Platform playlist publishing failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Clean up old draft playlists
+   * Utility method for maintenance
+   */
+  async cleanupOldPlatformDrafts(daysOld = 30) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+      const result = await Playlist.deleteMany({
+        category: "featured",
+        isDraft: true,
+        lastActivity: { $lt: cutoffDate },
+        tracks: { $size: 0 }, // Только пустые черновики
+      });
+
+      return {
+        deletedCount: result.deletedCount,
+        cutoffDate,
+      };
+    } catch (error) {
+      throw new Error(`Failed to cleanup old drafts: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get platform playlist statistics for admin dashboard
+   */
+  async getPlatformPlaylistStats() {
+    try {
+      const [
+        totalPlatformPlaylists,
+        publishedPlaylists,
+        draftPlaylists,
+        totalTracks,
+        totalLikes,
+      ] = await Promise.all([
+        Playlist.countDocuments({ category: "featured" }),
+        Playlist.countDocuments({
+          category: "featured",
+          isDraft: { $ne: true },
+        }),
+        Playlist.countDocuments({ category: "featured", isDraft: true }),
+        Playlist.aggregate([
+          { $match: { category: "featured", isDraft: { $ne: true } } },
+          { $group: { _id: null, totalTracks: { $sum: "$trackCount" } } },
+        ]),
+        Playlist.aggregate([
+          { $match: { category: "featured", isDraft: { $ne: true } } },
+          { $group: { _id: null, totalLikes: { $sum: "$likeCount" } } },
+        ]),
+      ]);
+
+      return {
+        totalPlatformPlaylists,
+        publishedPlaylists,
+        draftPlaylists,
+        totalTracks: totalTracks[0]?.totalTracks || 0,
+        totalLikes: totalLikes[0]?.totalLikes || 0,
+        publishRate:
+          totalPlatformPlaylists > 0
+            ? Math.round((publishedPlaylists / totalPlatformPlaylists) * 100)
+            : 0,
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to get platform playlist stats: ${error.message}`
+      );
     }
   }
 }

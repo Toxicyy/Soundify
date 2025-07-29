@@ -470,4 +470,83 @@ export const api = {
       });
     },
   },
+
+  admin: {
+    playlist: {
+      // Получить все платформенные плейлисты
+      getPlatform: async (
+        options: {
+          page?: number;
+          limit?: number;
+          search?: string;
+        } = {}
+      ) => {
+        const query = buildQueryString(options);
+        return fetch(`${BASEURL}/api/playlists/admin/platform${query}`, {
+          headers: getAuthHeaders(),
+        });
+      },
+
+      // Получить черновики платформенных плейлистов
+      getDrafts: async (
+        options: {
+          page?: number;
+          limit?: number;
+        } = {}
+      ) => {
+        const query = buildQueryString(options);
+        return fetch(`${BASEURL}/api/playlists/admin/platform/drafts${query}`, {
+          headers: getAuthHeaders(),
+        });
+      },
+
+      // Создать платформенный плейлист
+      create: async (playlistData: FormData) => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: playlistData,
+        });
+      },
+
+      // Обновить платформенный плейлист
+      update: async (playlistId: string, playlistData: FormData) => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: playlistData,
+        });
+      },
+
+      // Опубликовать платформенный плейлист
+      publish: async (playlistId: string) => {
+        return fetch(
+          `${BASEURL}/api/playlists/admin/platform/${playlistId}/publish`,
+          {
+            method: "POST",
+            headers: getAuthHeaders(),
+          }
+        );
+      },
+
+      // Удалить платформенный плейлист
+      delete: async (playlistId: string) => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+      },
+
+      // Получить статистику платформенных плейлистов
+      getStats: async () => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform/stats`, {
+          headers: getAuthHeaders(),
+        });
+      },
+    },
+  },
 };

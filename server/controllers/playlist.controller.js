@@ -477,3 +477,251 @@ export const publishPlaylist = catchAsync(async (req, res) => {
 
   res.json(ApiResponse.success("Playlist published successfully", playlist));
 });
+/**
+ * Get all platform playlists for admin panel
+ * Returns featured playlists with enhanced admin data
+ */
+export const getPlatformPlaylists = catchAsync(async (req, res) => {
+  const { page, limit, search } = req.query;
+
+  // Получаем только featured плейлисты для админки
+  const result = await PlaylistService.getAllPlaylists({
+    page: parseInt(page) || 1,
+    limit: parseInt(limit) || 20,
+    search,
+    category: "featured", // Только платформенные плейлисты
+    privacy: "public",
+    includeDrafts: true, // Включаем черновики для админки
+  });
+
+  res.json(
+    ApiResponse.paginated(
+      "Platform playlists retrieved successfully",
+      result.playlists,
+      result.pagination
+    )
+  );
+});
+
+/**
+ * Create platform playlist (draft mode)
+ * Creates a draft playlist that won't be visible to regular users
+ */
+export const createPlatformPlaylist = catchAsync(async (req, res) => {
+  // Валидация обязательных полей
+  if (!req.body.name) {
+    return res.status(400).json(ApiResponse.error("Playlist name is required"));
+  }
+
+  // Данные для платформенного плейлиста
+  const playlistData = {
+    name: req.body.name.trim(),
+    owner: req.user.id,
+    description: req.body.description || "",
+    tracks: req.body.tracks || [],
+    tags: req.body.tags || [],
+    category: "featured", // Принудительно featured для платформенных
+    privacy: "public",
+    isDraft: true, // Создаем как черновик
+  };
+
+  if (req.body.publish) {
+    playlistData.isDraft = false;
+  }
+
+  const playlist = await PlaylistService.createPlaylist(
+    playlistData,
+    req.file // Cover file от multer
+  );
+
+  res.status(201).json(
+    ApiResponse.success("Platform playlist draft created successfully", {
+      ...playlist,
+      isAdminPlaylist: true,
+    })
+  );
+});
+
+/**
+ * Update platform playlist
+ * Can publish draft or update existing playlist
+ */
+export const updatePlatformPlaylist = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json(ApiResponse.error("Playlist ID is required"));
+  }
+
+  // Проверяем что плейлист существует и это featured
+  const existingPlaylist = await PlaylistService.getPlaylistById(
+    id,
+    req.user.id
+  );
+
+  if (existingPlaylist.category !== "featured") {
+    return res.status(400).json(
+      ApiResponse.error("Only platform playlists can be managed here", {
+        playlistCategory: existingPlaylist.category,
+        requiredCategory: "featured",
+      })
+    );
+  }
+
+  // Подготавливаем данные для обновления
+  const updateData = {
+    name: req.body.name,
+    description: req.body.description,
+    tags: req.body.tags || undefined,
+    tracks: req.body.tracks || undefined,
+    category: "featured", // Принудительно сохраняем как featured
+    privacy: "public",
+  };
+
+  if (req.body.publish) {
+    updateData.isDraft = false;
+  } else {
+    updateData.isDraft = true;
+  }
+
+  // Убираем undefined поля
+  Object.keys(updateData).forEach(
+    (key) => updateData[key] === undefined && delete updateData[key]
+  );
+
+  const playlist = await PlaylistService.updatePlaylist(
+    id,
+    updateData,
+    req.file
+  );
+
+  const action = updateData.isDraft === false ? "published" : "updated";
+
+  res.json(
+    ApiResponse.success(`Platform playlist ${action} successfully`, {
+      ...playlist,
+      isAdminPlaylist: true,
+    })
+  );
+});
+
+/**
+ * Delete platform playlist
+ * Removes playlist completely from database
+ */
+export const deletePlatformPlaylist = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json(ApiResponse.error("Playlist ID is required"));
+  }
+
+  // Проверяем что плейлист существует и это featured
+  const existingPlaylist = await PlaylistService.getPlaylistById(
+    id,
+    req.user.id
+  );
+
+  if (existingPlaylist.category !== "featured") {
+    return res.status(400).json(
+      ApiResponse.error("Only platform playlists can be deleted here", {
+        playlistCategory: existingPlaylist.category,
+        requiredCategory: "featured",
+      })
+    );
+  }
+
+  await PlaylistService.deletePlaylist(id);
+
+  res.json(
+    ApiResponse.success("Platform playlist deleted successfully", {
+      deletedPlaylistId: id,
+      deletedPlaylistName: existingPlaylist.name,
+    })
+  );
+});
+
+/**
+ * Publish platform playlist
+ * Converts draft to published playlist
+ */
+export const publishPlatformPlaylist = catchAsync(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json(ApiResponse.error("Playlist ID is required"));
+  }
+
+  // Проверяем что это черновик платформенного плейлиста
+  const existingPlaylist = await PlaylistService.getPlaylistById(
+    id,
+    req.user.id
+  );
+
+  if (existingPlaylist.category !== "featured") {
+    return res
+      .status(400)
+      .json(ApiResponse.error("Only platform playlists can be published"));
+  }
+
+  if (!existingPlaylist.isDraft) {
+    return res
+      .status(400)
+      .json(ApiResponse.error("Playlist is already published"));
+  }
+
+  // Проверяем что плейлист готов к публикации
+  if (!existingPlaylist.name || existingPlaylist.name.trim().length === 0) {
+    return res
+      .status(400)
+      .json(ApiResponse.error("Playlist name is required for publishing"));
+  }
+
+  if (!existingPlaylist.tracks || existingPlaylist.tracks.length === 0) {
+    return res
+      .status(400)
+      .json(
+        ApiResponse.error(
+          "Playlist must have at least one track to be published"
+        )
+      );
+  }
+
+  // Публикуем плейлист
+  const playlist = await PlaylistService.updatePlaylist(id, {
+    isDraft: false,
+    privacy: "public",
+  });
+
+  res.json(
+    ApiResponse.success("Platform playlist published successfully", {
+      ...playlist,
+      isAdminPlaylist: true,
+      wasPublished: true,
+    })
+  );
+});
+
+/**
+ * Get platform playlist drafts
+ * Returns only draft playlists for admin review
+ */
+export const getPlatformDrafts = catchAsync(async (req, res) => {
+  const { page, limit } = req.query;
+
+  const result = await PlaylistService.getAllPlaylists({
+    page: parseInt(page) || 1,
+    limit: parseInt(limit) || 20,
+    category: "featured",
+    privacy: "public",
+    draftsOnly: true, // Только черновики
+  });
+
+  res.json(
+    ApiResponse.paginated(
+      "Platform playlist drafts retrieved successfully",
+      result.playlists,
+      result.pagination
+    )
+  );
+});
