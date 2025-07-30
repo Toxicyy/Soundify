@@ -99,7 +99,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       icon: <CrownOutlined style={{ color: "#FFD700" }} />,
       label: "Upgrade to Premium",
       onClick: () => {
-        console.log("Upgrade to Premium clicked");
+        navigate("/upgrade-to-premium");
         onClose();
       },
       className:

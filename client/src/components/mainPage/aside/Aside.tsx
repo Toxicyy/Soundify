@@ -9,8 +9,8 @@ export default function Aside() {
 
   const navigationItems = [
     { text: "Home", animationDuration: 0.5, path: "/" },
-    { text: "Playlists", animationDuration: 0.6, path: "/radio" },
-    { text: "Artists", animationDuration: 0.7, path: "/library" },
+    { text: "Playlists", animationDuration: 0.6, path: "/playlists" },
+    { text: "Artists", animationDuration: 0.7, path: "/artists" },
     { text: "Liked Songs", animationDuration: 0.8, path: "/liked" },
     { text: "Recently", animationDuration: 0.9, path: "/recently" },
     {

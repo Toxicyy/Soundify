@@ -13,6 +13,11 @@ import {
 import { authenticate, optionalAuth } from "../middleware/auth.middleware.js";
 import { validateTrackCreation } from "../middleware/validation.middleware.js";
 import { uploadTrackFiles } from "../middleware/upload.middleware.js";
+import {
+  extractStreamListenTime,
+  recordListenEvent,
+  trackListenStart,
+} from "../middleware/listenTracking.middleware.js";
 
 /**
  * Track routes configuration
@@ -23,30 +28,45 @@ const router = express.Router();
 
 // Streaming routes - CRITICAL: Order matters for proper route matching
 // These must be defined before generic /:id routes to avoid conflicts
-router.get("/:id/segment/:segmentName", streamTrack);  // HLS segment streaming (highest priority)
-router.get("/:id/playlist.m3u8", streamTrack);         // HLS playlist endpoint
-router.get("/:id/stream", streamTrack);                // General streaming endpoint
+router.get(
+  "/:id/segment/:segmentName",
+  trackListenStart,
+  extractStreamListenTime,
+  streamTrack
+); // HLS segment streaming (highest priority)
+router.get(
+  "/:id/playlist.m3u8",
+  trackListenStart,
+  extractStreamListenTime,
+  streamTrack
+); // HLS playlist endpoint
+router.get(
+  "/:id/stream",
+  trackListenStart,
+  extractStreamListenTime,
+  streamTrack
+); // General streaming endpoint
 
 // Public routes - no authentication required
-router.get("/", optionalAuth, getAllTracks);           // Get all tracks with optional user context
-router.get("/search", searchTracks);                   // Search tracks by query
-router.get("/:id", getTrackById);                      // Get track metadata by ID
+router.get("/", optionalAuth, getAllTracks); // Get all tracks with optional user context
+router.get("/search", searchTracks); // Search tracks by query
+router.get("/:id", getTrackById); // Get track metadata by ID
 
-router.get("/:id/page", getTrackForPage);              // Get track metadata for track page
+router.get("/:id/page", getTrackForPage); // Get track metadata for track page
 
 // Interaction routes
-router.patch("/:id/listen", incrementListenCount);     // Manual listen count increment
+router.patch("/:id/listen", recordListenEvent, incrementListenCount); // Manual listen count increment
 
 // Protected routes - require authentication
 router.post(
   "/",
-  authenticate,                    // Verify user authentication
-  uploadTrackFiles,               // Handle multipart file upload
-  validateTrackCreation,          // Validate track data
-  createTrack                     // Create track with HLS processing
+  authenticate, // Verify user authentication
+  uploadTrackFiles, // Handle multipart file upload
+  validateTrackCreation, // Validate track data
+  createTrack // Create track with HLS processing
 );
 
-router.put("/:id", authenticate, updateTrack);         // Update track metadata
-router.delete("/:id", authenticate, deleteTrack);      // Delete track
+router.put("/:id", authenticate, updateTrack); // Update track metadata
+router.delete("/:id", authenticate, deleteTrack); // Delete track
 
 export default router;

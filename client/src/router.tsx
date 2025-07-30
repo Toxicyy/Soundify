@@ -24,6 +24,10 @@ import AdminPlatformPlaylists from "./Pages/Admin/AdminPlatfromPlaylists";
 import { AdminAnalytics, AdminContent, AdminModeration, AdminReports, AdminUsers } from "./Pages/Admin/AdminComingSoon";
 import AdminGuard from "./Pages/Admin/AdminGuard";
 import AdminPanel from "./Pages/Admin/AdminPanel";
+import Playlists from "./Pages/Playlists";
+import Artists from "./Pages/Artists";
+import Recently from "./Pages/Recently";
+import Premium from "./Pages/Premium";
 
 export const router = createBrowserRouter([
   {
@@ -39,12 +43,12 @@ export const router = createBrowserRouter([
             element: <MainMenu />,
           },
           {
-            path: "/radio",
-            element: <div>radio</div>,
+            path: "/playlists",
+            element: <Playlists />,
           },
           {
-            path: "/library",
-            element: <div>library</div>,
+            path: "/artists",
+            element: <Artists />,
           },
           {
             path: "/liked",
@@ -52,7 +56,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/recently",
-            element: <div>recently</div>,
+            element: <Recently />,
           },
           {
             path: "/playlist/:id",
@@ -103,6 +107,10 @@ export const router = createBrowserRouter([
             path: "/track/:id",
             element: <TrackPage />,
           },
+          {
+            path: "/upgrade-to-premium",
+            element: <Premium />
+          }
         ],
       },
       {
