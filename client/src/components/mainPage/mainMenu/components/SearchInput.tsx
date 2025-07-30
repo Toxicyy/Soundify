@@ -11,6 +11,7 @@ import {
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
 import type { Track } from "../../../../types/TrackData";
+import { SearchOutlined } from "@ant-design/icons";
 
 const SearchInput = () => {
   const [query, setQuery] = useState("");
@@ -63,7 +64,6 @@ const SearchInput = () => {
 
     switch (item.type) {
       case "track":
-        // TODO: Добавить логику воспроизведения
         togglePlayPause(item);
         break;
       case "artist":
@@ -76,6 +76,11 @@ const SearchInput = () => {
         navigate(`/playlist/${item._id}`);
         break;
     }
+  };
+
+  const handleShowMore = () => {
+    setIsOpen(false);
+    navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
   const renderResults = () => {
@@ -112,10 +117,12 @@ const SearchInput = () => {
       ...searchResults.albums
         .slice(0, 2)
         .map((album) => ({ ...album, type: "album" })),
-    ].slice(0, MAX_ITEMS); // Обрезаем до 5 элементов
+    ].slice(0, MAX_ITEMS);
+
+    const hasMoreResults = searchResults.totalResults > MAX_ITEMS;
 
     return (
-      <div className="max-h-96 overflow-hidden">
+      <div className="max-h-120 overflow-hidden">
         {allResults.map((item) => (
           <SearchResultItem
             key={item._id}
@@ -124,6 +131,25 @@ const SearchInput = () => {
             showPlayButton={item.type === "track"}
           />
         ))}
+
+        {hasMoreResults && query.length >= 2 && (
+          <motion.div
+            className="border-t border-white/10 px-4 py-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <button
+              onClick={handleShowMore}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 text-white/80 hover:text-white"
+            >
+              <SearchOutlined className="text-sm" />
+              <span className="text-sm font-medium">
+                Show all results ({searchResults.totalResults})
+              </span>
+            </button>
+          </motion.div>
+        )}
       </div>
     );
   };
@@ -146,6 +172,11 @@ const SearchInput = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && query.length >= 2) {
+              handleShowMore();
+            }
+          }}
           placeholder="Search Soundify"
           className="bg-transparent outline-none w-full pt-1 text-gray-700 placeholder-gray-600 font-medium"
         />
