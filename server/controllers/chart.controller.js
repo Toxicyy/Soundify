@@ -86,6 +86,8 @@ export const getCountryChart = catchAsync(async (req, res) => {
   );
 });
 
+// Обновить getTrendingTracks в chart.controller.js:
+
 /**
  * Get trending tracks (biggest gainers)
  * GET /api/charts/trending?country=GLOBAL&limit=20
@@ -95,23 +97,55 @@ export const getTrendingTracks = catchAsync(async (req, res) => {
   const parsedLimit = Math.min(parseInt(limit) || 20, 50);
   const upperCountry = country.toUpperCase();
 
-  const trending = await ChartService.getTrendingTracks(
-    upperCountry,
-    parsedLimit
+  console.log(
+    `Trending request: country=${upperCountry}, limit=${parsedLimit}`
   );
 
-  res.json(
-    ApiResponse.success("Trending tracks retrieved successfully", {
-      trending,
-      metadata: {
-        type: "trending",
-        country: upperCountry,
-        limit: parsedLimit,
-        totalTracks: trending.length,
-        generatedAt: new Date(),
-      },
-    })
-  );
+  try {
+    const trending = await ChartService.getTrendingTracks(
+      upperCountry,
+      parsedLimit
+    );
+
+    console.log(`Trending response: found ${trending.length} tracks`);
+
+    // Если нет трендинговых треков, вернем информативный ответ
+    if (trending.length === 0) {
+      return res.json(
+        ApiResponse.success("No trending tracks available yet", {
+          trending: [],
+          metadata: {
+            type: "trending",
+            country: upperCountry,
+            limit: parsedLimit,
+            totalTracks: 0,
+            message: "Charts are being generated. Please check back later.",
+            generatedAt: new Date(),
+          },
+        })
+      );
+    }
+
+    res.json(
+      ApiResponse.success("Trending tracks retrieved successfully", {
+        trending,
+        metadata: {
+          type: "trending",
+          country: upperCountry,
+          limit: parsedLimit,
+          totalTracks: trending.length,
+          generatedAt: new Date(),
+        },
+      })
+    );
+  } catch (error) {
+    console.error("Trending tracks error:", error);
+    res
+      .status(500)
+      .json(
+        ApiResponse.error(`Failed to get trending tracks: ${error.message}`)
+      );
+  }
 });
 
 /**
@@ -548,4 +582,101 @@ export const getTopMovers = catchAsync(async (req, res) => {
       },
     })
   );
+});
+
+// Добавьте в chart.controller.js
+
+import Track from "../models/Track.model.js";
+import { ListenEvent } from "../models/Chart.model.js";
+
+/**
+ * ADMIN: Create test data for charts
+ * POST /api/charts/admin/test-data
+ */
+export const createTestData = catchAsync(async (req, res) => {
+  if (req.user?.status !== "ADMIN") {
+    return res.status(403).json(ApiResponse.error("Admin access required"));
+  }
+
+  try {
+    console.log("Creating test data for charts...");
+
+    // 1. Убедимся что у треков есть chartEligible: true
+    const tracksUpdated = await Track.updateMany(
+      { chartEligible: { $ne: false } },
+      { $set: { chartEligible: true } }
+    );
+
+    // 2. Получим треки
+    const tracks = await Track.find({ chartEligible: true }).limit(10);
+
+    if (tracks.length === 0) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("No tracks found. Add some tracks first."));
+    }
+
+    // 3. Очистим старые тестовые данные
+    await ListenEvent.deleteMany({ userAgent: "Test Browser" });
+
+    // 4. Создадим события прослушивания за последние 5 дней
+    const listenEvents = [];
+    const countries = ["US", "GB", "DE", "FR", "CA", "AU", "GLOBAL"];
+
+    for (let day = 0; day < 5; day++) {
+      const date = new Date();
+      date.setDate(date.getDate() - day);
+
+      tracks.forEach((track, trackIndex) => {
+        const baseListens = Math.max(1, 100 - trackIndex * 10 - day * 5);
+
+        countries.forEach((country) => {
+          const listenCount = Math.floor(
+            baseListens * (0.5 + Math.random() * 0.5)
+          );
+
+          for (let i = 0; i < listenCount; i++) {
+            const eventTime = new Date(date);
+            eventTime.setHours(Math.floor(Math.random() * 24));
+            eventTime.setMinutes(Math.floor(Math.random() * 60));
+
+            listenEvents.push({
+              trackId: track._id,
+              userId: null,
+              sessionId: `test_session_${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+              country: country,
+              timestamp: eventTime,
+              listenDuration: Math.floor(30 + Math.random() * 120),
+              isValid: Math.random() > 0.1, // 90% valid
+              userAgent: "Test Browser",
+              ipAddress: "127.0.0.1",
+            });
+          }
+        });
+      });
+    }
+
+    // 5. Сохраним события
+    if (listenEvents.length > 0) {
+      await ListenEvent.insertMany(listenEvents);
+    }
+
+    const result = {
+      tracksUpdated: tracksUpdated.modifiedCount,
+      listenEventsCreated: listenEvents.length,
+      chartEligibleTracks: tracks.length,
+      message: "Test data created. Now generate charts!",
+    };
+
+    console.log("Test data created:", result);
+
+    res.json(ApiResponse.success("Test data created successfully", result));
+  } catch (error) {
+    console.error("Error creating test data:", error);
+    res
+      .status(500)
+      .json(ApiResponse.error(`Test data creation failed: ${error.message}`));
+  }
 });

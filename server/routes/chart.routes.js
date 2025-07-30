@@ -12,6 +12,7 @@ import {
   triggerCronJob,
   getChartCacheInfo,
   clearChartCache,
+  createTestData,
 } from "../controllers/chart.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 
@@ -125,5 +126,6 @@ router.post("/admin/update", authenticate, userLimit, triggerChartUpdate);
 router.post("/admin/cron/:jobName", authenticate, userLimit, triggerCronJob);
 router.get("/admin/cache", authenticate, userLimit, getChartCacheInfo);
 router.delete("/admin/cache", authenticate, userLimit, clearChartCache);
+router.post("/admin/test-data", authenticate, userLimit, createTestData);
 
 export default router;

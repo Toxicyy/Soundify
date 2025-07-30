@@ -4,6 +4,7 @@ import {
   ListenEvent,
 } from "../models/Chart.model.js";
 import Track from "../models/Track.model.js";
+import { extractFileName, generateSignedUrl } from "../utils/b2SignedUrl.js";
 
 /**
  * Service for chart calculations and management
@@ -365,7 +366,7 @@ class ChartService {
   }
 
   /**
-   * Get cached chart data for API responses
+   * Get cached chart data for API responses with signed URLs
    */
   async getChart(chartType = "global", country = null, limit = 50) {
     try {
@@ -377,27 +378,116 @@ class ChartService {
       })
         .sort({ rank: 1 })
         .limit(limit)
-        .populate("trackId", "name coverUrl duration validListenCount")
+        .populate(
+          "trackId",
+          "name coverUrl duration validListenCount audioUrl isHLS hlsSegments artist"
+        )
         .populate("trackSnapshot.artist", "name avatar")
         .lean();
 
-      return chart.map((entry) => ({
-        rank: entry.rank,
-        track: {
-          _id: entry.trackId._id,
-          name: entry.trackSnapshot.name,
-          artist: entry.trackSnapshot.artist,
-          coverUrl: entry.trackSnapshot.coverUrl,
-          duration: entry.trackSnapshot.duration,
-          validListenCount: entry.trackSnapshot.validListenCount,
-        },
-        chartScore: entry.chartScore,
-        trend: entry.trend,
-        rankChange: entry.rankChange,
-        daysInChart: entry.daysInChart,
-        peakPosition: entry.peakPosition,
-        lastUpdated: entry.generatedAt,
-      }));
+      // Add signed URLs to chart data
+      const chartWithSignedUrls = await Promise.all(
+        chart.map(async (entry) => {
+          // Get full track data from populated trackId
+          const fullTrack = entry.trackId;
+
+          const chartEntry = {
+            rank: entry.rank,
+            track: {
+              _id: fullTrack._id,
+              name: fullTrack.name || entry.trackSnapshot.name,
+              artist: fullTrack.artist || entry.trackSnapshot.artist,
+              coverUrl: fullTrack.coverUrl || entry.trackSnapshot.coverUrl,
+              duration: fullTrack.duration || entry.trackSnapshot.duration,
+              validListenCount:
+                fullTrack.validListenCount ||
+                entry.trackSnapshot.validListenCount,
+              // Добавляем аудио данные для воспроизведения
+              audioUrl: fullTrack.audioUrl,
+              isHLS: fullTrack.isHLS,
+              hlsSegments: fullTrack.hlsSegments,
+              genre: fullTrack.genre,
+              tags: fullTrack.tags,
+              isPublic: fullTrack.isPublic,
+            },
+            chartScore: entry.chartScore,
+            trend: entry.trend,
+            rankChange: entry.rankChange,
+            daysInChart: entry.daysInChart,
+            peakPosition: entry.peakPosition,
+            lastUpdated: entry.generatedAt,
+          };
+
+          // Generate signed URL for track cover
+          if (chartEntry.track.coverUrl) {
+            const coverFileName = extractFileName(chartEntry.track.coverUrl);
+            if (coverFileName) {
+              try {
+                const signedCoverUrl = await generateSignedUrl(
+                  coverFileName,
+                  7200
+                );
+                if (signedCoverUrl) {
+                  chartEntry.track.coverUrl = signedCoverUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for chart track cover ${coverFileName}:`,
+                  urlError.message
+                );
+              }
+            }
+          }
+
+          // Generate signed URL for audio/playlist
+          if (chartEntry.track.audioUrl) {
+            const audioFileName = extractFileName(chartEntry.track.audioUrl);
+            if (audioFileName) {
+              try {
+                const signedAudioUrl = await generateSignedUrl(
+                  audioFileName,
+                  7200
+                );
+                if (signedAudioUrl) {
+                  chartEntry.track.audioUrl = signedAudioUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for chart track audio ${audioFileName}:`,
+                  urlError.message
+                );
+              }
+            }
+          }
+
+          // Generate signed URL for artist avatar
+          if (chartEntry.track.artist && chartEntry.track.artist.avatar) {
+            const artistAvatarFileName = extractFileName(
+              chartEntry.track.artist.avatar
+            );
+            if (artistAvatarFileName) {
+              try {
+                const signedAvatarUrl = await generateSignedUrl(
+                  artistAvatarFileName,
+                  7200
+                );
+                if (signedAvatarUrl) {
+                  chartEntry.track.artist.avatar = signedAvatarUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for chart artist avatar ${artistAvatarFileName}:`,
+                  urlError.message
+                );
+              }
+            }
+          }
+
+          return chartEntry;
+        })
+      );
+
+      return chartWithSignedUrls;
     } catch (error) {
       console.error("Get chart failed:", error);
       throw new Error(`Failed to get chart: ${error.message}`);
@@ -405,7 +495,7 @@ class ChartService {
   }
 
   /**
-   * Get trending tracks (biggest gainers)
+   * Get trending tracks (biggest gainers) with signed URLs
    */
   async getTrendingTracks(country = "GLOBAL", limit = 20) {
     try {
@@ -419,19 +509,72 @@ class ChartService {
         .populate("trackSnapshot.artist", "name avatar")
         .lean();
 
-      return trending.map((entry) => ({
-        rank: entry.rank,
-        track: {
-          _id: entry.trackId,
-          name: entry.trackSnapshot.name,
-          artist: entry.trackSnapshot.artist,
-          coverUrl: entry.trackSnapshot.coverUrl,
-          duration: entry.trackSnapshot.duration,
-        },
-        chartScore: entry.chartScore,
-        trend: entry.trend,
-        rankChange: entry.rankChange,
-      }));
+      // Add signed URLs to trending data
+      const trendingWithSignedUrls = await Promise.all(
+        trending.map(async (entry) => {
+          const trendingEntry = {
+            rank: entry.rank,
+            track: {
+              _id: entry.trackId,
+              name: entry.trackSnapshot.name,
+              artist: entry.trackSnapshot.artist,
+              coverUrl: entry.trackSnapshot.coverUrl,
+              duration: entry.trackSnapshot.duration,
+            },
+            chartScore: entry.chartScore,
+            trend: entry.trend,
+            rankChange: entry.rankChange,
+          };
+
+          // Generate signed URL for track cover
+          if (trendingEntry.track.coverUrl) {
+            const coverFileName = extractFileName(trendingEntry.track.coverUrl);
+            if (coverFileName) {
+              try {
+                const signedCoverUrl = await generateSignedUrl(
+                  coverFileName,
+                  7200
+                );
+                if (signedCoverUrl) {
+                  trendingEntry.track.coverUrl = signedCoverUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for trending track cover ${coverFileName}:`,
+                  urlError.message
+                );
+              }
+            }
+          }
+
+          // Generate signed URL for artist avatar
+          if (trendingEntry.track.artist && trendingEntry.track.artist.avatar) {
+            const artistAvatarFileName = extractFileName(
+              trendingEntry.track.artist.avatar
+            );
+            if (artistAvatarFileName) {
+              try {
+                const signedAvatarUrl = await generateSignedUrl(
+                  artistAvatarFileName,
+                  7200
+                );
+                if (signedAvatarUrl) {
+                  trendingEntry.track.artist.avatar = signedAvatarUrl;
+                }
+              } catch (urlError) {
+                console.warn(
+                  `Failed to generate signed URL for trending artist avatar ${artistAvatarFileName}:`,
+                  urlError.message
+                );
+              }
+            }
+          }
+
+          return trendingEntry;
+        })
+      );
+
+      return trendingWithSignedUrls;
     } catch (error) {
       console.error("Get trending tracks failed:", error);
       throw new Error(`Failed to get trending tracks: ${error.message}`);
@@ -566,6 +709,77 @@ class ChartService {
       console.error("Get chart stats failed:", error);
       throw new Error(`Failed to get chart stats: ${error.message}`);
     }
+  }
+
+  /**
+   * Helper method to add signed URLs to trending tracks
+   */
+  async addSignedUrlsToTrendingTracks(trending) {
+    const trendingWithSignedUrls = await Promise.all(
+      trending.map(async (entry) => {
+        const trendingEntry = {
+          rank: entry.rank,
+          track: {
+            _id: entry.trackId,
+            name: entry.trackSnapshot.name,
+            artist: entry.trackSnapshot.artist,
+            coverUrl: entry.trackSnapshot.coverUrl,
+            duration: entry.trackSnapshot.duration,
+          },
+          chartScore: entry.chartScore,
+          trend: entry.trend,
+          rankChange: entry.rankChange,
+        };
+
+        // Generate signed URL for track cover
+        if (trendingEntry.track.coverUrl) {
+          const coverFileName = extractFileName(trendingEntry.track.coverUrl);
+          if (coverFileName) {
+            try {
+              const signedCoverUrl = await generateSignedUrl(
+                coverFileName,
+                7200
+              );
+              if (signedCoverUrl) {
+                trendingEntry.track.coverUrl = signedCoverUrl;
+              }
+            } catch (urlError) {
+              console.warn(
+                `Failed to generate signed URL for trending track cover ${coverFileName}:`,
+                urlError.message
+              );
+            }
+          }
+        }
+
+        // Generate signed URL for artist avatar
+        if (trendingEntry.track.artist && trendingEntry.track.artist.avatar) {
+          const artistAvatarFileName = extractFileName(
+            trendingEntry.track.artist.avatar
+          );
+          if (artistAvatarFileName) {
+            try {
+              const signedAvatarUrl = await generateSignedUrl(
+                artistAvatarFileName,
+                7200
+              );
+              if (signedAvatarUrl) {
+                trendingEntry.track.artist.avatar = signedAvatarUrl;
+              }
+            } catch (urlError) {
+              console.warn(
+                `Failed to generate signed URL for trending artist avatar ${artistAvatarFileName}:`,
+                urlError.message
+              );
+            }
+          }
+        }
+
+        return trendingEntry;
+      })
+    );
+
+    return trendingWithSignedUrls;
   }
 }
 

@@ -17,7 +17,13 @@ import ArtistStudio from "./Pages/ArtistStudio";
 import CreateAlbumPage from "./Pages/CreateAlbumPage";
 import TrackPage from "./Pages/TrackPage";
 import AdminPlatformPlaylists from "./Pages/Admin/AdminPlatfromPlaylists";
-import { AdminAnalytics, AdminContent, AdminModeration, AdminReports, AdminUsers } from "./Pages/Admin/AdminComingSoon";
+import {
+  AdminAnalytics,
+  AdminContent,
+  AdminModeration,
+  AdminReports,
+  AdminUsers,
+} from "./Pages/Admin/AdminComingSoon";
 import AdminGuard from "./Pages/Admin/AdminGuard";
 import AdminPanel from "./Pages/Admin/AdminPanel";
 import Playlists from "./Pages/Playlists";
@@ -25,6 +31,7 @@ import Artists from "./Pages/Artists";
 import Recently from "./Pages/Recently";
 import Premium from "./Pages/Premium";
 import Search from "./Pages/Search";
+import Charts from "./Pages/Charts";
 
 export const router = createBrowserRouter([
   {
@@ -106,12 +113,16 @@ export const router = createBrowserRouter([
           },
           {
             path: "/upgrade-to-premium",
-            element: <Premium />
+            element: <Premium />,
           },
           {
             path: "/search",
-            element: <Search />
-          }
+            element: <Search />,
+          },
+          {
+            path: "/charts",
+            element: <Charts />,
+          },
         ],
       },
       {
