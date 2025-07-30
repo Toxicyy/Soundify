@@ -481,6 +481,7 @@ class PlaylistService {
       const playlists = await Playlist.find({
         category: "featured",
         privacy: "public",
+        isDraft: false,
       })
         .populate("owner", "name avatar")
         .sort({ likeCount: -1, createdAt: -1 })

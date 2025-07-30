@@ -100,28 +100,28 @@ const SearchInput = () => {
       );
     }
 
+    const MAX_ITEMS = 5;
+
+    const allResults = [
+      ...searchResults.tracks
+        .slice(0, 3)
+        .map((track) => ({ ...track, type: "track" })),
+      ...searchResults.artists
+        .slice(0, 2)
+        .map((artist) => ({ ...artist, type: "artist" })),
+      ...searchResults.albums
+        .slice(0, 2)
+        .map((album) => ({ ...album, type: "album" })),
+    ].slice(0, MAX_ITEMS); // Обрезаем до 5 элементов
+
     return (
       <div className="max-h-96 overflow-hidden">
-        {searchResults.tracks.slice(0, 3).map((track) => (
+        {allResults.map((item) => (
           <SearchResultItem
-            key={track._id}
-            item={track}
-            onClick={() => handleItemClick(track)}
-            showPlayButton={true}
-          />
-        ))}
-        {searchResults.artists.slice(0, 2).map((artist) => (
-          <SearchResultItem
-            key={artist._id}
-            item={artist}
-            onClick={() => handleItemClick(artist)}
-          />
-        ))}
-        {searchResults.albums.slice(0, 2).map((album) => (
-          <SearchResultItem
-            key={album._id}
-            item={album}
-            onClick={() => handleItemClick(album)}
+            key={item._id}
+            item={item}
+            onClick={() => handleItemClick(item)}
+            showPlayButton={item.type === "track"}
           />
         ))}
       </div>
@@ -158,7 +158,7 @@ const SearchInput = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-2 glass rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden"
+            className="absolute top-full left-0 right-0 mt-2 bg-black/50 rounded-2xl shadow-2xl border backdrop-blur-sm border-white/20 z-50 overflow-hidden"
           >
             {renderResults()}
           </motion.div>

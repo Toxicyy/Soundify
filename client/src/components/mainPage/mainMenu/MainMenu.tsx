@@ -3,8 +3,6 @@ import UserIcon from "./components/UserIcon";
 import SettingsMenu from "./components/SettingsMenu"; // Новый импорт
 import userAvatar from "../../../images/User/Anonym.jpg";
 import {
-  LeftOutlined,
-  RightOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import PlaylistModule from "./components/PlaylistModule";
@@ -18,7 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useGetUserQuery } from "../../../state/UserApi.slice";
 import { useEffect, useState } from "react"; // Добавлен useState
-import { useDailyArtistsDataLoader } from "../../../hooks/useDailyArtistDataLoader";
+import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
+import type { Playlist } from "../../../types/Playlist";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
@@ -26,11 +25,11 @@ export default function MainMenu() {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false); // Новое состояние
 
   // Используем новый хук
-  const { dailyTracks, isLoading, loadArtistsData } =
-    useDailyArtistsDataLoader();
+  const { dailyTracks, featuredPlaylist, isLoading, loadDailyContent } =
+    useDailyContentLoader();
 
   useEffect(() => {
-    loadArtistsData();
+    loadDailyContent();
   }, []);
 
   // Функция для переключения меню настроек
@@ -54,30 +53,18 @@ export default function MainMenu() {
             className="w-[70%] flex items-center justify-between"
           >
             <SearchInput />
-            <UserIcon userIcon={user?.avatar ? user.avatar : userAvatar} />
+
+            {user &&<UserIcon userIcon={user?.avatar ? user.avatar : userAvatar} />}
           </motion.div>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: -300 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex gap-4 mb-[10px]"
-        >
-          <div className="w-[30px] h-[30px] rounded-md glass flex justify-center items-center cursor-not-allowed">
-            <LeftOutlined style={{ color: "white" }} />
-          </div>
-          <div className="w-[30px] h-[30px] rounded-md bg-white flex justify-center items-center hover:bg-gray-200 cursor-pointer">
-            <RightOutlined style={{ color: "black" }} />
-          </div>
-        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, x: 2000 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mt-[40px]"
         >
-          <PlaylistModule />
+          <PlaylistModule playlist={featuredPlaylist ? featuredPlaylist : {} as Playlist} />
         </motion.div>
 
         <motion.div

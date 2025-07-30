@@ -11,7 +11,7 @@ export default function MixesModule({ mixImage }: { mixImage: string }) {
   return (
     <div>
       <h1 className="text-3xl font-bold text-white tracking-wider mt-2 mb-[15px]">
-        Your Top Mixes
+        Global chart
       </h1>
       <div
         className={

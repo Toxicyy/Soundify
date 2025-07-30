@@ -21,7 +21,9 @@ const TracksList: FC<TracksListProps> = ({
   tracksError = null,
 }) => {
   const hasData = tracks.length > 0;
-
+  const sortedTracks = [...tracks].sort(
+    (a, b) => b.listenCount - a.listenCount
+  );
   /**
    * Render skeleton loaders for loading state
    */
@@ -127,7 +129,7 @@ const TracksList: FC<TracksListProps> = ({
               ? renderError()
               : !hasData
               ? renderEmptyState()
-              : tracks.map((track, index) => (
+              : sortedTracks.map((track, index) => (
                   <TrackTemplate
                     key={track._id}
                     track={track}

@@ -1,8 +1,12 @@
 import { RightOutlined } from "@ant-design/icons";
 import PlaylistCard from "./PlaylistCard";
-import playlistImage from "../../../../images/Playlist/JapaneseLofi.jpg";
+import type { Playlist } from "../../../../types/Playlist";
+import type { FC } from "react";
 
-export default function PlaylistModule() {
+type PlaylistModuleProps = {
+  playlist: Playlist
+}
+const PlaylistModule:FC<PlaylistModuleProps> = ({playlist}) => {
   return (
     <>
       <div className="flex items-center justify-between mb-[15px]">
@@ -25,9 +29,11 @@ export default function PlaylistModule() {
           />
         </div>
       </div>
-      <div>
-        <PlaylistCard playlistImage={playlistImage} />
+      <div className="hover:scale-102 transition-all duration-300">
+        <PlaylistCard playlist={playlist} />
       </div>
     </>
   );
 }
+
+export default PlaylistModule

@@ -2,6 +2,7 @@ import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
 import type { Track } from "../../../../types/TrackData";
 import type { Artist } from "../../../../types/ArtistData";
+import { useEffect } from "react";
 
 interface ArtistModuleProps {
   dailyTracks: { artist: Artist; tracks: Track[] }[];
@@ -12,6 +13,7 @@ export default function ArtistModule({
   dailyTracks,
   isLoading = false,
 }: ArtistModuleProps) {
+  useEffect(() => { console.log(dailyTracks)}, []);
   return (
     <div>
       <div className="flex items-center mt-3 justify-between mb-[15px]">
