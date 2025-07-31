@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -13,13 +13,11 @@ import {
   RiseOutlined,
   CaretRightOutlined,
   PauseOutlined,
-  CaretUpOutlined,
-  CaretDownOutlined,
-  MinusOutlined,
-  StarOutlined,
-  LoadingOutlined,
 } from "@ant-design/icons";
 
+/**
+ * Represents a track in the charts with additional chart-specific metadata
+ */
 interface ChartTrack {
   rank: number;
   track: {
@@ -31,8 +29,8 @@ interface ChartTrack {
       avatar?: string;
     };
     coverUrl?: string;
-    audioUrl?: string; // Добавили
-    isHLS?: boolean; // Добавили
+    audioUrl?: string;
+    isHLS?: boolean;
     duration: number;
     validListenCount?: number;
   };
@@ -44,18 +42,51 @@ interface ChartTrack {
   lastUpdated: string;
 }
 
-const Charts = () => {
+/**
+ * Chart tab configuration
+ */
+interface ChartTab {
+  id: "global" | "trending";
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+/**
+ * Animation configuration constants
+ */
+const ANIMATION_CONFIG = {
+  pageTransition: { duration: 0.4 },
+  itemStagger: 0.05,
+  buttonHover: { scale: 1.05 },
+  buttonTap: { scale: 0.95 },
+} as const;
+
+/**
+ * Chart configuration constants
+ */
+const CHART_CONFIG = {
+  global: { limit: 50, refreshInterval: 300000 }, // 5 minutes
+  trending: { limit: 30, refreshInterval: 300000 },
+} as const;
+
+/**
+ * Charts component - displays global and trending music charts
+ * Features real-time updates, playback controls, and responsive design
+ */
+const Charts: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Redux state selectors
+  // Redux state
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
   );
 
+  // Local state
   const [activeTab, setActiveTab] = useState<"global" | "trending">("global");
 
-  // Use charts hook for data fetching
+  // Chart data fetching
   const {
     data: chartData,
     metadata,
@@ -64,321 +95,305 @@ const Charts = () => {
     refetch,
     timeSinceUpdate,
   } = useCharts(activeTab, undefined, {
-    limit: activeTab === "global" ? 50 : 30,
+    limit: CHART_CONFIG[activeTab].limit,
     autoRefresh: true,
-    refreshInterval: 300000, // 5 minutes
+    refreshInterval: CHART_CONFIG[activeTab].refreshInterval,
   });
 
-  const tabs = [
+  /**
+   * Tab configuration
+   */
+  const tabs: ChartTab[] = [
     {
-      id: "global" as const,
+      id: "global",
       label: "Global Top 50",
       icon: <GlobalOutlined />,
       description: "Most popular tracks worldwide",
     },
     {
-      id: "trending" as const,
+      id: "trending",
       label: "Trending Now",
       icon: <RiseOutlined />,
       description: "Fastest rising tracks",
     },
   ];
 
-  const createTestData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        "http://localhost:5000/api/charts/admin/test-data",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+  /**
+   * Handles play/pause functionality for chart tracks
+   * Fetches full track data if needed before playing
+   */
+  const togglePlayPause = useCallback(
+    async (track: ChartTrack["track"]) => {
+      try {
+        const isCurrentTrack =
+          currentTrackState.currentTrack?._id === track._id;
+
+        // Toggle play/pause for current track
+        if (isCurrentTrack) {
+          dispatch(setIsPlaying(!currentTrackState.isPlaying));
+          return;
         }
-      );
 
-      const result = await response.json();
-      console.log("Test data creation result:", result);
-
-      if (result.success) {
-        setTimeout(() => triggerChartGeneration(), 1000);
-      }
-    } catch (error) {
-      console.error("Failed to create test data:", error);
-    }
-  };
-
-  const triggerChartGeneration = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        "http://localhost:5000/api/charts/admin/update",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ type: "all" }),
-        }
-      );
-
-      const result = await response.json();
-      console.log("Chart generation result:", result);
-
-      if (result.success) {
-        setTimeout(() => refetch(), 2000);
-      }
-    } catch (error) {
-      console.error("Failed to trigger chart generation:", error);
-    }
-  };
-
-  const togglePlayPause = async (track: ChartTrack["track"]) => {
-    try {
-      // Проверяем, является ли этот трек текущим играющим
-      const isCurrentTrack = currentTrackState.currentTrack?._id === track._id;
-
-      if (isCurrentTrack) {
-        // Если это текущий трек, просто переключаем play/pause
-        dispatch(setIsPlaying(!currentTrackState.isPlaying));
-        return;
-      }
-
-      // Если у трека нет audioUrl, загрузим полные данные
-      if (!track.audioUrl) {
-        console.log("Loading full track data for playback...");
-
-        const response = await fetch(
-          `http://localhost:5000/api/tracks/${track._id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          const fullTrack = result.data || result;
-
-          // Обновляем трек с полными данными
-          dispatch(
-            setCurrentTrack({fullTrack})
+        // Fetch full track data if audioUrl is missing
+        if (!track.audioUrl) {
+          const response = await fetch(
+            `http://localhost:5000/api/tracks/${track._id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
           );
+
+          if (response.ok) {
+            const result = await response.json();
+            const fullTrack = result.data || result;
+            dispatch(setCurrentTrack(fullTrack as Track));
+          } else {
+            dispatch(setCurrentTrack(track as Track));
+          }
         } else {
-          console.error("Failed to load track data for playback");
-          dispatch(setCurrentTrack(track as Track)); // Попробуем с неполными данными
+          dispatch(setCurrentTrack(track as Track));
         }
-      } else {
+
+        // Start playback with slight delay for state synchronization
+        setTimeout(() => {
+          dispatch(setIsPlaying(true));
+        }, 50);
+      } catch (error) {
+        console.error("Error toggling playback:", error);
+        // Fallback - attempt playback with available data
         dispatch(setCurrentTrack(track as Track));
+        setTimeout(() => {
+          dispatch(setIsPlaying(true));
+        }, 50);
       }
+    },
+    [currentTrackState.currentTrack?._id, currentTrackState.isPlaying, dispatch]
+  );
 
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
-    } catch (error) {
-      console.error("Error loading track for playbook:", error);
-      // Fallback - попробуем воспроизвести с неполными данными
-      dispatch(setCurrentTrack(track as Track));
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
-    }
-  };
-
-  const getTrendIcon = (trend: ChartTrack["trend"], _rankChange: number) => {
-    switch (trend) {
-      case "up":
-        return <CaretUpOutlined className="text-green-400" />;
-      case "down":
-        return <CaretDownOutlined className="text-red-400" />;
-      case "new":
-        return <StarOutlined className="text-yellow-400" />;
-      default:
-        return <MinusOutlined className="text-gray-400" />;
-    }
-  };
-
-  const formatDuration = (seconds: number) => {
+  /**
+   * Formats duration from seconds to MM:SS format
+   */
+  const formatDuration = useCallback((seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  }, []);
 
-  const formatNumber = (num: number) => {
+  /**
+   * Formats large numbers with K/M suffixes
+   */
+  const formatNumber = useCallback((num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
-  };
+  }, []);
 
-  const renderChartItem = (item: ChartTrack, index: number) => {
-    // Проверяем, является ли этот трек текущим играющим
-    const isCurrentTrack =
-      currentTrackState.currentTrack?._id === item.track._id;
-    const isPlaying = isCurrentTrack && currentTrackState.isPlaying;
+  /**
+   * Loading skeleton for chart items
+   */
+  const ChartItemSkeleton: React.FC<{ index: number }> = ({ index }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.02 }}
+      className="p-4 rounded-xl"
+    >
+      <div className="flex items-center gap-4">
+        {/* Rank skeleton */}
+        <div className="w-12 h-6 bg-white/10 rounded animate-pulse" />
 
-    return (
-      <motion.div
-        key={item.track._id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: index * 0.05 }}
-        className="p-4 hover:bg-white/5 rounded-xl transition-all duration-200 group"
-      >
-        <div className="flex items-center gap-4">
-          {/* Rank */}
-          <div className="flex items-center justify-center w-12 text-center">
-            <span
-              className={`text-lg font-bold ${
-                item.rank <= 3
-                  ? "text-yellow-400"
-                  : item.rank <= 10
-                  ? "text-white"
-                  : "text-white/70"
-              }`}
-            >
-              {item.rank}
-            </span>
+        {/* Album art skeleton */}
+        <div className="w-16 h-16 bg-white/10 rounded-lg animate-pulse" />
+
+        {/* Track info skeleton */}
+        <div className="flex-1 space-y-2">
+          <div className="h-5 bg-white/10 rounded w-3/4 animate-pulse" />
+          <div className="h-4 bg-white/10 rounded w-1/2 animate-pulse" />
+          <div className="flex gap-2">
+            <div className="h-3 bg-white/10 rounded w-16 animate-pulse" />
+            <div className="h-3 bg-white/10 rounded w-20 animate-pulse" />
           </div>
+        </div>
 
-          {/* Trend Indicator */}
-          <div className="flex flex-col items-center w-8">
-            {getTrendIcon(item.trend, item.rankChange)}
-            {item.rankChange !== 0 && (
+        {/* Stats skeleton */}
+        <div className="hidden sm:flex flex-col items-end gap-1">
+          <div className="h-4 bg-white/10 rounded w-12 animate-pulse" />
+          <div className="h-3 bg-white/10 rounded w-16 animate-pulse" />
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  /**
+   * Renders individual chart item with play controls and metadata
+   */
+  const renderChartItem = useCallback(
+    (item: ChartTrack, index: number) => {
+      const isCurrentTrack =
+        currentTrackState.currentTrack?._id === item.track._id;
+      const isPlaying = isCurrentTrack && currentTrackState.isPlaying;
+
+      return (
+        <motion.div
+          key={`${item.track._id}-${item.rank}-${activeTab}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.4,
+            delay: index * ANIMATION_CONFIG.itemStagger,
+          }}
+          className="p-4 hover:bg-white/5 rounded-xl transition-all duration-200 group"
+        >
+          <div className="flex items-center gap-4">
+            {/* Rank Display */}
+            <div className="flex items-center justify-center w-12 text-center">
               <span
-                className={`text-xs ${
-                  item.rankChange > 0 ? "text-green-400" : "text-red-400"
+                className={`text-lg font-bold ${
+                  item.rank <= 3
+                    ? "text-yellow-400"
+                    : item.rank <= 10
+                    ? "text-white"
+                    : "text-white/70"
                 }`}
               >
-                {Math.abs(item.rankChange)}
+                {item.rank}
               </span>
-            )}
-          </div>
+            </div>
 
-          {/* Album Art + Play Button */}
-          <div className="relative flex-shrink-0">
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10">
-              {item.track.coverUrl ? (
-                <img
-                  src={item.track.coverUrl}
-                  alt={item.track.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                  <CaretRightOutlined
-                    style={{ color: "white", fontSize: "24px" }}
+            {/* Album Art with Play Button */}
+            <div className="relative flex-shrink-0">
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10">
+                {item.track.coverUrl ? (
+                  <img
+                    src={item.track.coverUrl}
+                    alt={`${item.track.name} cover`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
                   />
+                ) : (
+                  <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                    <CaretRightOutlined className="text-white text-2xl" />
+                  </div>
+                )}
+              </div>
+
+              {/* Play/Pause Button Overlay */}
+              <motion.button
+                className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => togglePlayPause(item.track)}
+                whileHover={ANIMATION_CONFIG.buttonHover}
+                whileTap={ANIMATION_CONFIG.buttonTap}
+                aria-label={isPlaying ? "Pause track" : "Play track"}
+              >
+                {isPlaying ? (
+                  <PauseOutlined className="text-white text-2xl" />
+                ) : (
+                  <CaretRightOutlined className="text-white text-2xl" />
+                )}
+              </motion.button>
+
+              {/* Currently Playing Indicator */}
+              {isCurrentTrack && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                  {isPlaying ? (
+                    <motion.div
+                      className="w-2 h-2 bg-white rounded-full"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  ) : (
+                    <PauseOutlined className="text-white text-xs" />
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Play Button Overlay */}
-            <motion.button
-              className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => togglePlayPause(item.track)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isPlaying ? (
-                <PauseOutlined style={{ color: "white", fontSize: "24px" }} />
-              ) : (
-                <CaretRightOutlined
-                  style={{ color: "white", fontSize: "24px" }}
-                />
+            {/* Track Information */}
+            <div className="flex-1 min-w-0">
+              <h3
+                className={`font-semibold truncate mb-1 ${
+                  isCurrentTrack ? "text-green-400" : "text-white"
+                }`}
+              >
+                {item.track.name}
+              </h3>
+              <p className="text-white/60 text-sm truncate">
+                {item.track.artist.name}
+              </p>
+              {activeTab === "global" && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-white/40 text-xs">
+                    Peak: #{item.peakPosition}
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className="text-white/40 text-xs">
+                    {item.daysInChart} days in chart
+                  </span>
+                </div>
               )}
-            </motion.button>
+            </div>
 
-            {/* Playing Indicator */}
-            {isCurrentTrack && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                {isPlaying ? (
-                  <motion.div
-                    className="w-2 h-2 bg-white rounded-full"
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />
-                ) : (
-                  <PauseOutlined style={{ color: "white", fontSize: "8px" }} />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Track Info */}
-          <div className="flex-1 min-w-0">
-            <h3
-              className={`font-semibold truncate mb-1 ${
-                isCurrentTrack ? "text-green-400" : "text-white"
-              }`}
-            >
-              {item.track.name}
-            </h3>
-            <p className="text-white/60 text-sm truncate">
-              {item.track.artist.name}
-            </p>
-            {activeTab === "global" && (
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-white/40 text-xs">
-                  Peak: #{item.peakPosition}
-                </span>
-                <span className="text-white/30">•</span>
-                <span className="text-white/40 text-xs">
-                  {item.daysInChart} days in chart
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="hidden sm:flex flex-col items-end text-right">
-            <span className="text-white/60 text-sm">
-              {formatDuration(item.track.duration)}
-            </span>
-            {item.track.validListenCount && (
-              <span className="text-white/40 text-xs">
-                {formatNumber(item.track.validListenCount)} plays
+            {/* Track Statistics */}
+            <div className="hidden sm:flex flex-col items-end text-right">
+              <span className="text-white/60 text-sm">
+                {formatDuration(item.track.duration)}
               </span>
-            )}
-            {activeTab === "trending" && item.rankChange > 0 && (
-              <span className="text-green-400 text-xs font-medium">
-                +{item.rankChange} positions
-              </span>
-            )}
+              {item.track.validListenCount && (
+                <span className="text-white/40 text-xs">
+                  {formatNumber(item.track.validListenCount)} plays
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </motion.div>
-    );
-  };
+        </motion.div>
+      );
+    },
+    [
+      activeTab,
+      currentTrackState,
+      togglePlayPause,
+      formatDuration,
+      formatNumber,
+    ]
+  );
 
-  const renderContent = () => {
+  /**
+   * Renders main content based on loading/error/data states
+   */
+  const renderContent = useCallback(() => {
+    // Loading state with skeletons
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center py-20">
-          <LoadingOutlined className="text-4xl text-white/70 mb-4" spin />
-          <p className="text-white/70 text-lg">Loading charts...</p>
+        <div className="space-y-1">
+          {Array.from({ length: CHART_CONFIG[activeTab].limit }, (_, index) => (
+            <ChartItemSkeleton key={index} index={index} />
+          ))}
         </div>
       );
     }
 
+    // Error state
     if (error) {
       return (
         <div className="flex flex-col items-center justify-center py-20">
           <TrophyOutlined className="text-4xl text-white/30 mb-4" />
           <h3 className="text-white/70 text-xl mb-2">Failed to load charts</h3>
           <p className="text-white/50 text-center max-w-md mb-4">{error}</p>
-          <button
+          <motion.button
             onClick={refetch}
             className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors duration-200"
+            whileHover={ANIMATION_CONFIG.buttonHover}
+            whileTap={ANIMATION_CONFIG.buttonTap}
           >
             Try again
-          </button>
+          </motion.button>
         </div>
       );
     }
 
+    // Empty state
     if (!chartData || chartData.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-20">
@@ -386,43 +401,30 @@ const Charts = () => {
           <h3 className="text-white/70 text-xl mb-2">
             No chart data available
           </h3>
-          <p className="text-white/50 text-center max-w-md mb-6">
-            Charts are updated regularly. Create test data to get started.
+          <p className="text-white/50 text-center max-w-md">
+            Charts are updated regularly. Please check back later.
           </p>
-          <div className="flex gap-3">
-            <button
-              onClick={createTestData}
-              className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors duration-200"
-            >
-              🎵 Create Test Data
-            </button>
-            <button
-              onClick={triggerChartGeneration}
-              className="px-6 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors duration-200"
-            >
-              🔄 Generate Charts
-            </button>
-          </div>
         </div>
       );
     }
 
+    // Data state
     return (
       <div className="space-y-1">
         {chartData.map((item, index) => renderChartItem(item, index))}
       </div>
     );
-  };
+  }, [isLoading, error, chartData, activeTab, refetch, renderChartItem]);
 
   return (
     <motion.main
       className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-6 mb-45 xl:mb-6 py-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={ANIMATION_CONFIG.pageTransition}
     >
-      {/* Header */}
-      <motion.div
+      {/* Page Header */}
+      <motion.header
         className="flex items-center gap-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -431,8 +433,9 @@ const Charts = () => {
         <motion.button
           onClick={() => navigate(-1)}
           className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={ANIMATION_CONFIG.buttonHover}
+          whileTap={ANIMATION_CONFIG.buttonTap}
+          aria-label="Go back"
         >
           <ArrowLeftOutlined className="text-white text-xl" />
         </motion.button>
@@ -460,10 +463,10 @@ const Charts = () => {
             <p className="text-white/70 text-lg">Discover what's trending</p>
           </motion.div>
         </div>
-      </motion.div>
+      </motion.header>
 
-      {/* Tabs */}
-      <motion.div
+      {/* Tab Navigation */}
+      <motion.nav
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
@@ -480,6 +483,7 @@ const Charts = () => {
               }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              aria-pressed={activeTab === tab.id}
             >
               {tab.icon}
               <div className="text-left">
@@ -489,9 +493,9 @@ const Charts = () => {
             </motion.button>
           ))}
         </div>
-      </motion.div>
+      </motion.nav>
 
-      {/* Chart Info */}
+      {/* Chart Metadata */}
       {metadata && !isLoading && (
         <motion.div
           className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-4 mb-4"
@@ -499,37 +503,23 @@ const Charts = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
-          <div className="flex items-center justify-between text-sm flex-wrap gap-3">
+          <div className="flex items-center justify-between text-sm">
             <div className="text-white/70">
               Last updated:{" "}
               {timeSinceUpdate ||
-                (metadata
+                (metadata.lastUpdated
                   ? new Date(metadata.lastUpdated).toLocaleString()
                   : "Never")}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-white/50">
-                {metadata?.totalTracks || 0} tracks
-              </div>
-              <button
-                onClick={createTestData}
-                className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-xs transition-colors duration-200"
-              >
-                🎵 Create Test Data
-              </button>
-              <button
-                onClick={triggerChartGeneration}
-                className="px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-xs transition-colors duration-200"
-              >
-                🔄 Generate Charts
-              </button>
+            <div className="text-white/50">
+              {metadata.totalTracks || 0} tracks
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* Content */}
-      <motion.div
+      {/* Main Content */}
+      <motion.section
         className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -546,7 +536,7 @@ const Charts = () => {
             {renderContent()}
           </motion.div>
         </AnimatePresence>
-      </motion.div>
+      </motion.section>
     </motion.main>
   );
 };

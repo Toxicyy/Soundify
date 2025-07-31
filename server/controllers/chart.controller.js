@@ -3,6 +3,9 @@ import chartCronJobs from "../cron/chart-cron-jobs.js";
 import { ApiResponse } from "../utils/responses.js";
 import { catchAsync } from "../utils/helpers.js";
 import { ChartCache, DailyTrackStats } from "../models/Chart.model.js";
+import Track from "../models/Track.model.js";
+import { ListenEvent } from "../models/Chart.model.js";
+
 
 /**
  * Chart controller handling HTTP requests for chart operations
@@ -86,7 +89,6 @@ export const getCountryChart = catchAsync(async (req, res) => {
   );
 });
 
-// Обновить getTrendingTracks в chart.controller.js:
 
 /**
  * Get trending tracks (biggest gainers)
@@ -94,7 +96,7 @@ export const getCountryChart = catchAsync(async (req, res) => {
  */
 export const getTrendingTracks = catchAsync(async (req, res) => {
   const { country = "GLOBAL", limit = 20 } = req.query;
-  const parsedLimit = Math.min(parseInt(limit) || 20, 50);
+  const parsedLimit = Math.min(parseInt(limit) || 20);
   const upperCountry = country.toUpperCase();
 
   console.log(
@@ -584,11 +586,6 @@ export const getTopMovers = catchAsync(async (req, res) => {
   );
 });
 
-// Добавьте в chart.controller.js
-
-import Track from "../models/Track.model.js";
-import { ListenEvent } from "../models/Chart.model.js";
-
 /**
  * ADMIN: Create test data for charts
  * POST /api/charts/admin/test-data
@@ -607,8 +604,8 @@ export const createTestData = catchAsync(async (req, res) => {
       { $set: { chartEligible: true } }
     );
 
-    // 2. Получим треки
-    const tracks = await Track.find({ chartEligible: true }).limit(10);
+    // 2. Получим ВСЕ треки (50 штук)
+    const tracks = await Track.find({ chartEligible: true }).limit(50);
 
     if (tracks.length === 0) {
       return res
@@ -628,11 +625,12 @@ export const createTestData = catchAsync(async (req, res) => {
       date.setDate(date.getDate() - day);
 
       tracks.forEach((track, trackIndex) => {
-        const baseListens = Math.max(1, 100 - trackIndex * 10 - day * 5);
+        // Создаем более реалистичное распределение для 50 треков
+        const baseListens = Math.max(1, 200 - trackIndex * 3 - day * 8);
 
         countries.forEach((country) => {
           const listenCount = Math.floor(
-            baseListens * (0.5 + Math.random() * 0.5)
+            baseListens * (0.3 + Math.random() * 0.7)
           );
 
           for (let i = 0; i < listenCount; i++) {
@@ -644,8 +642,7 @@ export const createTestData = catchAsync(async (req, res) => {
               trackId: track._id,
               userId: null,
               sessionId: `test_session_${Math.random()
-                .toString(36)
-                .substr(2, 9)}`,
+                .toString(36)}`,
               country: country,
               timestamp: eventTime,
               listenDuration: Math.floor(30 + Math.random() * 120),

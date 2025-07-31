@@ -7,8 +7,7 @@ import {
 } from "@ant-design/icons";
 import PlaylistModule from "./components/PlaylistModule";
 import ArtistModule from "./components/ArtistModule";
-import MixesModule from "./components/MixesModule";
-import mixImage from "../../../images/mix/jazz.jpg";
+import chartImage from "../../../images/chart/global.jpg";
 import Queue from "./components/Queue";
 import { useSelector } from "react-redux";
 import type { AppState } from "../../../store";
@@ -18,6 +17,7 @@ import { useGetUserQuery } from "../../../state/UserApi.slice";
 import { useEffect, useState } from "react"; // Добавлен useState
 import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
 import type { Playlist } from "../../../types/Playlist";
+import ChartModule from "./components/ChartModule";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
@@ -156,7 +156,7 @@ export default function MainMenu() {
               transition={{ duration: 0.6, ease: "easeInOut" }}
               style={{ overflow: "visible" }}
             >
-              <MixesModule mixImage={mixImage} />
+              <ChartModule chartImage={chartImage} />
             </motion.div>
           )}
         </AnimatePresence>

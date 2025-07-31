@@ -122,20 +122,20 @@ export const useCharts = (
               "Charts not available yet, using mock data for development"
             );
 
-            // Return mock data for development
+            // Return mock data for development - MORE DATA for trending
             const mockData: ChartTrack[] =
               type === "trending"
                 ? [
                     {
                       rank: 1,
                       track: {
-                        _id: "mock-1",
-                        name: "Sample Track 1",
-                        artist: { _id: "artist-1", name: "Sample Artist" },
+                        _id: "mock-trending-1",
+                        name: "Rising Star",
+                        artist: { _id: "artist-1", name: "New Artist" },
                         duration: 180,
                         validListenCount: 1000,
                         coverUrl:
-                          "https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=Sample+Track",
+                          "https://via.placeholder.com/300x300/EF4444/FFFFFF?text=Rising+Star",
                       },
                       chartScore: 100,
                       trend: "new" as const,
@@ -147,19 +147,55 @@ export const useCharts = (
                     {
                       rank: 2,
                       track: {
-                        _id: "mock-2",
-                        name: "Trending Hit 2",
-                        artist: { _id: "artist-2", name: "Rising Artist" },
+                        _id: "mock-trending-2",
+                        name: "Viral Hit",
+                        artist: { _id: "artist-2", name: "Trending Artist" },
                         duration: 210,
-                        validListenCount: 800,
+                        validListenCount: 2500,
                         coverUrl:
-                          "https://via.placeholder.com/300x300/EF4444/FFFFFF?text=Trending+Hit",
+                          "https://via.placeholder.com/300x300/10B981/FFFFFF?text=Viral+Hit",
                       },
-                      chartScore: 85,
+                      chartScore: 95,
                       trend: "up" as const,
-                      rankChange: 5,
+                      rankChange: 15,
                       daysInChart: 3,
                       peakPosition: 2,
+                      lastUpdated: new Date().toISOString(),
+                    },
+                    {
+                      rank: 3,
+                      track: {
+                        _id: "mock-trending-3",
+                        name: "Rocket Song",
+                        artist: { _id: "artist-3", name: "Hot Artist" },
+                        duration: 195,
+                        validListenCount: 1800,
+                        coverUrl:
+                          "https://via.placeholder.com/300x300/F59E0B/FFFFFF?text=Rocket+Song",
+                      },
+                      chartScore: 88,
+                      trend: "up" as const,
+                      rankChange: 8,
+                      daysInChart: 5,
+                      peakPosition: 3,
+                      lastUpdated: new Date().toISOString(),
+                    },
+                    {
+                      rank: 4,
+                      track: {
+                        _id: "mock-trending-4",
+                        name: "Fresh Sound",
+                        artist: { _id: "artist-4", name: "Breakout Star" },
+                        duration: 175,
+                        validListenCount: 1200,
+                        coverUrl:
+                          "https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=Fresh+Sound",
+                      },
+                      chartScore: 82,
+                      trend: "new" as const,
+                      rankChange: 0,
+                      daysInChart: 1,
+                      peakPosition: 4,
                       lastUpdated: new Date().toISOString(),
                     },
                   ]
