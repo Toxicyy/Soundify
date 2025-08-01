@@ -16,7 +16,7 @@ const LoginValid = (formData: LoginFormData) => {
     };
 
     if (!formData.username) {
-        errors.username.push("Username is required");
+        errors.username.push("Email is required");
     }
 
     if (!formData.password) {

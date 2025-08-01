@@ -100,6 +100,21 @@ const Charts: React.FC = () => {
     refreshInterval: CHART_CONFIG[activeTab].refreshInterval,
   });
 
+  const getBestRankedTracks = (data: ChartTrack[]) => {
+    const trackMap = new Map<string, ChartTrack>();
+
+    data.forEach((item) => {
+      const existingTrack = trackMap.get(item.track._id);
+      if (!existingTrack || item.rank < existingTrack.rank) {
+        trackMap.set(item.track._id, item);
+      }
+    });
+
+    return Array.from(trackMap.values()).sort((a, b) => a.rank - b.rank);
+  };
+
+  const uniqueChartData = getBestRankedTracks(chartData);
+
   /**
    * Tab configuration
    */
@@ -411,7 +426,7 @@ const Charts: React.FC = () => {
     // Data state
     return (
       <div className="space-y-1">
-        {chartData.map((item, index) => renderChartItem(item, index))}
+        {uniqueChartData.map((item, index) => renderChartItem(item, index))}
       </div>
     );
   }, [isLoading, error, chartData, activeTab, refetch, renderChartItem]);

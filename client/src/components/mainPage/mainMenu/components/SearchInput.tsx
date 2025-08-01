@@ -16,6 +16,7 @@ import { SearchOutlined } from "@ant-design/icons";
 const SearchInput = () => {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ const SearchInput = () => {
         !containerRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        setIsFocused(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -61,6 +63,7 @@ const SearchInput = () => {
   const handleItemClick = (item: any) => {
     setQuery(item.name);
     setIsOpen(false);
+    setIsFocused(false);
 
     switch (item.type) {
       case "track":
@@ -80,49 +83,65 @@ const SearchInput = () => {
 
   const handleShowMore = () => {
     setIsOpen(false);
+    setIsFocused(false);
     navigate(`/search?q=${encodeURIComponent(query)}`);
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    if (query.length === 0) {
+      getPopularContent();
+      setIsOpen(true);
+    } else if (query.length >= 2) {
+      setIsOpen(true);
+    }
   };
 
   const renderResults = () => {
     if (isLoading) {
       return (
-        <div className="px-4 py-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-          <p className="text-white/70 mt-2">Поиск...</p>
+        <div className="px-4 py-6 md:py-8 text-center">
+          <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-white mx-auto"></div>
+          <p className="text-white/70 mt-2 text-sm md:text-base">
+            Searching...
+          </p>
         </div>
       );
     }
 
     if (!searchResults || searchResults.totalResults === 0) {
       return (
-        <div className="px-4 py-6 text-center">
-          <p className="text-white/70">
-            {query.length >= 2
-              ? "Ничего не найдено"
-              : "Введите запрос для поиска"}
+        <div className="px-4 py-4 md:py-6 text-center">
+          <p className="text-white/70 text-sm md:text-base">
+            {query.length >= 2 ? "No results found" : "Type to search"}
           </p>
         </div>
       );
     }
 
-    const MAX_ITEMS = 5;
+    // Different limits for mobile vs desktop
+    const isMobile = window.innerWidth < 768;
+    const MAX_ITEMS = isMobile ? 3 : 5;
+    const tracksLimit = isMobile ? 2 : 3;
+    const artistsLimit = isMobile ? 1 : 2;
+    const albumsLimit = isMobile ? 1 : 2;
 
     const allResults = [
       ...searchResults.tracks
-        .slice(0, 3)
+        .slice(0, tracksLimit)
         .map((track) => ({ ...track, type: "track" })),
       ...searchResults.artists
-        .slice(0, 2)
+        .slice(0, artistsLimit)
         .map((artist) => ({ ...artist, type: "artist" })),
       ...searchResults.albums
-        .slice(0, 2)
+        .slice(0, albumsLimit)
         .map((album) => ({ ...album, type: "album" })),
     ].slice(0, MAX_ITEMS);
 
     const hasMoreResults = searchResults.totalResults > MAX_ITEMS;
 
     return (
-      <div className="max-h-120 overflow-hidden">
+      <div className="max-h-80 md:max-h-96 overflow-hidden">
         {allResults.map((item) => (
           <SearchResultItem
             key={item._id}
@@ -134,17 +153,17 @@ const SearchInput = () => {
 
         {hasMoreResults && query.length >= 2 && (
           <motion.div
-            className="border-t border-white/10 px-4 py-3"
+            className="border-t border-white/10 px-3 md:px-4 py-2 md:py-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
             <button
               onClick={handleShowMore}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 text-white/80 hover:text-white"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 md:px-4 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 text-white/80 hover:text-white"
             >
-              <SearchOutlined className="text-sm" />
-              <span className="text-sm font-medium">
+              <SearchOutlined className="text-xs md:text-sm" />
+              <span className="text-xs md:text-sm font-medium">
                 Show all results ({searchResults.totalResults})
               </span>
             </button>
@@ -155,10 +174,15 @@ const SearchInput = () => {
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <div className="flex items-center w-[20vw] max-w-md bg-white/70 backdrop-blur-sm rounded-full px-9 py-2 shadow-lg gap-2 transition-all duration-300 hover:bg-white/80 focus-within:bg-white/90">
+    <div ref={containerRef} className="relative w-full max-w-md xl:max-w-lg">
+      {/* Search Input */}
+      <div
+        className={`flex items-center w-full bg-white/70 backdrop-blur-sm rounded-full px-4 md:px-6 xl:px-9 py-2 md:py-2.5 shadow-lg gap-2 transition-all duration-300 hover:bg-white/80 ${
+          isFocused ? "bg-white/90 ring-2 ring-white/30" : ""
+        }`}
+      >
         <svg
-          className="w-5 h-5 text-gray-700 mr-2 flex-shrink-0"
+          className="w-4 h-4 md:w-5 md:h-5 text-gray-700 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -171,17 +195,18 @@ const SearchInput = () => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsOpen(true)}
+          onFocus={handleFocus}
           onKeyDown={(e) => {
             if (e.key === "Enter" && query.length >= 2) {
               handleShowMore();
             }
           }}
           placeholder="Search Soundify"
-          className="bg-transparent outline-none w-full pt-1 text-gray-700 placeholder-gray-600 font-medium"
+          className="bg-transparent outline-none w-full pt-1 text-gray-700 placeholder-gray-600 font-medium text-sm md:text-base"
         />
       </div>
 
+      {/* Search Results Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -189,7 +214,7 @@ const SearchInput = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-black/50 rounded-2xl shadow-2xl border backdrop-blur-sm border-white/20 z-50 overflow-hidden"
+            className="absolute top-full left-0 right-0 mt-2 bg-black/50 rounded-xl md:rounded-2xl shadow-2xl border backdrop-blur-sm border-white/20 z-50 overflow-hidden"
           >
             {renderResults()}
           </motion.div>

@@ -19,17 +19,21 @@ import ContextMenu from "./ContextMenu";
 import { addToQueue } from "../../../../state/Queue.slice";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../../../../hooks/useNotification";
+import { motion } from "framer-motion";
 
 interface TrackLayoutProps {
   track: Track | undefined;
   isLoading?: boolean;
+  isMobile?: boolean;
 }
 
 export default function TrackLayout({
   track,
   isLoading = false,
+  isMobile = false,
 }: TrackLayoutProps) {
   const [likeHover, setLikeHover] = useState(false);
+  const [ellipsisHover, setEllipsisHover] = useState(false);
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -65,8 +69,7 @@ export default function TrackLayout({
     }
   };
 
-  const handleEllipsisClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEllipsisClick = () => {
     setMenuOpen(!menuOpen);
   };
 
@@ -161,29 +164,173 @@ export default function TrackLayout({
     setMenuOpen(false);
   };
 
-  return (
+  // Mobile Layout
+  const MobileLayout = () => (
+    <motion.div
+      className={`bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10 transition-all duration-200 ${
+        isLoading ? "pointer-events-none" : "cursor-pointer"
+      } ${hover && !isLoading ? "bg-white/10" : ""}`}
+      onMouseEnter={() => !isLoading && setHover(true)}
+      onMouseLeave={() => !isLoading && setHover(false)}
+      onClick={
+        menuOpen || likeHover || ellipsisHover
+          ? () => {}
+          : () => {
+              togglePlayPause();
+            }
+      }
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Cover Image */}
+        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative">
+          {isLoading ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white/40 text-lg">🎵</div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <img
+                src={track?.coverUrl}
+                alt={track?.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+
+              {/* Play overlay */}
+              {hover && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  {isThisTrackPlaying ? (
+                    <PauseOutlined
+                      style={{ color: "white", fontSize: "16px" }}
+                    />
+                  ) : (
+                    <CaretRightOutlined
+                      style={{ color: "white", fontSize: "16px" }}
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Track Info */}
+        <div className="flex-1 min-w-0">
+          {isLoading ? (
+            <div className="space-y-2">
+              <div className="h-4 bg-gradient-to-r from-white/10 via-white/20 to-white/10 rounded w-3/4"></div>
+              <div className="h-3 bg-gradient-to-r from-white/8 via-white/15 to-white/8 rounded w-1/2"></div>
+            </div>
+          ) : (
+            <>
+              <h1
+                className={`text-sm font-medium truncate ${
+                  isCurrentTrack ? "text-[#5cec8c]" : "text-white"
+                }`}
+              >
+                {track?.name}
+              </h1>
+              <p className="text-xs text-white/60 truncate">
+                {track?.listenCount} plays
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-white/10 rounded-full"></div>
+              <div className="w-4 h-4 bg-white/10 rounded-sm"></div>
+            </div>
+          ) : (
+            <>
+              {/* Duration */}
+              <span className="text-white/50 text-xs">{duration}</span>
+
+              {/* Like Button */}
+              {likePending ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-white" />
+              ) : isLiked ? (
+                <HeartFilled
+                  style={{
+                    color: likeHover ? "#F93822" : "red",
+                    fontSize: "14px",
+                  }}
+                  className="cursor-pointer transition-all duration-200"
+                  onMouseEnter={() => setLikeHover(true)}
+                  onMouseLeave={() => setLikeHover(false)}
+                  onClick={handleLikeClick}
+                />
+              ) : (
+                <HeartOutlined
+                  style={{
+                    color: likeHover ? "#D3D3D3" : "white/60",
+                    fontSize: "14px",
+                  }}
+                  className="cursor-pointer transition-all duration-200"
+                  onMouseEnter={() => setLikeHover(true)}
+                  onMouseLeave={() => setLikeHover(false)}
+                  onClick={handleLikeClick}
+                />
+              )}
+
+              {/* Menu */}
+              <div className="relative" ref={ellipsisRef}>
+                <EllipsisOutlined
+                  style={{ color: "white", fontSize: "14px" }}
+                  className="cursor-pointer transition-all duration-200 hover:scale-110"
+                  onMouseEnter={() => setEllipsisHover(true)}
+                  onMouseLeave={() => setEllipsisHover(false)}
+                  onClick={handleEllipsisClick}
+                />
+                <ContextMenu
+                  isOpen={menuOpen}
+                  onClose={handleCloseMenu}
+                  onMenuItemClick={handleMenuItemClick}
+                  anchorRef={ellipsisRef}
+                  isPlaying={isCurrentTrack}
+                  isLiked={isLiked}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  // Desktop/Tablet Layout (Original)
+  const DesktopLayout = () => (
     <div
-      className={`flex justify-between items-center w-[40vw] ${
+      className={`flex justify-between items-center w-full ${
         isLoading ? "pointer-events-none" : "cursor-pointer"
       }`}
       onMouseEnter={() => !isLoading && setHover(true)}
       onMouseLeave={() => !isLoading && setHover(false)}
       onClick={
-        menuOpen || likeHover
+        menuOpen || likeHover || ellipsisHover
           ? () => {}
-          : (e) => {
-              e.stopPropagation();
+          : () => {
               togglePlayPause();
             }
       }
     >
-      <div className="flex gap-3 items-end justify-center">
-        <div className="w-[65px] h-[65px] rounded-[10px] flex items-center justify-center relative overflow-hidden group">
+      <div className="flex gap-2 md:gap-3 items-end justify-center">
+        <div className="w-12 h-12 md:w-16 md:h-16 xl:w-[65px] xl:h-[65px] rounded-lg xl:rounded-[10px] flex items-center justify-center relative overflow-hidden group">
           {isLoading ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-[10px]">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg xl:rounded-[10px]">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-white/40 text-2xl">🎵</div>
+                <div className="text-white/40 text-lg xl:text-2xl">🎵</div>
               </div>
             </div>
           ) : (
@@ -192,7 +339,7 @@ export default function TrackLayout({
               <img
                 src={track?.coverUrl}
                 alt={track?.name}
-                className="w-full h-full object-cover rounded-[10px]"
+                className="w-full h-full object-cover rounded-lg xl:rounded-[10px]"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
@@ -200,7 +347,7 @@ export default function TrackLayout({
 
               {/* Overlay при hover */}
               <div
-                className={`absolute inset-0 transition bg-black rounded-[10px] ${
+                className={`absolute inset-0 transition bg-black rounded-lg xl:rounded-[10px] ${
                   hover ? "opacity-50" : "opacity-0"
                 }`}
                 style={{ zIndex: 20 }}
@@ -213,7 +360,7 @@ export default function TrackLayout({
                     <PauseOutlined
                       style={{
                         color: "white",
-                        fontSize: "32px",
+                        fontSize: "24px",
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
                       }}
@@ -222,7 +369,7 @@ export default function TrackLayout({
                     <CaretRightOutlined
                       style={{
                         color: "white",
-                        fontSize: "32px",
+                        fontSize: "24px",
                         filter: "drop-shadow(0 2px 8px #222)",
                         cursor: "pointer",
                       }}
@@ -234,22 +381,24 @@ export default function TrackLayout({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1 xl:gap-2 min-w-0 flex-1">
           {isLoading ? (
-            <div className="h-5 w-36 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+            <div className="h-4 xl:h-5 w-24 xl:w-36 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
           ) : (
-            <h1 className="text-white text-lg tracking-wider">{track?.name}</h1>
+            <h1 className="text-white text-sm md:text-base xl:text-lg tracking-wider truncate">
+              {track?.name}
+            </h1>
           )}
 
           {isLoading ? (
-            <div className="h-4 w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+            <div className="h-3 xl:h-4 w-12 xl:w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
             </div>
           ) : (
             <h1
-              className="text-sm tracking-wider"
+              className="text-xs xl:text-sm tracking-wider truncate"
               style={{ color: "rgba(255, 255, 255, 0.6)" }}
             >
               {track?.listenCount}
@@ -258,28 +407,31 @@ export default function TrackLayout({
         </div>
       </div>
 
-      <div className="flex gap-4 items-center relative">
+      <div className="flex gap-2 md:gap-3 xl:gap-4 items-center relative">
         {isLoading ? (
-          <div className="h-4 w-12 mr-20 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+          <div className="h-3 xl:h-4 w-8 xl:w-12 mr-8 xl:mr-20 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         ) : (
-          <h1 style={{ color: "rgba(255, 255, 255, 0.6)" }} className="mr-20">
+          <h1
+            style={{ color: "rgba(255, 255, 255, 0.6)" }}
+            className="mr-8 xl:mr-20 text-xs xl:text-sm"
+          >
             {duration}
           </h1>
         )}
 
         {isLoading ? (
-          <div className="w-5 h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
+          <div className="w-4 h-4 xl:w-5 xl:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
           </div>
         ) : likePending ? (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1" />
+          <div className="animate-spin rounded-full h-3 w-3 xl:h-4 xl:w-4 border-b-2 border-white mr-1" />
         ) : isLiked ? (
           <HeartFilled
             style={{
               color: likeHover ? "#F93822" : "red",
-              fontSize: "1.1rem",
+              fontSize: "16px",
             }}
             className="pb-1 cursor-pointer transition-all duration-200"
             onMouseEnter={() => setLikeHover(true)}
@@ -290,7 +442,7 @@ export default function TrackLayout({
           <HeartOutlined
             style={{
               color: likeHover ? "#D3D3D3" : "white",
-              fontSize: "1.1rem",
+              fontSize: "16px",
             }}
             className="pb-1 cursor-pointer transition-all duration-200"
             onMouseEnter={() => setLikeHover(true)}
@@ -300,14 +452,16 @@ export default function TrackLayout({
         )}
 
         {isLoading ? (
-          <div className="w-5 h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-sm relative overflow-hidden">
+          <div className="w-4 h-4 xl:w-5 xl:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
           </div>
         ) : (
           <div className="relative" ref={ellipsisRef}>
             <EllipsisOutlined
-              style={{ color: "white" }}
+              style={{ color: "white", fontSize: "16px" }}
               className="cursor-pointer transition-all duration-200 hover:scale-110"
+              onMouseEnter={() => setEllipsisHover(true)}
+              onMouseLeave={() => setEllipsisHover(false)}
               onClick={handleEllipsisClick}
             />
 
@@ -324,4 +478,6 @@ export default function TrackLayout({
       </div>
     </div>
   );
+
+  return isMobile ? <MobileLayout /> : <DesktopLayout />;
 }

@@ -53,7 +53,7 @@ export const MobileNavigation: FC<MobileNavigationProps> = ({
   const getDisplayText = (text: string) => {
     const shortNames = {
       Home: "Home",
-      Playlists: "Radio",
+      Playlists: "Playlists",
       Artists: "Artists",
       "Liked Songs": "Liked",
       Recently: "Recent",

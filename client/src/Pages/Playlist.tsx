@@ -418,7 +418,7 @@ export default function Playlist() {
   }
 
   return (
-    <div className="w-full mainMenu mb-35 xl:mb-5 pl-4 xl:pl-[22vw] pr-[2vw] flex flex-col gap-5">
+    <div className="min-h-screen w-full mainMenu mb-35 xl:mb-5 pl-4 xl:pl-[22vw] pr-[2vw] flex flex-col gap-5">
       {headerComponent}
       {mainMenuComponent}
 

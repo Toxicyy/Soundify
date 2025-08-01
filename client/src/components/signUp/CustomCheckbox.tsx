@@ -1,44 +1,88 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
+/**
+ * Custom checkbox component with purple design
+ * Simple and reliable component without excessive animations
+ *
+ * Features:
+ * - Purple color scheme
+ * - Hover effects
+ * - Simple animated checkmark
+ * - Support for children text content
+ */
 export const CustomCheckbox: React.FC<
-  React.InputHTMLAttributes<HTMLInputElement>
-> = (props) => {
-  const [checked, setChecked] = useState(props.checked || false);
+  React.InputHTMLAttributes<HTMLInputElement> & {
+    children?: React.ReactNode;
+  }
+> = ({ children, checked: controlledChecked, onChange, ...props }) => {
+  const [internalChecked, setInternalChecked] = useState(
+    controlledChecked || false
+  );
+
+  // Синхронизируем внутреннее состояние с внешним пропом
+  useEffect(() => {
+    if (controlledChecked !== undefined) {
+      setInternalChecked(controlledChecked);
+    }
+  }, [controlledChecked]);
+
+  const isChecked =
+    controlledChecked !== undefined ? controlledChecked : internalChecked;
+
+  /**
+   * Handles checkbox state change
+   * @param e - Change event from input element
+   */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newChecked = e.target.checked;
+
+    // Если компонент неконтролируемый, обновляем внутреннее состояние
+    if (controlledChecked === undefined) {
+      setInternalChecked(newChecked);
+    }
+
+    // Вызываем внешний onChange если он есть
+    if (onChange) {
+      onChange(e);
+    }
+  };
 
   return (
-    <label className="inline-flex items-center cursor-pointer">
+    <label className="inline-flex items-start cursor-pointer gap-3">
       <input
         type="checkbox"
-        checked={checked}
-        onChange={(e) => {
-          setChecked(e.target.checked);
-          props.onChange && props.onChange(e);
-        }}
+        checked={isChecked}
+        onChange={handleChange}
         className="sr-only"
         {...props}
       />
       <span
-        className={`w-4 h-4 rounded transition-colors border border-gray-300 flex items-center justify-center mr-2
-          ${checked ? "bg-[#f8919a]" : "bg-white"}
-        `}
-        style={{ boxShadow: "0 1px 2px rgba(0,0,0,.05)" }}
+        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 mt-0.5 ${
+          isChecked
+            ? "bg-purple-600 border-purple-600 shadow-md"
+            : "bg-white/10 border-purple-400/50 hover:border-purple-400 hover:bg-white/15"
+        }`}
       >
-        {checked && (
+        {isChecked && (
           <svg
-            viewBox="0 0 16 16"
-            className="w-3 h-3 text-white"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+            className="w-3 h-3 text-white animate-in fade-in duration-150"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M4 8l3 3 5-5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
             />
           </svg>
         )}
       </span>
+      {children && (
+        <span className="text-sm text-purple-100/90 leading-relaxed">
+          {children}
+        </span>
+      )}
     </label>
   );
 };

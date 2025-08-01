@@ -13,63 +13,97 @@ import { setIsPlaying } from "../../state/CurrentTrack.slice";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, AppState } from "../../store";
 
-type MainMenuProps = {
+/**
+ * Props для MainMenu компонента
+ */
+interface MainMenuProps {
+  /** Массив треков для отображения */
   tracks: Track[];
+  /** Флаг загрузки данных */
   isLoading?: boolean;
-};
+}
 
-const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
+/**
+ * Главный компонент для отображения списка любимых треков
+ * Включает поиск, управление воспроизведением и адаптивную таблицу треков
+ *
+ * Features:
+ * - Умная кнопка воспроизведения (play/pause based on context)
+ * - Поиск по треку, артисту и альбому
+ * - Shuffle функционал
+ * - Адаптивный дизайн для всех устройств
+ * - Skeleton loading состояния
+ */
+const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
+  // Локальные состояния
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Redux selectors
+
+  // Redux селекторы
   const { shuffle } = useSelector((state: AppState) => state.queue);
-  const currentTrackState = useSelector((state: AppState) => state.currentTrack);
-  
+  const currentTrackState = useSelector(
+    (state: AppState) => state.currentTrack
+  );
+
   const dispatch = useDispatch<AppDispatch>();
 
-  // Проверяем, принадлежит ли текущий трек к этому плейлисту
+  /**
+   * Проверяет, принадлежит ли текущий трек к этому плейлисту
+   */
   const isCurrentTrackFromThisPlaylist = useMemo(() => {
     if (!currentTrackState.currentTrack) return false;
-    
-    // Проверяем наличие трека в текущем плейлисте
-    return tracks.some(track => track._id === currentTrackState.currentTrack?._id);
+
+    return tracks.some(
+      (track) => track._id === currentTrackState.currentTrack?._id
+    );
   }, [currentTrackState.currentTrack, tracks]);
 
-  // Определяем, должна ли кнопка показывать состояние "играет"
+  /**
+   * Определяет, должна ли кнопка показывать состояние "играет"
+   */
   const isPlaylistPlaying = useMemo(() => {
     return isCurrentTrackFromThisPlaylist && currentTrackState.isPlaying;
   }, [isCurrentTrackFromThisPlaylist, currentTrackState.isPlaying]);
 
-  // Обработчик кнопки shuffle
+  /**
+   * Обработчик кнопки shuffle
+   */
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
-  // Умная логика кнопки плейлиста
+  /**
+   * Умная логика кнопки плейлиста
+   * - Если играет трек из этого плейлиста: переключает play/pause
+   * - Если играет другой трек или ничего не играет: запускает плейлист
+   */
   const handlePlaylistPlayPause = useCallback(() => {
     if (isLoading || tracks.length === 0) return;
 
     if (isCurrentTrackFromThisPlaylist) {
-      // Если текущий трек из этого плейлиста - переключаем play/pause
+      // Переключаем play/pause для текущего трека из плейлиста
       dispatch(setIsPlaying(!currentTrackState.isPlaying));
     } else {
-      // Если текущий трек НЕ из этого плейлиста или ничего не играет
       // Запускаем плейлист с первого трека
-      dispatch(playTrackAndQueue({
-        contextTracks: tracks,
-        startIndex: 0,
-      }));
+      dispatch(
+        playTrackAndQueue({
+          contextTracks: tracks,
+          startIndex: 0,
+        })
+      );
     }
   }, [
-    isLoading, 
-    tracks.length, 
-    isCurrentTrackFromThisPlaylist, 
-    currentTrackState.isPlaying, 
-    tracks, 
-    dispatch
+    isLoading,
+    tracks.length,
+    isCurrentTrackFromThisPlaylist,
+    currentTrackState.isPlaying,
+    tracks,
+    dispatch,
   ]);
 
-  // Фильтрация треков по поисковому запросу
+  /**
+   * Фильтрация треков по поисковому запросу
+   * Поиск осуществляется по названию трека, артисту и альбому
+   */
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) {
       return tracks;
@@ -80,67 +114,108 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
       (track) =>
         track.name.toLowerCase().includes(query) ||
         track.artist.name.toLowerCase().includes(query) ||
-        (track.album !== "single" && track.album.name.toLowerCase().includes(query))
+        (track.album !== "single" &&
+          track.album.name.toLowerCase().includes(query))
     );
   }, [tracks, searchQuery]);
 
-  return (
-    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl w-[100%] h-full flex flex-col">
-      <div className="pt-3 px-3 flex-shrink-0">
-        {/* Верхняя панель с кнопками управления и поиском */}
-        <div className="flex items-center justify-between mb-5 px-3">
-          {/* Левая сторона - кнопки воспроизведения и перемешивания */}
-          <div className="flex items-center gap-4">
-            {/* УМНАЯ КНОПКА ПЛЕЙЛИСТА */}
-            <div 
-              className="bg-white/40 rounded-full w-[65px] h-[65px] flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200" 
-              onClick={handlePlaylistPlayPause}
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
-              ) : isPlaylistPlaying ? (
-                // Показываем pause только если играет трек ИЗ ЭТОГО плейлиста
-                <PauseOutlined style={{ fontSize: "40px", color: "white" }} />
-              ) : (
-                // Показываем play если ничего не играет ИЛИ играет трек из другого плейлиста
-                <CaretRightOutlined
-                  style={{ fontSize: "42px", color: "white" }}
-                  className="ml-[4px]"
-                />
-              )}
-            </div>
+  /**
+   * Очищает поисковый запрос
+   */
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
 
-            <div>
+  /**
+   * Рендерит кнопку воспроизведения с правильной иконкой
+   */
+  const renderPlayButton = () => {
+    if (isLoading) {
+      return (
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+      );
+    }
+
+    if (isPlaylistPlaying) {
+      return (
+        <PauseOutlined
+          style={{
+            fontSize: window.innerWidth < 768 ? "24px" : "40px",
+            color: "white",
+          }}
+        />
+      );
+    }
+
+    return (
+      <CaretRightOutlined
+        style={{
+          fontSize: window.innerWidth < 768 ? "26px" : "42px",
+          color: "white",
+        }}
+        className={window.innerWidth < 768 ? "ml-[2px]" : "ml-[4px]"}
+      />
+    );
+  };
+
+  return (
+    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg md:rounded-xl shadow-2xl w-full h-full flex flex-col">
+      {/* Control Panel */}
+      <div className="pt-2 md:pt-3 px-2 md:px-3 flex-shrink-0">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 md:mb-5 px-2 md:px-3 gap-3 md:gap-4">
+          {/* Left side - Play controls */}
+          <div className="flex items-center gap-2 md:gap-4 order-2 md:order-1">
+            {/* Smart Play Button */}
+            <button
+              className={`bg-white/40 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200 ${
+                window.innerWidth < 768 ? "w-12 h-12" : "w-[65px] h-[65px]"
+              }`}
+              onClick={handlePlaylistPlayPause}
+              disabled={isLoading}
+            >
+              {renderPlayButton()}
+            </button>
+
+            {/* Shuffle Button */}
+            <button
+              onClick={handleShuffle}
+              className="cursor-pointer hover:scale-110 transition-all duration-200"
+              disabled={isLoading}
+            >
               <SwapOutlined
                 style={{
                   color: shuffle ? "white" : "rgba(255, 255, 255, 0.3)",
-                  fontSize: "42px",
+                  fontSize: window.innerWidth < 768 ? "24px" : "42px",
                 }}
-                className="cursor-pointer hover:scale-110 transition-all duration-200"
-                onClick={handleShuffle}
               />
-            </div>
+            </button>
           </div>
 
-          {/* Правая сторона - поисковая строка */}
-          <div className="relative">
+          {/* Right side - Search */}
+          <div className="relative order-1 md:order-2 w-full md:w-auto">
             <div className="relative flex items-center">
               <SearchOutlined
-                className="absolute left-3 text-lg z-10"
+                className={`absolute left-3 z-10 ${
+                  window.innerWidth < 768 ? "text-base" : "text-lg"
+                }`}
                 style={{ color: "white" }}
               />
               <input
                 type="text"
-                placeholder="Search in liked tracks..."
+                placeholder={
+                  window.innerWidth < 768
+                    ? "Search tracks..."
+                    : "Search in liked tracks..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="
+                className={`
                   bg-white/10 
                   backdrop-blur-md 
                   border 
                   border-white/20 
                   rounded-full 
-                  px-10 
+                  px-8 md:px-10 
                   py-2 
                   text-white 
                   placeholder-white/40 
@@ -149,13 +224,17 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
                   focus:bg-white/15 
                   transition-all 
                   duration-200
-                  w-[300px]
-                "
+                  ${
+                    window.innerWidth < 768
+                      ? "w-full text-sm"
+                      : "w-[300px] text-base"
+                  }
+                `}
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 text-white/40 hover:text-white/60 transition-colors text-xl"
+                  onClick={clearSearch}
+                  className="absolute right-3 text-white/40 hover:text-white/60 transition-colors text-lg md:text-xl"
                 >
                   ×
                 </button>
@@ -164,26 +243,36 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
           </div>
         </div>
 
-        {/* Заголовки таблицы с фиксированной сеткой */}
-        <div className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_50px] gap-4 items-center px-4 mb-2">
-          <h1 className="text-white/50 text-xl text-center">#</h1>
-          <h1 className="text-white/50 text-xl">Title</h1>
-          <h1 className="text-white/50 text-xl text-center">Album</h1>
-          <h1 className="text-white/50 text-xl text-center">Date added</h1>
-          <div className="text-white/50 text-xl text-center"></div>
-          <div className="text-white/50 text-xl text-center">
-            <ClockCircleOutlined />
+        {/* Table Headers - Desktop Only */}
+        <div className="hidden xl:block">
+          <div className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_50px] gap-4 items-center px-4 mb-2">
+            <h1 className="text-white/50 text-xl text-center">#</h1>
+            <h1 className="text-white/50 text-xl">Title</h1>
+            <h1 className="text-white/50 text-xl text-center">Album</h1>
+            <h1 className="text-white/50 text-xl text-center">Date added</h1>
+            <div className="text-white/50 text-xl text-center"></div>
+            <div className="text-white/50 text-xl text-center">
+              <ClockCircleOutlined />
+            </div>
+            <div className="text-white/50 text-xl text-center"></div>
           </div>
-          <div className="text-white/50 text-xl text-center"></div>
+          <div className="h-[2px] w-full bg-white/20"></div>
         </div>
 
-        <div className="h-[2px] w-[100%] bg-white/20"></div>
+        {/* Mobile Table Headers */}
+        <div className="block xl:hidden">
+          <div className="flex items-center justify-between px-3 mb-2 text-white/50">
+            <span className="text-sm font-medium">Track</span>
+            <span className="text-sm font-medium">Duration</span>
+          </div>
+          <div className="h-[1px] w-full bg-white/20"></div>
+        </div>
       </div>
 
-      {/* Скроллируемая область с треками */}
+      {/* Scrollable Track List */}
       <div className="flex-1 overflow-hidden">
         <div
-          className="h-full overflow-y-auto px-3 pb-2 scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30 scrollbar-thumb-rounded-full scrollbar-track-rounded-full"
+          className="h-full overflow-y-auto px-2 md:px-3 pb-2 scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30 scrollbar-thumb-rounded-full scrollbar-track-rounded-full"
           style={{
             scrollbarWidth: "thin",
             scrollbarColor:
@@ -201,10 +290,15 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading }) => {
               />
             ))
           ) : (
+            /* Empty State */
             <div className="flex flex-col items-center justify-center h-40 text-white/60">
-              <SearchOutlined className="text-4xl mb-2" />
-              <p className="text-lg">No tracks found</p>
-              <p className="text-sm">Try changing your search query</p>
+              <SearchOutlined className="text-3xl md:text-4xl mb-2" />
+              <p className="text-base md:text-lg font-medium">
+                No tracks found
+              </p>
+              <p className="text-xs md:text-sm mt-1">
+                Try changing your search query
+              </p>
             </div>
           )}
         </div>

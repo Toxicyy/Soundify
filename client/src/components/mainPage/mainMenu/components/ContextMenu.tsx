@@ -20,7 +20,7 @@ interface ContextMenuProps {
   isLiked: boolean;
   isPending?: boolean;
   usePortal?: boolean;
-  showRemoveFromPlaylist?: boolean; // Новый проп для показа опции удаления
+  showRemoveFromPlaylist?: boolean;
 }
 
 export default function ContextMenu({
@@ -36,9 +36,21 @@ export default function ContextMenu({
 }: ContextMenuProps) {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Базовые пункты меню
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Base menu items
   const baseMenuItems = [
     {
       icon: isPending ? (
@@ -48,60 +60,53 @@ export default function ContextMenu({
       ) : (
         <HeartOutlined />
       ),
-      label: isLiked ? "Убрать из любимых треков" : "Добавить в любимые треки",
+      label: isLiked ? "Remove from liked tracks" : "Add to liked tracks",
       disabled: isPending,
-      className: "",
     },
     {
       icon: <UnorderedListOutlined />,
-      label: "Добавить в очередь",
+      label: "Add to queue",
       disabled: false,
-      className: "",
     },
     {
       icon: <UserOutlined />,
-      label: "К исполнителю",
+      label: "Go to artist",
       disabled: false,
-      className: "",
     },
     {
       icon: <PlaySquareOutlined />,
-      label: "К альбому",
+      label: "Go to album",
       disabled: false,
-      className: "",
     },
     {
       icon: <InfoCircleOutlined />,
-      label: "Посмотреть сведения",
+      label: "View details",
       disabled: false,
-      className: "",
     },
     {
       icon: <ShareAltOutlined />,
-      label: "Поделиться",
+      label: "Share",
       disabled: false,
-      className: "",
     },
   ];
 
-  // Добавляем пункт удаления из плейлиста если нужно
+  // Add remove from playlist option if needed
   const menuItems = showRemoveFromPlaylist
     ? [
         ...baseMenuItems,
         {
           icon: <DeleteOutlined />,
-          label: "Удалить из плейлиста",
+          label: "Remove from playlist",
           disabled: false,
-          className: "text-red-400 hover:text-red-300", // Красный цвет для удаления
         },
       ]
     : baseMenuItems;
 
-  // Вычисляем позицию меню (только для портала)
+  // Calculate menu position (only for portal)
   useEffect(() => {
-    if (isOpen && usePortal && anchorRef.current) {
+    if (isOpen && usePortal && anchorRef.current && !isMobile) {
       const visibleItems = menuItems.filter(
-        (item) => !isPlaying || item.label !== "Добавить в очередь"
+        (item) => !isPlaying || item.label !== "Add to queue"
       );
       const menuHeight = visibleItems.length * 48 + 16;
       const menuWidth = 220;
@@ -123,9 +128,17 @@ export default function ContextMenu({
 
       setPosition({ top, left });
     }
-  }, [isOpen, usePortal, anchorRef, isPlaying, showRemoveFromPlaylist]);
+  }, [
+    isOpen,
+    usePortal,
+    anchorRef,
+    isPlaying,
+    showRemoveFromPlaylist,
+    isMobile,
+    menuItems,
+  ]);
 
-  // Закрытие меню при клике вне его
+  // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -139,8 +152,8 @@ export default function ContextMenu({
     };
 
     const handleScroll = () => {
-      if (usePortal) {
-        onClose(); // Закрываем меню при скролле только для портала
+      if (usePortal && !isMobile) {
+        onClose();
       }
     };
 
@@ -152,7 +165,7 @@ export default function ContextMenu({
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      if (usePortal) {
+      if (usePortal && !isMobile) {
         document.addEventListener("scroll", handleScroll, true);
       }
       document.addEventListener("keydown", handleEscape);
@@ -160,27 +173,97 @@ export default function ContextMenu({
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      if (usePortal) {
+      if (usePortal && !isMobile) {
         document.removeEventListener("scroll", handleScroll, true);
       }
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose, anchorRef, usePortal]);
+  }, [isOpen, onClose, anchorRef, usePortal, isMobile]);
 
   const handleMenuItemClick = (index: number, disabled: boolean) => {
     if (disabled) return;
-
     onMenuItemClick(index);
     onClose();
   };
 
   if (!isOpen) return null;
 
-  // Основной JSX меню
-  const menuContent = (
+  // Mobile Modal Layout
+  if (isMobile) {
+    const content = (
+      <div className="fixed inset-0 z-[9999] flex items-end">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
+
+        {/* Menu Panel */}
+        <div
+          ref={menuRef}
+          className="relative w-full bg-black/50 backdrop-blur-xl border-t border-white/20 rounded-t-3xl overflow-hidden animate-slide-up"
+        >
+          {/* Handle bar */}
+          <div className="flex justify-center py-3">
+            <div className="w-12 h-1 bg-white/30 rounded-full" />
+          </div>
+
+          {/* Menu Items */}
+          <div className="px-4 pb-8">
+            {menuItems
+              .map((item, originalIndex) => ({ ...item, originalIndex }))
+              .filter((item) => !isPlaying || item.label !== "Add to queue")
+              .map((item, _filteredIndex) => {
+                const isDeleteItem = item.label === "Remove from playlist";
+
+                return (
+                  <div
+                    key={item.originalIndex}
+                    className={`px-4 py-4 text-base flex items-center gap-4 transition-colors duration-200 rounded-xl mb-2 ${
+                      item.disabled
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer hover:bg-white/10 active:bg-white/20"
+                    } ${
+                      isDeleteItem ? "border-t border-white/10 mt-4 pt-6" : ""
+                    }`}
+                    onClick={() =>
+                      handleMenuItemClick(item.originalIndex, item.disabled)
+                    }
+                  >
+                    <span
+                      className={`text-xl transition-colors duration-200 ${
+                        item.disabled
+                          ? "text-white/30"
+                          : isDeleteItem
+                          ? "text-red-400"
+                          : "text-white/70"
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span
+                      className={`flex-1 font-medium ${
+                        isDeleteItem ? "text-red-400" : "text-white"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      </div>
+    );
+
+    return usePortal ? createPortal(content, document.body) : content;
+  }
+
+  // Desktop Menu Layout
+  const content = (
     <div
       ref={menuRef}
-      className={`min-w-[220px] bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl overflow-hidden animate-fade-in-up ${
+      className={`min-w-[220px] bg-black/30 backdrop-blur-md border border-white/20 rounded-lg shadow-2xl overflow-hidden ${
         usePortal ? "fixed" : "absolute bottom-full right-0 mb-2"
       }`}
       style={
@@ -201,20 +284,20 @@ export default function ContextMenu({
     >
       {menuItems
         .map((item, originalIndex) => ({ ...item, originalIndex }))
-        .filter((item) => !isPlaying || item.label !== "Добавить в очередь")
+        .filter((item) => !isPlaying || item.label !== "Add to queue")
         .map((item, filteredIndex) => {
-          const isDeleteItem = item.label === "Удалить из плейлиста";
+          const isDeleteItem = item.label === "Remove from playlist";
 
           return (
             <div
               key={item.originalIndex}
-              className={`px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200 ${
+              className={`px-4 py-3 text-sm flex items-center gap-3 transition-colors duration-200 ${
                 item.disabled
                   ? "opacity-50 cursor-not-allowed"
                   : "cursor-pointer hover:bg-white/5"
               } ${
                 hoveredMenuItem === filteredIndex && !item.disabled
-                  ? "bg-white/10 backdrop-blur-sm"
+                  ? "bg-white/10"
                   : ""
               } ${isDeleteItem ? "border-t border-white/10" : ""}`}
               onMouseEnter={() =>
@@ -226,7 +309,7 @@ export default function ContextMenu({
               }
             >
               <span
-                className={`text-base transition-all duration-200 ${
+                className={`text-base transition-colors duration-200 ${
                   item.disabled
                     ? "text-white/30"
                     : isDeleteItem
@@ -251,6 +334,5 @@ export default function ContextMenu({
     </div>
   );
 
-  // Возвращаем либо через портал, либо обычным способом
-  return usePortal ? createPortal(menuContent, document.body) : menuContent;
+  return usePortal ? createPortal(content, document.body) : content;
 }

@@ -11,7 +11,7 @@ import {
 import { useGetUserQuery } from "../../../../state/UserApi.slice";
 import { api } from "../../../../shared/api";
 import { message } from "antd";
-import defaultImage from "../../../../images/User/Anonym.jpg"
+import defaultImage from "../../../../images/User/Anonym.jpg";
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -216,65 +216,66 @@ export default function UserSettingsModal({
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 flex items-center justify-center z-50 p-2 md:p-4"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: "spring", duration: 0.3 }}
           >
-            <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl">
+            <div className="relative w-full max-w-sm md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-hidden rounded-xl md:rounded-2xl">
               {/* Glass Background */}
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl" />
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl md:rounded-2xl" />
 
               {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20 rounded-2xl" />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20 rounded-xl md:rounded-2xl" />
 
               {/* Content */}
-              <div className="relative p-6 overflow-y-auto max-h-[90vh]">
+              <div className="relative p-4 md:p-6 overflow-y-auto max-h-[95vh] md:max-h-[90vh]">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-white">
+                <div className="flex items-center justify-between mb-4 md:mb-6">
+                  <h2 className="text-xl md:text-2xl font-bold text-white">
                     User Settings
                   </h2>
                   <button
                     onClick={handleClose}
-                    className="p-2 rounded-full w-10 hover:bg-white/10 transition-colors"
+                    className="p-2 rounded-full w-8 h-8 md:w-10 md:h-10 hover:bg-white/10 transition-colors flex items-center justify-center"
                   >
-                    <CloseOutlined className="text-xl" style={{ color: "white" }}/>
+                    <CloseOutlined
+                      className="text-lg md:text-xl"
+                      style={{ color: "white" }}
+                    />
                   </button>
                 </div>
 
                 {/* Profile Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <div className="mb-6 md:mb-8">
+                  <h3 className="text-base md:text-lg font-semibold text-white mb-3 md:mb-4 flex items-center gap-2">
                     <UserOutlined /> Profile Information
                   </h3>
 
                   {/* Avatar Upload */}
-                  <div className="flex items-center gap-4 mb-6">
+                  <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 mb-4 md:mb-6">
                     <div className="relative">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/20">
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/20">
                         <img
-                          src={
-                            avatarPreview ||
-                            user.avatar ||
-                            defaultImage
-                          }
+                          src={avatarPreview || user.avatar || defaultImage}
                           alt="Avatar"
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-1 -right-1 p-2 bg-purple-500 rounded-full w-10 h-10 hover:bg-purple-600 transition-colors"
+                        className="absolute -bottom-1 -right-1 p-1.5 md:p-2 bg-purple-500 rounded-full w-8 h-8 md:w-10 md:h-10 hover:bg-purple-600 transition-colors flex items-center justify-center"
                         disabled={isLoading}
                       >
-                        <CameraOutlined className="text-white text-sm" />
+                        <CameraOutlined className="text-white text-xs md:text-sm" />
                       </button>
                     </div>
-                    <div>
-                      <p className="text-white font-medium">{user.username}</p>
-                      <p className="text-white/60 text-sm">
+                    <div className="text-center md:text-left">
+                      <p className="text-white font-medium text-sm md:text-base">
+                        {user.username}
+                      </p>
+                      <p className="text-white/60 text-xs md:text-sm">
                         Click camera to change avatar
                       </p>
                     </div>
@@ -289,7 +290,7 @@ export default function UserSettingsModal({
                   </div>
 
                   {/* Form Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
                     <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">
                         Full Name
@@ -301,7 +302,7 @@ export default function UserSettingsModal({
                           handleInputChange("name", e.target.value)
                         }
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -317,13 +318,13 @@ export default function UserSettingsModal({
                           handleInputChange("username", e.target.value)
                         }
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                         placeholder="Enter your username"
                       />
                     </div>
                   </div>
 
-                  <div className="mb-6">
+                  <div className="mb-4 md:mb-6">
                     <label className="block text-white/80 text-sm font-medium mb-2">
                       <MailOutlined className="mr-2" /> Email Address
                     </label>
@@ -334,7 +335,7 @@ export default function UserSettingsModal({
                         handleInputChange("email", e.target.value)
                       }
                       disabled={isLoading}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                      className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                       placeholder="Enter your email"
                     />
                   </div>
@@ -342,7 +343,7 @@ export default function UserSettingsModal({
                   <button
                     onClick={handleProfileUpdate}
                     disabled={isLoading}
-                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-2.5 md:py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg md:rounded-xl text-white font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 text-sm md:text-base"
                   >
                     <SaveOutlined />
                     {isUpdatingProfile ? "Updating..." : "Update Profile"}
@@ -351,11 +352,11 @@ export default function UserSettingsModal({
 
                 {/* Password Section */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <h3 className="text-base md:text-lg font-semibold text-white mb-3 md:mb-4 flex items-center gap-2">
                     <LockOutlined /> Change Password
                   </h3>
 
-                  <div className="space-y-4 mb-6">
+                  <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                     <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">
                         Current Password
@@ -370,7 +371,7 @@ export default function UserSettingsModal({
                           )
                         }
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                         placeholder="Enter current password"
                       />
                     </div>
@@ -386,7 +387,7 @@ export default function UserSettingsModal({
                           handlePasswordChange("newPassword", e.target.value)
                         }
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                         placeholder="Enter new password"
                       />
                     </div>
@@ -405,7 +406,7 @@ export default function UserSettingsModal({
                           )
                         }
                         disabled={isLoading}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50"
+                        className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-purple-500 transition-colors disabled:opacity-50 text-sm md:text-base"
                         placeholder="Confirm new password"
                       />
                     </div>
@@ -418,7 +419,7 @@ export default function UserSettingsModal({
                       !passwordData.currentPassword ||
                       !passwordData.newPassword
                     }
-                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl text-white font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-2.5 md:py-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg md:rounded-xl text-white font-medium hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 text-sm md:text-base"
                   >
                     <LockOutlined />
                     {isChangingPassword ? "Updating..." : "Update Password"}
