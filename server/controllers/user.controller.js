@@ -221,67 +221,6 @@ export const unfollowArtist = async (req, res) => {
 };
 
 /**
- * Like a playlist
- */
-export const likePlaylist = async (req, res) => {
-  try {
-    const { userId, playlistId } = req.params;
-
-    // Validate user authorization
-    if (req.user.id !== userId) {
-      return res
-        .status(403)
-        .json(ApiResponse.error("Unauthorized to modify this user's data"));
-    }
-
-    const result = await UserService.likePlaylist(userId, playlistId);
-    res
-      .status(200)
-      .json(ApiResponse.success("Playlist liked successfully", result));
-  } catch (error) {
-    console.error("Controller error - likePlaylist:", error);
-
-    if (error.message.includes("already liked")) {
-      return res.status(409).json(ApiResponse.error(error.message));
-    }
-    if (error.message.includes("Playlist not found")) {
-      return res.status(404).json(ApiResponse.error(error.message));
-    }
-
-    res.status(400).json(ApiResponse.error(error.message));
-  }
-};
-
-/**
- * Unlike a playlist
- */
-export const unlikePlaylist = async (req, res) => {
-  try {
-    const { userId, playlistId } = req.params;
-
-    // Validate user authorization
-    if (req.user.id !== userId) {
-      return res
-        .status(403)
-        .json(ApiResponse.error("Unauthorized to modify this user's data"));
-    }
-
-    const result = await UserService.unlikePlaylist(userId, playlistId);
-    res
-      .status(200)
-      .json(ApiResponse.success("Playlist unliked successfully", result));
-  } catch (error) {
-    console.error("Controller error - unlikePlaylist:", error);
-
-    if (error.message.includes("not liked")) {
-      return res.status(409).json(ApiResponse.error(error.message));
-    }
-
-    res.status(400).json(ApiResponse.error(error.message));
-  }
-};
-
-/**
  * Update user profile data
  */
 

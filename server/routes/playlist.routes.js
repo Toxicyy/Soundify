@@ -14,13 +14,16 @@ import {
   deletePlaylist,
   getAllPlaylists,
   getFeaturedPlaylists,
+  getLikedPlaylists,
   getPlatformDrafts,
   getPlatformPlaylists,
   getPlaylistById,
+  getPlaylistLikeStatus,
   getPlaylistsByCategory,
   getPlaylistsByTag,
   getPlaylistStats,
   getPlaylistTracks,
+  getUserPlaylists,
   likePlaylist,
   publishPlatformPlaylist,
   publishPlaylist,
@@ -37,15 +40,32 @@ import { ApiResponse } from "../utils/responses.js";
 
 const router = express.Router();
 
+/**
+ * Public routes - no authentication required
+ */
 router.get("/", getAllPlaylists);
 router.get("/search", searchPlaylists);
 router.get("/featured", getFeaturedPlaylists);
 router.get("/category/:category", getPlaylistsByCategory);
 router.get("/tag/:tag", getPlaylistsByTag);
+
+/**
+ * Protected routes - authentication required
+ */
 router.get("/:id", authenticate, getPlaylistById);
 router.get("/:id/tracks", authenticate, getPlaylistTracks);
-router.get("/:id/statistics", getPlaylistStats);
+router.get("/:id/statistics", authenticate, getPlaylistStats);
+router.get("/:playlistId/like-status", authenticate, getPlaylistLikeStatus);
 
+/**
+ * User-specific playlist routes
+ */
+router.get("/user/:userId", getUserPlaylists);
+router.get("/user/liked", authenticate, getLikedPlaylists);
+
+/**
+ * Playlist creation and management routes
+ */
 router.post(
   "/",
   authenticate,
@@ -54,7 +74,11 @@ router.post(
   createPlaylist
 );
 router.post("/quick", authenticate, createQuickPlaylist);
-router.post("/:id/publish", authenticate, publishPlaylist);
+
+/**
+ * Playlist modification routes with enhanced security
+ * These routes now include proper permission checking in controllers
+ */
 router.put(
   "/:id",
   authenticate,
@@ -62,20 +86,38 @@ router.put(
   validatePlaylistUpdate,
   updatePlaylist
 );
+
 router.delete("/:id", authenticate, deletePlaylist);
+router.post("/:id/publish", authenticate, publishPlaylist);
+
+/**
+ * Track management routes with enhanced security
+ */
 router.post("/:playlistId/tracks/:trackId", authenticate, addTrackToPlaylist);
-router.delete("/:id/tracks/:trackId", authenticate, removeTrackFromPlaylist);
+router.delete(
+  "/:playlistId/tracks/:trackId",
+  authenticate,
+  removeTrackFromPlaylist
+);
 router.put("/:playlistId/tracks/order", authenticate, updateTrackOrder);
-router.post("/:id/like", authenticate, likePlaylist);
-router.delete("/:id/like", authenticate, unlikePlaylist);
 
-// Получить все платформенные плейлисты (включая черновики)
+/**
+ * Like/Unlike functionality routes
+ */
+router.post("/:playlistId/like", authenticate, likePlaylist);
+router.delete("/:playlistId/like", authenticate, unlikePlaylist);
+
+/**
+ * Admin-only platform playlist management routes
+ */
 router.get("/admin/platform", authenticate, adminOnly, getPlatformPlaylists);
+router.get(
+  "/admin/platform/drafts",
+  authenticate,
+  adminOnly,
+  getPlatformDrafts
+);
 
-// Получить только черновики платформенных плейлистов
-router.get("/admin/platform/drafts", authenticate, adminOnly, getPlatformDrafts);
-
-// Создать новый платформенный плейлист (как черновик)
 router.post(
   "/admin/platform",
   authenticate,
@@ -85,7 +127,6 @@ router.post(
   createPlatformPlaylist
 );
 
-// Обновить платформенный плейлист
 router.put(
   "/admin/platform/:id",
   authenticate,
@@ -95,7 +136,6 @@ router.put(
   updatePlatformPlaylist
 );
 
-// Опубликовать платформенный плейлист (убрать статус черновика)
 router.post(
   "/admin/platform/:id/publish",
   authenticate,
@@ -103,7 +143,6 @@ router.post(
   publishPlatformPlaylist
 );
 
-// Удалить платформенный плейлист
 router.delete(
   "/admin/platform/:id",
   authenticate,
@@ -111,7 +150,9 @@ router.delete(
   deletePlatformPlaylist
 );
 
-// Статистика платформенных плейлистов (бонус для дашборда)
+/**
+ * Admin statistics route
+ */
 router.get(
   "/admin/platform/stats",
   authenticate,

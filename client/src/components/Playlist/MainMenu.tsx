@@ -3,6 +3,7 @@ import type { Playlist } from "../../types/Playlist";
 import type { Track } from "../../types/TrackData";
 import DraggableTracksList from "./components/DraggableTracksList";
 import TrackSearchLocal from "./components/TrackSearchLocal";
+import { useNotification } from "../../hooks/useNotification";
 
 interface MainMenuProps {
   /** Current playlist data */
@@ -17,13 +18,20 @@ interface MainMenuProps {
   tracks?: Track[];
   /** Error message if track loading failed */
   tracksError?: string | null;
-  /** Whether the playlist is in edit mode */
+  /** Whether the current user can edit this playlist */
   isEditable?: boolean;
 }
 
 /**
- * Playlist main menu component with drag & drop tracks, local track management, and search
- * Provides comprehensive playlist editing and interaction functionality
+ * Enhanced playlist main menu component with role-based permissions
+ *
+ * Features:
+ * - Role-based access control for editing
+ * - Drag & drop tracks with proper permissions
+ * - Local track management with notifications
+ * - Search functionality with permission checks
+ * - Comprehensive error handling
+ * - Responsive design with accessibility
  */
 const MainMenu: FC<MainMenuProps> = ({
   playlist,
@@ -32,49 +40,154 @@ const MainMenu: FC<MainMenuProps> = ({
   hasUnsavedChanges,
   tracks = [],
   tracksError = null,
-  isEditable = true, // По умолчанию включаем редактирование
+  isEditable = false,
 }) => {
+  const notification = useNotification();
+
   /**
-   * Локальное добавление трека в плейлист
+   * Enhanced local track addition with notifications
    */
   const handleAddTrackLocal = useCallback(
     (track: Track) => {
-      if (!playlist) return;
-      // Проверяем, нет ли уже такого трека в плейлисте
+      if (!playlist) {
+        notification.showError("No playlist available");
+        return;
+      }
+
+      if (!isEditable) {
+        notification.showError(
+          "You don't have permission to edit this playlist"
+        );
+        return;
+      }
+
+      // Check if track already exists in playlist
       const isAlreadyInPlaylist = tracks.some(
         (existingTrack) => existingTrack._id === track._id
       );
 
       if (isAlreadyInPlaylist) {
-        console.warn(`Track "${track.name}" is already in the playlist`);
+        notification.showWarning(`"${track.name}" is already in the playlist`);
         return;
       }
 
-      // Добавляем трек в конец списка
-      const newTracks = [...tracks, track];
+      try {
+        // Add track to the end of the list
+        const newTracks = [...tracks, track];
 
-      // Обновляем локальное состояние плейлиста
-      updateLocal({
-        tracks: newTracks as Track[] | string[], // Приводим к нужному типу
-        trackCount: newTracks.length,
-        // Можно также обновить общую длительность плейлиста
-        totalDuration: newTracks.reduce(
-          (total, t) => total + (t.duration || 0),
-          0
-        ),
-      });
+        // Update local playlist state
+        updateLocal({
+          tracks: newTracks as Track[] | string[],
+          trackCount: newTracks.length,
+          totalDuration: newTracks.reduce(
+            (total, t) => total + (t.duration || 0),
+            0
+          ),
+        });
 
-      console.log(`✅ Track "${track.name}" added to playlist locally`);
+        // Show success notification
+        notification.showSuccess(`"${track.name}" added to playlist`);
+
+        console.log(`✅ Track "${track.name}" added to playlist locally`);
+      } catch (error) {
+        console.error("❌ Error adding track locally:", error);
+        notification.showError("Failed to add track to playlist");
+      }
     },
-    [playlist, tracks, updateLocal]
+    [playlist, tracks, updateLocal, isEditable, notification]
   );
 
-  // Показываем индикатор изменений
+  /**
+   * Enhanced track removal with notifications
+   */
+  const handleRemoveTrackLocal = useCallback(
+    (trackId: string) => {
+      if (!playlist) {
+        notification.showError("No playlist available");
+        return;
+      }
+
+      if (!isEditable) {
+        notification.showError(
+          "You don't have permission to edit this playlist"
+        );
+        return;
+      }
+
+      try {
+        const trackToRemove = tracks.find((track) => track._id === trackId);
+        const newTracks = tracks.filter((track) => track._id !== trackId);
+
+        updateLocal({
+          tracks: newTracks as Track[] | string[],
+          trackCount: newTracks.length,
+          totalDuration: newTracks.reduce(
+            (total, t) => total + (t.duration || 0),
+            0
+          ),
+        });
+
+        // Show success notification
+        const trackName = trackToRemove?.name || "Track";
+        notification.showSuccess(`"${trackName}" removed from playlist`);
+
+        console.log(`✅ Track removed from playlist locally`);
+      } catch (error) {
+        console.error("❌ Error removing track locally:", error);
+        notification.showError("Failed to remove track from playlist");
+      }
+    },
+    [playlist, tracks, updateLocal, isEditable, notification]
+  );
+
+  /**
+   * Enhanced track reordering with notifications
+   */
+  const handleTrackReorder = useCallback(
+    (newTracks: Track[]) => {
+      if (!playlist) {
+        notification.showError("No playlist available");
+        return;
+      }
+
+      if (!isEditable) {
+        notification.showError(
+          "You don't have permission to edit this playlist"
+        );
+        return;
+      }
+
+      try {
+        updateLocal({
+          tracks: newTracks as Track[] | string[],
+          trackCount: newTracks.length,
+          totalDuration: newTracks.reduce(
+            (total, t) => total + (t.duration || 0),
+            0
+          ),
+        });
+
+        // Show subtle notification for reordering
+        notification.showInfo("Track order updated");
+
+        console.log(`✅ Track order updated locally`);
+      } catch (error) {
+        console.error("❌ Error reordering tracks locally:", error);
+        notification.showError("Failed to reorder tracks");
+      }
+    },
+    [playlist, updateLocal, isEditable, notification]
+  );
+
+  /**
+   * Render unsaved changes indicator with enhanced styling
+   */
   const renderUnsavedChangesIndicator = () => {
     if (!hasUnsavedChanges) return null;
+    if(!isEditable) return null;
 
     return (
-      <div className="px-6 py-3 mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+      <div className="px-6 py-3 mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
@@ -90,12 +203,46 @@ const MainMenu: FC<MainMenuProps> = ({
     );
   };
 
-  return (
-    <div className="min-h-[62.9vh] w-full bg-white/10 rounded-3xl border border-white/20 overflow-hidden">
-      {/* Индикатор несохраненных изменений */}
-      {renderUnsavedChangesIndicator()}
+  /**
+   * Render permission-based edit notice
+   */
+  const renderEditNotice = () => {
+    if (isEditable || !playlist) return null;
 
-      {/* Основной список треков с drag & drop */}
+    return (
+      <div className="px-6 py-3 mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-blue-400/20 rounded-full flex items-center justify-center">
+            <svg
+              className="w-2.5 h-2.5 text-blue-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <span className="text-blue-400 font-medium text-sm">
+            View Only Mode
+          </span>
+          <span className="text-blue-400/60 text-xs">
+            You can listen but cannot edit this playlist
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full bg-white/10 rounded-3xl border border-white/20 overflow-hidden backdrop-blur-sm">
+      {/* Status indicators */}
+      {renderUnsavedChangesIndicator()}
+      {renderEditNotice()}
+
+      {/* Main tracks list with drag & drop */}
       <DraggableTracksList
         tracks={tracks}
         isLoading={isLoading}
@@ -103,9 +250,11 @@ const MainMenu: FC<MainMenuProps> = ({
         isEditable={isEditable}
         updateLocal={updateLocal}
         playlist={playlist}
+        onRemoveTrack={handleRemoveTrackLocal}
+        onReorderTracks={handleTrackReorder}
       />
 
-      {/* Поиск и добавление треков (только в режиме редактирования) */}
+      {/* Search and add tracks section (only for editable playlists) */}
       {isEditable && (
         <div className="border-t border-white/10 pt-4 pb-6">
           <TrackSearchLocal
@@ -116,7 +265,7 @@ const MainMenu: FC<MainMenuProps> = ({
         </div>
       )}
 
-      {/* Информация о плейлисте внизу */}
+      {/* Enhanced playlist info footer */}
       {playlist && (
         <div className="px-6 py-4 border-t border-white/10 bg-white/5">
           <div className="flex items-center justify-between text-sm">
@@ -128,14 +277,36 @@ const MainMenu: FC<MainMenuProps> = ({
               {playlist.privacy && (
                 <span className="capitalize">{playlist.privacy}</span>
               )}
+              {playlist.likeCount !== undefined && (
+                <span>{playlist.likeCount} likes</span>
+              )}
             </div>
 
-            {hasUnsavedChanges && (
-              <div className="flex items-center gap-2 text-yellow-400">
-                <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                <span className="text-xs">Changes pending</span>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {!isEditable && (
+                <div className="flex items-center gap-1 text-blue-400">
+                  <svg
+                    className="w-3 h-3"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-xs">View Only</span>
+                </div>
+              )}
+
+              {hasUnsavedChanges && isEditable && (
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs">Changes pending</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

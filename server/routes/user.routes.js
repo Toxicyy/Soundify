@@ -9,8 +9,6 @@ import {
   getUserLikedArtists,
   followArtist,
   unfollowArtist,
-  likePlaylist,
-  unlikePlaylist,
   updateUserProfile,
   getUser,
   syncSkipData,
@@ -47,14 +45,6 @@ router.get("/:userId/playlists/liked", authenticate, getLikedPlaylists);
 router.get("/:userId/liked-artists", authenticate, getUserLikedArtists);
 router.put("/:userId/follow/artist/:artistId", authenticate, followArtist);
 router.put("/:userId/unfollow/artist/:artistId", authenticate, unfollowArtist);
-
-// User liked playlists routes
-router.put("/:userId/like/playlist/:playlistId", authenticate, likePlaylist);
-router.put(
-  "/:userId/unlike/playlist/:playlistId",
-  authenticate,
-  unlikePlaylist
-);
 
 router.post("/skip-sync", authenticate, syncSkipData);
 

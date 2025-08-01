@@ -1,4 +1,5 @@
 import type { ArtistCreate } from "../Pages/BecomeAnArtist";
+import type { Playlist } from "../types/Playlist";
 
 export const BASEURL = "http://localhost:5000";
 
@@ -91,17 +92,32 @@ export const api = {
       });
     },
 
+    /**
+     * Get user's liked playlists
+     * @param userId - ID of the user
+     * @param options - Pagination options
+     * @returns Promise<Response> - API response with liked playlists
+     */
     getLikedPlaylists: async (
       userId: string,
-      options: {
-        page?: number;
-        limit?: number;
-      } = {}
-    ) => {
-      const query = buildQueryString(options);
-      return fetch(`${BASEURL}/api/users/${userId}/playlists/liked${query}`, {
-        headers: getAuthHeaders(),
-      });
+      options: { page?: number; limit?: number } = {}
+    ): Promise<Response> => {
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+
+      if (options.page) params.append("page", options.page.toString());
+      if (options.limit) params.append("limit", options.limit.toString());
+
+      return fetch(
+        `http://localhost:5000/api/users/${userId}/liked-playlists?${params}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     },
 
     getLikedArtists: async (
@@ -155,24 +171,48 @@ export const api = {
       );
     },
 
-    likePlaylist: async (userId: string, playlistId: string) => {
-      return fetch(
-        `${BASEURL}/api/users/${userId}/like/playlist/${playlistId}`,
-        {
-          method: "PUT",
-          headers: getAuthHeaders(),
-        }
-      );
+    /**
+     * Like a playlist
+     * @param userId - ID of the user liking the playlist
+     * @param playlistId - ID of the playlist to like
+     * @returns Promise<Response> - API response
+     */
+    likePlaylist: async (
+      userId: string,
+      playlistId: string
+    ): Promise<Response> => {
+      const token = localStorage.getItem("token");
+
+      return fetch(`http://localhost:5000/api/playlists/${playlistId}/like`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
     },
 
-    unlikePlaylist: async (userId: string, playlistId: string) => {
-      return fetch(
-        `${BASEURL}/api/users/${userId}/unlike/playlist/${playlistId}`,
-        {
-          method: "PUT",
-          headers: getAuthHeaders(),
-        }
-      );
+    /**
+     * Unlike a playlist
+     * @param userId - ID of the user unliking the playlist
+     * @param playlistId - ID of the playlist to unlike
+     * @returns Promise<Response> - API response
+     */
+    unlikePlaylist: async (
+      userId: string,
+      playlistId: string
+    ): Promise<Response> => {
+      const token = localStorage.getItem("token");
+
+      return fetch(`http://localhost:5000/api/playlists/${playlistId}/like`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      });
     },
 
     // Update user profile
@@ -379,18 +419,44 @@ export const api = {
       });
     },
 
-    like: async (playlistId: string) => {
-      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+    /**
+     * Get playlist like status for current user
+     * @param playlistId - ID of the playlist
+     * @returns Promise<Response> - API response with like status
+     */
+    getLikeStatus: async (playlistId: string): Promise<Response> => {
+      const token = localStorage.getItem("token");
+
+      return fetch(
+        `http://localhost:5000/api/playlists/${playlistId}/like-status`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     },
 
-    unlike: async (playlistId: string) => {
-      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+    /**
+     * Get playlist statistics including like count
+     * @param playlistId - ID of the playlist
+     * @returns Promise<Response> - API response with playlist stats
+     */
+    getStats: async (playlistId: string): Promise<Response> => {
+      const token = localStorage.getItem("token");
+
+      return fetch(
+        `http://localhost:5000/api/playlists/${playlistId}/statistics`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     },
 
     search: async (query: string, options: { limit?: number } = {}) => {
@@ -415,12 +481,6 @@ export const api = {
 
     getByTag: async (tag: string) => {
       return fetch(`${BASEURL}/api/playlists/tag/${tag}`, {
-        headers: getAuthHeaders(false),
-      });
-    },
-
-    getStats: async (playlistId: string) => {
-      return fetch(`${BASEURL}/api/playlists/${playlistId}/statistics`, {
         headers: getAuthHeaders(false),
       });
     },
@@ -550,3 +610,40 @@ export const api = {
     },
   },
 };
+
+// Type definitions for API responses
+export interface PlaylistLikeResponse {
+  success: boolean;
+  message: string;
+  data: {
+    isLiked: boolean;
+    likeCount: number;
+    playlistId: string;
+  };
+}
+
+export interface PlaylistStatsResponse {
+  success: boolean;
+  data: {
+    trackCount: number;
+    totalDuration: number;
+    likeCount: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface LikedPlaylistsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    playlists: Playlist[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalPlaylists: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  };
+}

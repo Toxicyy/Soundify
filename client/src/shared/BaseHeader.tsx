@@ -22,6 +22,7 @@ interface HeaderContentProps {
   title: {
     text: string | ReactNode;
     callback?: () => void;
+    className?: string;
   };
   subtitle?: string | ReactNode;
   isLoading: boolean;

@@ -3,9 +3,28 @@ import { ApiResponse } from "../utils/responses.js";
 import { catchAsync } from "../utils/helpers.js";
 
 /**
- * Playlist controller handling HTTP requests for playlist operations
- * Manages playlist CRUD operations, track management, and social features
+ * Enhanced playlist controller with improved security and like functionality
+ * All playlist modification operations now include proper ownership/admin checks
  */
+
+/**
+ * Check if user can edit playlist (owner or admin)
+ * @param {Object} playlist - Playlist document
+ * @param {string} userId - User ID
+ * @param {string} userStatus - User status (USER, PREMIUM, ADMIN)
+ * @returns {boolean} Can edit playlist
+ */
+const checkEditPermissions = (playlist, userId, userStatus) => {
+  if (userStatus === "ADMIN") return true;
+
+  const ownerId =
+    typeof playlist.owner === "string"
+      ? playlist.owner
+      : playlist.owner._id || playlist.owner.toString();
+
+
+  return ownerId.toString() === userId;
+};
 
 /**
  * Create new playlist with optional cover image
@@ -20,7 +39,7 @@ export const createPlaylist = catchAsync(async (req, res) => {
   // Extract playlist data from request body
   const playlistData = {
     name: req.body.name,
-    owner: req.user.id, // Get owner from authenvticated user
+    owner: req.user.id, // Get owner from authenticated user
     description: req.body.description || "",
     tracks: req.body.tracks || [],
     tags: req.body.tags || [],
@@ -75,14 +94,14 @@ export const getPlaylistById = catchAsync(async (req, res) => {
   if (!id) {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
+
   const playlist = await PlaylistService.getPlaylistById(id, req.user?.id);
 
   res.json(ApiResponse.success("Playlist retrieved successfully", playlist));
 });
 
 /**
- * Update existing playlist with optional new cover image
- * Requires playlist ownership
+ * Update existing playlist with enhanced permission checking
  */
 export const updatePlaylist = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -91,8 +110,16 @@ export const updatePlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  // Validate ownership
-  await PlaylistService.validatePlaylistOwnership(id, req.user.id);
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(id, req.user.id);
+
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to edit this playlist")
+      );
+  }
 
   // Extract update data from request body
   const updateData = {
@@ -109,18 +136,19 @@ export const updatePlaylist = catchAsync(async (req, res) => {
   );
 
   const coverFile = req.file;
-  const playlist = await PlaylistService.updatePlaylist(
+  const updatedPlaylist = await PlaylistService.updatePlaylist(
     id,
     updateData,
     coverFile
   );
 
-  res.json(ApiResponse.success("Playlist updated successfully", playlist));
+  res.json(
+    ApiResponse.success("Playlist updated successfully", updatedPlaylist)
+  );
 });
 
 /**
- * Delete playlist and associated cover file
- * Requires playlist ownership
+ * Delete playlist with enhanced permission checking
  */
 export const deletePlaylist = catchAsync(async (req, res) => {
   const { id } = req.params;
@@ -129,8 +157,16 @@ export const deletePlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  // Validate ownership
-  await PlaylistService.validatePlaylistOwnership(id, req.user.id);
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(id, req.user.id);
+
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to delete this playlist")
+      );
+  }
 
   await PlaylistService.deletePlaylist(id);
 
@@ -264,8 +300,7 @@ export const getUserPlaylists = catchAsync(async (req, res) => {
 });
 
 /**
- * Add existing track to playlist
- * Requires playlist ownership
+ * Add track to playlist with permission checking
  */
 export const addTrackToPlaylist = catchAsync(async (req, res) => {
   const { playlistId, trackId } = req.params;
@@ -276,23 +311,33 @@ export const addTrackToPlaylist = catchAsync(async (req, res) => {
       .json(ApiResponse.error("Playlist ID and Track ID are required"));
   }
 
-  // Validate ownership
-  await PlaylistService.validatePlaylistOwnership(playlistId, req.user.id);
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(
+    playlistId,
+    req.user.id
+  );
 
-  const playlist = await PlaylistService.addTrackToPlaylist(
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to edit this playlist")
+      );
+  }
+
+  const updatedPlaylist = await PlaylistService.addTrackToPlaylist(
     playlistId,
     trackId,
     req.user.id
   );
 
   res.json(
-    ApiResponse.success("Track added to playlist successfully", playlist)
+    ApiResponse.success("Track added to playlist successfully", updatedPlaylist)
   );
 });
 
 /**
- * Remove track from playlist
- * Requires playlist ownership
+ * Remove track from playlist with permission checking
  */
 export const removeTrackFromPlaylist = catchAsync(async (req, res) => {
   const { playlistId, trackId } = req.params;
@@ -303,22 +348,35 @@ export const removeTrackFromPlaylist = catchAsync(async (req, res) => {
       .json(ApiResponse.error("Playlist ID and Track ID are required"));
   }
 
-  // Validate ownership
-  await PlaylistService.validatePlaylistOwnership(playlistId, req.user.id);
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(
+    playlistId,
+    req.user.id
+  );
 
-  const playlist = await PlaylistService.removeTrackFromPlaylist(
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to edit this playlist")
+      );
+  }
+
+  const updatedPlaylist = await PlaylistService.removeTrackFromPlaylist(
     playlistId,
     trackId
   );
 
   res.json(
-    ApiResponse.success("Track removed from playlist successfully", playlist)
+    ApiResponse.success(
+      "Track removed from playlist successfully",
+      updatedPlaylist
+    )
   );
 });
 
 /**
- * Update track order within playlist
- * Requires playlist ownership
+ * Update track order with permission checking
  */
 export const updateTrackOrder = catchAsync(async (req, res) => {
   const { playlistId } = req.params;
@@ -333,22 +391,35 @@ export const updateTrackOrder = catchAsync(async (req, res) => {
       .status(400)
       .json(ApiResponse.error("Track IDs array is required"));
   }
-  // Validate ownership
-  await PlaylistService.validatePlaylistOwnership(playlistId, req.user.id);
 
-  const playlist = await PlaylistService.updateTrackOrder(
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(
+    playlistId,
+    req.user.id
+  );
+
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to edit this playlist")
+      );
+  }
+
+  const updatedPlaylist = await PlaylistService.updateTrackOrder(
     playlistId,
     trackIds,
     skipValidation,
     req.user.id
   );
 
-  res.json(ApiResponse.success("Track order updated successfully", playlist));
+  res.json(
+    ApiResponse.success("Track order updated successfully", updatedPlaylist)
+  );
 });
 
 /**
- * Like playlist
- * Adds playlist to user's liked playlists
+ * Like playlist - Enhanced with proper error handling
  */
 export const likePlaylist = catchAsync(async (req, res) => {
   const { playlistId } = req.params;
@@ -357,14 +428,28 @@ export const likePlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  const playlist = await PlaylistService.likePlaylist(playlistId, req.user.id);
+  try {
+    const result = await PlaylistService.likePlaylist(playlistId, req.user.id);
 
-  res.json(ApiResponse.success("Playlist liked successfully", playlist));
+    res.json(
+      ApiResponse.success("Playlist liked successfully", {
+        playlistId,
+        isLiked: true,
+        likeCount: result.likeCount,
+      })
+    );
+  } catch (error) {
+    if (error.message.includes("already liked")) {
+      return res
+        .status(409)
+        .json(ApiResponse.error("Playlist is already liked"));
+    }
+    throw error;
+  }
 });
 
 /**
- * Unlike playlist
- * Removes playlist from user's liked playlists
+ * Unlike playlist - Enhanced with proper error handling
  */
 export const unlikePlaylist = catchAsync(async (req, res) => {
   const { playlistId } = req.params;
@@ -373,17 +458,49 @@ export const unlikePlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  const playlist = await PlaylistService.unlikePlaylist(
+  try {
+    const result = await PlaylistService.unlikePlaylist(
+      playlistId,
+      req.user.id
+    );
+
+    res.json(
+      ApiResponse.success("Playlist unliked successfully", {
+        playlistId,
+        isLiked: false,
+        likeCount: result.likeCount,
+      })
+    );
+  } catch (error) {
+    if (error.message.includes("not liked")) {
+      return res
+        .status(409)
+        .json(ApiResponse.error("Playlist is not liked by user"));
+    }
+    throw error;
+  }
+});
+
+/**
+ * Get playlist like status for current user
+ */
+export const getPlaylistLikeStatus = catchAsync(async (req, res) => {
+  const { playlistId } = req.params;
+
+  if (!playlistId) {
+    return res.status(400).json(ApiResponse.error("Playlist ID is required"));
+  }
+
+  const result = await PlaylistService.getPlaylistLikeStatus(
     playlistId,
-    req.user.id
+    req.user?.id
   );
 
-  res.json(ApiResponse.success("Playlist unliked successfully", playlist));
+  res.json(ApiResponse.success("Like status retrieved successfully", result));
 });
 
 /**
  * Get current user's liked playlists
- * Returns playlists the user has liked
  */
 export const getLikedPlaylists = catchAsync(async (req, res) => {
   const { page, limit } = req.query;
@@ -403,8 +520,7 @@ export const getLikedPlaylists = catchAsync(async (req, res) => {
 });
 
 /**
- * Get playlist statistics
- * Returns playlist metadata and stats
+ * Get enhanced playlist statistics
  */
 export const getPlaylistStats = catchAsync(async (req, res) => {
   const { playlistId } = req.params;
@@ -420,6 +536,9 @@ export const getPlaylistStats = catchAsync(async (req, res) => {
   );
 });
 
+/**
+ * Create quick playlist with enhanced limits checking
+ */
 export const createQuickPlaylist = catchAsync(async (req, res) => {
   try {
     const userId = req.user.id;
@@ -463,20 +582,35 @@ export const createQuickPlaylist = catchAsync(async (req, res) => {
   }
 });
 
-// Также добавить метод для превращения черновика в полноценный плейлист
+/**
+ * Publish playlist with permission checking
+ */
 export const publishPlaylist = catchAsync(async (req, res) => {
   const { id } = req.params;
 
-  // Валидация владельца
-  await PlaylistService.validatePlaylistOwnership(id, req.user.id);
+  // Get playlist and check permissions
+  const playlist = await PlaylistService.getPlaylistById(id, req.user.id);
 
-  const playlist = await PlaylistService.updatePlaylist(id, {
+  if (!checkEditPermissions(playlist, req.user.id, req.user.status)) {
+    return res
+      .status(403)
+      .json(
+        ApiResponse.error("You don't have permission to edit this playlist")
+      );
+  }
+
+  const updatedPlaylist = await PlaylistService.updatePlaylist(id, {
     isDraft: false,
     privacy: req.body.privacy || "public",
   });
 
-  res.json(ApiResponse.success("Playlist published successfully", playlist));
+  res.json(
+    ApiResponse.success("Playlist published successfully", updatedPlaylist)
+  );
 });
+
+// ============ ADMIN PLATFORM PLAYLIST METHODS ============
+
 /**
  * Get all platform playlists for admin panel
  * Returns featured playlists with enhanced admin data
@@ -484,14 +618,14 @@ export const publishPlaylist = catchAsync(async (req, res) => {
 export const getPlatformPlaylists = catchAsync(async (req, res) => {
   const { page, limit, search } = req.query;
 
-  // Получаем только featured плейлисты для админки
+  // Get only featured playlists for admin panel
   const result = await PlaylistService.getAllPlaylists({
     page: parseInt(page) || 1,
     limit: parseInt(limit) || 20,
     search,
-    category: "featured", // Только платформенные плейлисты
+    category: "featured", // Only platform playlists
     privacy: "public",
-    includeDrafts: true, // Включаем черновики для админки
+    includeDrafts: true, // Include drafts for admin panel
   });
 
   res.json(
@@ -508,21 +642,21 @@ export const getPlatformPlaylists = catchAsync(async (req, res) => {
  * Creates a draft playlist that won't be visible to regular users
  */
 export const createPlatformPlaylist = catchAsync(async (req, res) => {
-  // Валидация обязательных полей
+  // Validate required fields
   if (!req.body.name) {
     return res.status(400).json(ApiResponse.error("Playlist name is required"));
   }
 
-  // Данные для платформенного плейлиста
+  // Data for platform playlist
   const playlistData = {
     name: req.body.name.trim(),
     owner: req.user.id,
     description: req.body.description || "",
     tracks: req.body.tracks || [],
     tags: req.body.tags || [],
-    category: "featured", // Принудительно featured для платформенных
+    category: "featured", // Force featured for platform playlists
     privacy: "public",
-    isDraft: true, // Создаем как черновик
+    isDraft: true, // Create as draft
   };
 
   if (req.body.publish) {
@@ -531,7 +665,7 @@ export const createPlatformPlaylist = catchAsync(async (req, res) => {
 
   const playlist = await PlaylistService.createPlaylist(
     playlistData,
-    req.file // Cover file от multer
+    req.file // Cover file from multer
   );
 
   res.status(201).json(
@@ -553,7 +687,7 @@ export const updatePlatformPlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  // Проверяем что плейлист существует и это featured
+  // Check that playlist exists and is featured
   const existingPlaylist = await PlaylistService.getPlaylistById(
     id,
     req.user.id
@@ -568,13 +702,13 @@ export const updatePlatformPlaylist = catchAsync(async (req, res) => {
     );
   }
 
-  // Подготавливаем данные для обновления
+  // Prepare update data
   const updateData = {
     name: req.body.name,
     description: req.body.description,
     tags: req.body.tags || undefined,
     tracks: req.body.tracks || undefined,
-    category: "featured", // Принудительно сохраняем как featured
+    category: "featured", // Force keep as featured
     privacy: "public",
   };
 
@@ -584,7 +718,7 @@ export const updatePlatformPlaylist = catchAsync(async (req, res) => {
     updateData.isDraft = true;
   }
 
-  // Убираем undefined поля
+  // Remove undefined fields
   Object.keys(updateData).forEach(
     (key) => updateData[key] === undefined && delete updateData[key]
   );
@@ -616,7 +750,7 @@ export const deletePlatformPlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  // Проверяем что плейлист существует и это featured
+  // Check that playlist exists and is featured
   const existingPlaylist = await PlaylistService.getPlaylistById(
     id,
     req.user.id
@@ -652,7 +786,7 @@ export const publishPlatformPlaylist = catchAsync(async (req, res) => {
     return res.status(400).json(ApiResponse.error("Playlist ID is required"));
   }
 
-  // Проверяем что это черновик платформенного плейлиста
+  // Check that this is a draft platform playlist
   const existingPlaylist = await PlaylistService.getPlaylistById(
     id,
     req.user.id
@@ -670,7 +804,7 @@ export const publishPlatformPlaylist = catchAsync(async (req, res) => {
       .json(ApiResponse.error("Playlist is already published"));
   }
 
-  // Проверяем что плейлист готов к публикации
+  // Check that playlist is ready for publishing
   if (!existingPlaylist.name || existingPlaylist.name.trim().length === 0) {
     return res
       .status(400)
@@ -687,7 +821,7 @@ export const publishPlatformPlaylist = catchAsync(async (req, res) => {
       );
   }
 
-  // Публикуем плейлист
+  // Publish playlist
   const playlist = await PlaylistService.updatePlaylist(id, {
     isDraft: false,
     privacy: "public",
@@ -714,7 +848,7 @@ export const getPlatformDrafts = catchAsync(async (req, res) => {
     limit: parseInt(limit) || 20,
     category: "featured",
     privacy: "public",
-    draftsOnly: true, // Только черновики
+    draftsOnly: true, // Only drafts
   });
 
   res.json(

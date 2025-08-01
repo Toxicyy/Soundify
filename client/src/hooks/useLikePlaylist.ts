@@ -1,5 +1,4 @@
-import { useState, useCallback } from "react";
-import { api } from "../shared/api";
+import { useState, useCallback, useEffect } from "react";
 import { useGetUserQuery } from "../state/UserApi.slice";
 
 interface UseLikePlaylistReturn {
@@ -7,31 +6,75 @@ interface UseLikePlaylistReturn {
   isLoading: boolean;
   error: string | null;
   toggleLike: () => Promise<void>;
+  likeCount: number;
 }
 
 /**
- * Hook for liking/unliking playlists
- * Manages like state and provides toggle functionality
+ * Hook for managing playlist like/unlike functionality
+ *
+ * Features:
+ * - Optimistic updates for immediate UI feedback
+ * - Automatic state sync with user data
+ * - Comprehensive error handling with rollback
+ * - Integration with playlist API endpoints
  */
 export const useLikePlaylist = (
   playlistId: string,
-  initialLikeState = false
+  initialLikeCount = 0
 ): UseLikePlaylistReturn => {
-  const { data: user } = useGetUserQuery();
-  const [isLiked, setIsLiked] = useState(initialLikeState);
+  const { data: user, refetch: refetchUser } = useGetUserQuery();
+
+  const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
+
+  // Initialize like status from user data
+  useEffect(() => {
+    if (user?.likedPlaylists && playlistId) {
+      const userLikesPlaylist = user.likedPlaylists.includes(playlistId);
+      setIsLiked(userLikesPlaylist);
+    }
+  }, [user?.likedPlaylists, playlistId]);
+
+  // Update like count when prop changes
+  useEffect(() => {
+    setLikeCount(initialLikeCount);
+  }, [initialLikeCount]);
 
   const toggleLike = useCallback(async () => {
-    if (!user?._id || !playlistId || isLoading) return;
+    if (!user?._id || !playlistId || isLoading) {
+      return;
+    }
+
+    const previousLiked = isLiked;
+    const previousCount = likeCount;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = isLiked
-        ? await api.user.unlikePlaylist(user._id, playlistId)
-        : await api.user.likePlaylist(user._id, playlistId);
+      // Optimistic update
+      const newLikedState = !isLiked;
+      const newCount = newLikedState
+        ? likeCount + 1
+        : Math.max(0, likeCount - 1);
+
+      setIsLiked(newLikedState);
+      setLikeCount(newCount);
+
+      // API call
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/playlists/${playlistId}/like`,
+        {
+          method: newLikedState ? "POST" : "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -40,25 +83,31 @@ export const useLikePlaylist = (
 
       const data = await response.json();
 
-      if (data.success) {
-        setIsLiked(!isLiked);
-      } else {
-        throw new Error(data.message || "Failed to update like status");
+      if (data.data && typeof data.data.likeCount === "number") {
+        setLikeCount(data.data.likeCount);
       }
+
+      // Refresh user data
+      await refetchUser();
     } catch (error) {
+      // Rollback optimistic updates on error
+      setIsLiked(previousLiked);
+      setLikeCount(previousCount);
+
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       setError(errorMessage);
-      console.error("Error toggling like status:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [user?._id, playlistId, isLiked, isLoading]);
+  }, [user?._id, playlistId, isLiked, likeCount, isLoading, refetchUser]);
 
   return {
     isLiked,
     isLoading,
     error,
     toggleLike,
+    likeCount,
   };
 };

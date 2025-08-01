@@ -7,8 +7,8 @@ import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import { extractFileIdFromUrl, deleteFileFromB2 } from "../utils/b2Utils.js";
 
 /**
- * Service for managing playlists and their associated data
- * Handles playlist CRUD operations, track management, and access control
+ * Enhanced service for managing playlists with like functionality and improved security
+ * Handles playlist CRUD operations, track management, access control, and social features
  */
 class PlaylistService {
   /**
@@ -18,8 +18,16 @@ class PlaylistService {
    * @returns {Object} Created playlist document with signed URLs
    */
   async createPlaylist(playlistData, coverFile) {
-    const { name, owner, description, tracks, tags, category, privacy, isDraft } =
-      playlistData;
+    const {
+      name,
+      owner,
+      description,
+      tracks,
+      tags,
+      category,
+      privacy,
+      isDraft,
+    } = playlistData;
 
     if (!name || !owner) {
       throw new Error("Playlist name and owner are required");
@@ -75,10 +83,15 @@ class PlaylistService {
     }
   }
 
-  // В PlaylistService.js - добавить метод для генерации уникального имени
+  /**
+   * Generate unique playlist name for user
+   * @param {string} userId - User ID
+   * @param {string} baseName - Base name for playlist
+   * @returns {string} Unique playlist name
+   */
   async generateUniquePlaylistName(userId, baseName = "My Playlist") {
     try {
-      // Находим все плейлисты пользователя с похожим именем
+      // Find all user playlists with similar names
       const existingPlaylists = await Playlist.find({
         owner: userId,
         name: { $regex: `^${baseName}`, $options: "i" },
@@ -90,7 +103,7 @@ class PlaylistService {
         return baseName;
       }
 
-      // Извлекаем номера из существующих плейлистов
+      // Extract numbers from existing playlists
       const numbers = existingPlaylists
         .map((playlist) => {
           const match = playlist.name.match(
@@ -101,11 +114,11 @@ class PlaylistService {
         .filter((num) => !isNaN(num))
         .sort((a, b) => b - a);
 
-      // Находим следующий доступный номер
+      // Find next available number
       const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
       return `${baseName} #${nextNumber}`;
     } catch (error) {
-      // Fallback с timestamp
+      // Fallback with timestamp
       return `${baseName} #${Date.now()}`;
     }
   }
@@ -149,8 +162,8 @@ class PlaylistService {
         tracks: [],
         tags: [],
         category: "user",
-        privacy: "private", // По умолчанию приватный
-        isDraft: true, // Добавляем флаг черновика
+        privacy: "private", // Default to private
+        isDraft: true, // Add draft flag
       };
 
       const playlist = await this.createPlaylist(playlistData, null);
@@ -279,25 +292,41 @@ class PlaylistService {
     search,
     category,
     privacy = "public",
+    includeDrafts = false,
+    draftsOnly = false,
   }) {
     try {
       const skip = (page - 1) * limit;
-      const filter = { privacy }; // Only public playlists by default
+      const filter = { privacy };
 
-      // Build search filter
+      // Category filter
+      if (category) filter.category = category;
+
+      // Draft logic
+      if (draftsOnly) {
+        filter.isDraft = true;
+      } else if (!includeDrafts) {
+        filter.isDraft = { $ne: true }; // Exclude drafts for regular users
+      }
+      // If includeDrafts = true, show all (both drafts and published)
+
+      // Search
       if (search) {
         filter.$or = [
           { name: { $regex: search, $options: "i" } },
           { description: { $regex: search, $options: "i" } },
+          { tags: { $in: [new RegExp(search, "i")] } },
         ];
       }
 
-      if (category) filter.category = category;
-
       const [playlists, total] = await Promise.all([
         Playlist.find(filter)
-          .populate("owner", "name avatar")
-          .sort({ createdAt: -1 })
+          .populate("owner", "name avatar username")
+          .sort({
+            // Drafts first, then by creation date
+            isDraft: -1,
+            createdAt: -1,
+          })
           .skip(skip)
           .limit(limit),
         Playlist.countDocuments(filter),
@@ -396,7 +425,7 @@ class PlaylistService {
 
       const tracks = trackIdsForPage
         .map((trackId) => trackMap.get(trackId.toString()))
-        .filter(Boolean); // Убираем треки, которые не найдены (удаленные треки)
+        .filter(Boolean); // Remove tracks that are not found (deleted tracks)
 
       const totalPages = Math.ceil(total / limit);
       const tracksWithSignedUrls = await TrackService.addSignedUrlsToTracks(
@@ -453,7 +482,9 @@ class PlaylistService {
         privacy: "public", // Only search public playlists
       })
         .populate("owner", "name")
-        .select("name coverUrl owner tags category totalDuration trackCount")
+        .select(
+          "name coverUrl owner tags category totalDuration trackCount likeCount"
+        )
         .sort({ createdAt: -1 })
         .limit(limit);
 
@@ -612,6 +643,7 @@ class PlaylistService {
    * Add track to playlist
    * @param {string} playlistId - Playlist ID
    * @param {string} trackId - Track ID
+   * @param {string} userId - User ID for fetching updated playlist
    * @returns {Object} Updated playlist
    */
   async addTrackToPlaylist(playlistId, trackId, userId) {
@@ -676,6 +708,8 @@ class PlaylistService {
    * Update track order in playlist
    * @param {string} playlistId - Playlist ID
    * @param {Array} trackIds - Ordered array of track IDs
+   * @param {boolean} skipValidation - Skip validation of track IDs
+   * @param {string} userId - User ID for fetching updated playlist
    * @returns {Object} Updated playlist
    */
   async updateTrackOrder(playlistId, trackIds, skipValidation = false, userId) {
@@ -689,7 +723,7 @@ class PlaylistService {
         throw new Error("Playlist not found");
       }
 
-      // Проверяем только если не пропускаем валидацию
+      // Check only if not skipping validation
       if (!skipValidation) {
         const validTrackIds = trackIds.filter((id) =>
           playlist.tracks.includes(id)
@@ -711,11 +745,13 @@ class PlaylistService {
     }
   }
 
+  // ============ LIKE FUNCTIONALITY ============
+
   /**
    * Like playlist
    * @param {string} playlistId - Playlist ID
    * @param {string} userId - User ID
-   * @returns {Object} Updated playlist
+   * @returns {Object} Updated playlist with like count
    */
   async likePlaylist(playlistId, userId) {
     if (!playlistId || !userId) {
@@ -732,21 +768,26 @@ class PlaylistService {
       if (!user) throw new Error("User not found");
 
       // Check if playlist is already liked by user
-      if (user.likedPlaylists.includes(playlistId)) {
+      if (user.likedPlaylists && user.likedPlaylists.includes(playlistId)) {
         throw new Error("Playlist is already liked by this user");
       }
 
       // Add playlist to user's liked playlists and increment like count
       await Promise.all([
         User.findByIdAndUpdate(userId, {
-          $push: { likedPlaylists: playlistId },
+          $addToSet: { likedPlaylists: playlistId }, // Use $addToSet to avoid duplicates
         }),
         Playlist.findByIdAndUpdate(playlistId, {
           $inc: { likeCount: 1 },
         }),
       ]);
 
-      return await this.getPlaylistById(playlistId);
+      // Return updated playlist with new like count
+      const updatedPlaylist = await this.getPlaylistById(playlistId, userId);
+      return {
+        ...updatedPlaylist,
+        likeCount: (playlist.likeCount || 0) + 1,
+      };
     } catch (error) {
       throw new Error(`Failed to like playlist: ${error.message}`);
     }
@@ -756,7 +797,7 @@ class PlaylistService {
    * Unlike playlist
    * @param {string} playlistId - Playlist ID
    * @param {string} userId - User ID
-   * @returns {Object} Updated playlist
+   * @returns {Object} Updated playlist with like count
    */
   async unlikePlaylist(playlistId, userId) {
     if (!playlistId || !userId) {
@@ -773,7 +814,7 @@ class PlaylistService {
       if (!user) throw new Error("User not found");
 
       // Check if playlist is liked by user
-      if (!user.likedPlaylists.includes(playlistId)) {
+      if (!user.likedPlaylists || !user.likedPlaylists.includes(playlistId)) {
         throw new Error("Playlist is not liked by this user");
       }
 
@@ -787,9 +828,52 @@ class PlaylistService {
         }),
       ]);
 
-      return await this.getPlaylistById(playlistId);
+      // Return updated playlist with new like count
+      const updatedPlaylist = await this.getPlaylistById(playlistId, userId);
+      return {
+        ...updatedPlaylist,
+        likeCount: Math.max(0, (playlist.likeCount || 0) - 1), // Ensure non-negative
+      };
     } catch (error) {
       throw new Error(`Failed to unlike playlist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get playlist like status for current user
+   * @param {string} playlistId - Playlist ID
+   * @param {string} userId - User ID (optional)
+   * @returns {Object} Like status and count
+   */
+  async getPlaylistLikeStatus(playlistId, userId = null) {
+    if (!playlistId) {
+      throw new Error("Playlist ID is required");
+    }
+
+    try {
+      const playlist = await Playlist.findById(playlistId).select("likeCount");
+
+      if (!playlist) {
+        throw new Error("Playlist not found");
+      }
+
+      let isLiked = false;
+
+      // Check if user has liked this playlist
+      if (userId) {
+        const user = await User.findById(userId).select("likedPlaylists");
+        if (user && user.likedPlaylists) {
+          isLiked = user.likedPlaylists.includes(playlistId);
+        }
+      }
+
+      return {
+        playlistId,
+        isLiked,
+        likeCount: playlist.likeCount || 0,
+      };
+    } catch (error) {
+      throw new Error(`Failed to get like status: ${error.message}`);
     }
   }
 
@@ -810,7 +894,10 @@ class PlaylistService {
         throw new Error("User not found");
       }
 
-      return await this.getPlaylistsByIds(user.likedPlaylists, { page, limit });
+      return await this.getPlaylistsByIds(user.likedPlaylists || [], {
+        page,
+        limit,
+      });
     } catch (error) {
       throw new Error(`Failed to get liked playlists: ${error.message}`);
     }
@@ -859,6 +946,8 @@ class PlaylistService {
     }
   }
 
+  // ============ UTILITY METHODS ============
+
   /**
    * Check if user has access to playlist
    * @param {Object} playlist - Playlist document
@@ -875,7 +964,7 @@ class PlaylistService {
   }
 
   /**
-   * Validate playlist ownership
+   * Validate playlist ownership (legacy method, replaced by controller checks)
    * @param {string} playlistId - Playlist ID
    * @param {string} userId - User ID
    * @returns {Object} Playlist document
@@ -920,7 +1009,7 @@ class PlaylistService {
       return {
         trackCount: playlist.trackCount,
         totalDuration: playlist.totalDuration,
-        likeCount: playlist.likeCount,
+        likeCount: playlist.likeCount || 0,
         createdAt: playlist.createdAt,
         updatedAt: playlist.updatedAt,
       };
@@ -1036,254 +1125,7 @@ class PlaylistService {
     }
   }
 
-  /**
-   * Get paginated list of playlists with admin-specific options
-   * Enhanced version that supports draft filtering and admin features
-   */
-  async getAllPlaylistsAdmin({
-    page = 1,
-    limit = 20,
-    search,
-    category,
-    privacy = "public",
-    includeDrafts = false,
-    draftsOnly = false,
-  }) {
-    try {
-      const skip = (page - 1) * limit;
-      const filter = { privacy };
-
-      // Фильтр по категории
-      if (category) filter.category = category;
-
-      // Логика для черновиков
-      if (draftsOnly) {
-        filter.isDraft = true;
-      } else if (!includeDrafts) {
-        filter.isDraft = { $ne: true }; // Исключаем черновики для обычных пользователей
-      }
-      // Если includeDrafts = true, то показываем все (и черновики, и опубликованные)
-
-      // Поиск
-      if (search) {
-        filter.$or = [
-          { name: { $regex: search, $options: "i" } },
-          { description: { $regex: search, $options: "i" } },
-          { tags: { $in: [new RegExp(search, "i")] } },
-        ];
-      }
-
-      const [playlists, total] = await Promise.all([
-        Playlist.find(filter)
-          .populate("owner", "name avatar username")
-          .sort({
-            // Черновики сначала, потом по дате создания
-            isDraft: -1,
-            createdAt: -1,
-          })
-          .skip(skip)
-          .limit(limit),
-        Playlist.countDocuments(filter),
-      ]);
-
-      const totalPages = Math.ceil(total / limit);
-      const playlistsWithSignedUrls = await this.addSignedUrlsToPlaylistsSimple(
-        playlists
-      );
-
-      return {
-        playlists: playlistsWithSignedUrls,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalPlaylists: total,
-          hasNextPage: page < totalPages,
-          hasPreviousPage: page > 1,
-        },
-      };
-    } catch (error) {
-      throw new Error(`Failed to retrieve playlists: ${error.message}`);
-    }
-  }
-
-  /**
-   * Update the original getAllPlaylists method to use the admin version
-   */
-  async getAllPlaylists(params) {
-    return this.getAllPlaylistsAdmin(params);
-  }
-
-  /**
-   * Validate admin playlist permissions
-   * Checks if user can manage platform playlists
-   */
-  async validateAdminPlaylistAccess(userId, userStatus) {
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    if (userStatus !== "ADMIN") {
-      throw new Error("Admin access required for platform playlist management");
-    }
-
-    return true;
-  }
-
-  /**
-   * Create platform playlist with admin-specific logic
-   * Handles draft creation and admin permissions
-   */
-  async createPlatformPlaylist(playlistData, coverFile, adminUserId) {
-    try {
-      // Проверяем админские права
-      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
-
-      // Принудительно устанавливаем параметры для платформенного плейлиста
-      const platformPlaylistData = {
-        ...playlistData,
-        owner: adminUserId,
-        category: "featured",
-        privacy: "public",
-        isDraft: true, // По умолчанию создаем как черновик
-      };
-
-      return await this.createPlaylist(platformPlaylistData, coverFile);
-    } catch (error) {
-      throw new Error(`Platform playlist creation failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Update platform playlist with admin validation
-   */
-  async updatePlatformPlaylist(playlistId, updateData, coverFile, adminUserId) {
-    try {
-      // Проверяем админские права
-      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
-
-      // Получаем текущий плейлист
-      const existingPlaylist = await Playlist.findById(playlistId);
-      if (!existingPlaylist) {
-        throw new Error("Playlist not found");
-      }
-
-      // Проверяем что это платформенный плейлист
-      if (existingPlaylist.category !== "featured") {
-        throw new Error(
-          "Only platform playlists can be managed through admin interface"
-        );
-      }
-
-      // Принудительно сохраняем важные параметры
-      const platformUpdateData = {
-        ...updateData,
-        category: "featured", // Никогда не меняем категорию
-        privacy: "public", // Платформенные плейлисты всегда публичные
-      };
-
-      return await this.updatePlaylist(
-        playlistId,
-        platformUpdateData,
-        coverFile
-      );
-    } catch (error) {
-      throw new Error(`Platform playlist update failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Delete platform playlist with admin validation
-   */
-  async deletePlatformPlaylist(playlistId, adminUserId) {
-    try {
-      // Проверяем админские права
-      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
-
-      // Получаем плейлист для проверки
-      const existingPlaylist = await Playlist.findById(playlistId);
-      if (!existingPlaylist) {
-        throw new Error("Playlist not found");
-      }
-
-      // Проверяем что это платформенный плейлист
-      if (existingPlaylist.category !== "featured") {
-        throw new Error(
-          "Only platform playlists can be deleted through admin interface"
-        );
-      }
-
-      return await this.deletePlaylist(playlistId);
-    } catch (error) {
-      throw new Error(`Platform playlist deletion failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Publish platform playlist (convert from draft)
-   */
-  async publishPlatformPlaylist(playlistId, adminUserId) {
-    try {
-      // Проверяем админские права
-      await this.validateAdminPlaylistAccess(adminUserId, "ADMIN");
-
-      const existingPlaylist = await Playlist.findById(playlistId);
-      if (!existingPlaylist) {
-        throw new Error("Playlist not found");
-      }
-
-      if (existingPlaylist.category !== "featured") {
-        throw new Error("Only platform playlists can be published");
-      }
-
-      if (!existingPlaylist.isDraft) {
-        throw new Error("Playlist is already published");
-      }
-
-      // Валидация перед публикацией
-      if (!existingPlaylist.name || existingPlaylist.name.trim().length === 0) {
-        throw new Error("Playlist name is required for publishing");
-      }
-
-      if (!existingPlaylist.tracks || existingPlaylist.tracks.length === 0) {
-        throw new Error(
-          "Playlist must have at least one track to be published"
-        );
-      }
-
-      // Публикуем плейлист
-      return await this.updatePlaylist(playlistId, {
-        isDraft: false,
-        privacy: "public",
-      });
-    } catch (error) {
-      throw new Error(`Platform playlist publishing failed: ${error.message}`);
-    }
-  }
-
-  /**
-   * Clean up old draft playlists
-   * Utility method for maintenance
-   */
-  async cleanupOldPlatformDrafts(daysOld = 30) {
-    try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-
-      const result = await Playlist.deleteMany({
-        category: "featured",
-        isDraft: true,
-        lastActivity: { $lt: cutoffDate },
-        tracks: { $size: 0 }, // Только пустые черновики
-      });
-
-      return {
-        deletedCount: result.deletedCount,
-        cutoffDate,
-      };
-    } catch (error) {
-      throw new Error(`Failed to cleanup old drafts: ${error.message}`);
-    }
-  }
+  // ============ PLATFORM PLAYLIST METHODS (ADMIN) ============
 
   /**
    * Get platform playlist statistics for admin dashboard
@@ -1328,6 +1170,31 @@ class PlaylistService {
       throw new Error(
         `Failed to get platform playlist stats: ${error.message}`
       );
+    }
+  }
+
+  /**
+   * Clean up old draft playlists
+   * Utility method for maintenance
+   */
+  async cleanupOldPlatformDrafts(daysOld = 30) {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+      const result = await Playlist.deleteMany({
+        category: "featured",
+        isDraft: true,
+        lastActivity: { $lt: cutoffDate },
+        tracks: { $size: 0 }, // Only empty drafts
+      });
+
+      return {
+        deletedCount: result.deletedCount,
+        cutoffDate,
+      };
+    } catch (error) {
+      throw new Error(`Failed to cleanup old drafts: ${error.message}`);
     }
   }
 }

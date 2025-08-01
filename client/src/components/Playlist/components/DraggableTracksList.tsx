@@ -14,16 +14,33 @@ import {
 } from "@ant-design/icons";
 
 interface DraggableTracksListProps {
+  /** Array of tracks to display */
   tracks: Track[];
+  /** Loading state indicator */
   isLoading?: boolean;
+  /** Error message if tracks loading failed */
   tracksError?: string | null;
+  /** Whether the playlist is editable by current user */
   isEditable?: boolean;
+  /** Function to update local playlist state */
   updateLocal?: (updates: Partial<Playlist>) => void;
+  /** Current playlist data */
   playlist?: Playlist | null;
+  /** Callback for removing a track from playlist */
+  onRemoveTrack?: (trackId: string) => void;
+  /** Callback for reordering tracks */
+  onReorderTracks?: (newTracks: Track[]) => void;
 }
 
 /**
- * Компонент списка треков с поддержкой Drag & Drop
+ * Enhanced draggable tracks list component with permissions and callbacks
+ *
+ * Features:
+ * - Role-based editing permissions
+ * - Drag & drop reordering with callbacks
+ * - Track removal with confirmation
+ * - Comprehensive error handling
+ * - Responsive design with accessibility
  */
 const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   tracks,
@@ -31,6 +48,8 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   tracksError = null,
   isEditable = false,
   updateLocal,
+  onRemoveTrack,
+  onReorderTracks,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const currentTrackState = useSelector(
@@ -71,7 +90,7 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   }, [isCurrentTrackFromThisPlaylist, currentTrackState.isPlaying]);
 
   /**
-   * Обработка перетаскивания треков
+   * Обработка перетаскивания треков с callback
    */
   const handleDragStart = useCallback((index: number) => {
     setIsDragging(true);
@@ -83,42 +102,53 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
       setIsDragging(false);
       setDragOverIndex(null);
 
-      if (fromIndex === toIndex || !updateLocal) return;
+      if (fromIndex === toIndex || !isEditable) return;
 
       // Создаем новый массив треков с измененным порядком
       const newTracks = [...tracks];
       const [movedTrack] = newTracks.splice(fromIndex, 1);
       newTracks.splice(toIndex, 0, movedTrack);
-      // Обновляем плейлист локально
-      updateLocal({
-        tracks: newTracks as Track[] | string[], // Приводим к нужному типу
-        trackCount: newTracks.length,
-      });
+
+      // Вызываем callback для уведомления родительского компонента
+      if (onReorderTracks) {
+        onReorderTracks(newTracks);
+      } else if (updateLocal) {
+        // Fallback к старому способу если callback не предоставлен
+        updateLocal({
+          tracks: newTracks as Track[] | string[],
+          trackCount: newTracks.length,
+        });
+      }
 
       console.log(
         `🔄 Track moved from position ${fromIndex + 1} to ${toIndex + 1}`
       );
     },
-    [tracks, updateLocal]
+    [tracks, updateLocal, onReorderTracks, isEditable]
   );
 
   /**
-   * Удаление трека из плейлиста
+   * Удаление трека из плейлиста с callback
    */
   const handleRemoveTrack = useCallback(
     (trackId: string) => {
-      if (!updateLocal) return;
+      if (!isEditable) return;
 
-      const newTracks = tracks.filter((track) => track._id !== trackId);
-
-      updateLocal({
-        tracks: newTracks as Track[] | string[], // Приводим к нужному типу
-        trackCount: newTracks.length,
-      });
+      // Используем callback если предоставлен
+      if (onRemoveTrack) {
+        onRemoveTrack(trackId);
+      } else if (updateLocal) {
+        // Fallback к старому способу
+        const newTracks = tracks.filter((track) => track._id !== trackId);
+        updateLocal({
+          tracks: newTracks as Track[] | string[],
+          trackCount: newTracks.length,
+        });
+      }
 
       console.log(`🗑️ Track removed from playlist`);
     },
-    [tracks, updateLocal]
+    [tracks, updateLocal, onRemoveTrack, isEditable]
   );
 
   /**
