@@ -16,12 +16,13 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(
-  cors({
-    origin: config.corsOrigin,
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: true,
+  credentials: true,
+  optionsSuccessStatus: 200,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
