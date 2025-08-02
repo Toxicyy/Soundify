@@ -60,8 +60,8 @@ router.get("/:playlistId/like-status", authenticate, getPlaylistLikeStatus);
 /**
  * User-specific playlist routes
  */
-router.get("/user/:userId", getUserPlaylists);
 router.get("/user/liked", authenticate, getLikedPlaylists);
+router.get("/user/:userId", getUserPlaylists);
 
 /**
  * Playlist creation and management routes

@@ -24,7 +24,7 @@ export default function LikedSongs() {
   }, [user, isFetching]);
 
   return (
-    <div className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] mb-20 md:mb-30 xl:mb-0 flex flex-col gap-3 md:gap-4 xl:gap-5 pt-3 md:pt-6">
+    <div className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] md:mb-30 flex flex-col gap-3 md:gap-4 xl:gap-5 pt-3 md:pt-6 mb-35 xl:mb-0">
       {/* Header компонент с адаптивными размерами */}
       <Header tracks={likedTracks} />
 

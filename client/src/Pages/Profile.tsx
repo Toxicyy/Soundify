@@ -170,7 +170,11 @@ export default function Profile() {
               username={data?.username || ""}
               isLoading={isLoading}
               playlists={data?.playlists || []}
-              likedArtists={data?.likedArtists || []}
+              likedArtists={
+                typeof data?.likedArtists === "string"
+                  ? data?.likedArtists || []
+                  : []
+              }
             />
           </div>
 

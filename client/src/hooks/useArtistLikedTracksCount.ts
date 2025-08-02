@@ -28,15 +28,8 @@ export const useArtistLikedTracksCount = (
 
   // Вычисляем количество треков от конкретного артиста
   const count = useMemo(() => {
-    console.log(artistId, likedTracks);
     if (!artistId || !likedTracks.length) return 0;
 
-    console.log(
-      likedTracks.filter(
-        (track) =>
-          track.artist?._id === artistId || track.artist?._id === artistId
-      ).length
-    );
     return likedTracks.filter(
       (track) =>
         track.artist?._id === artistId || track.artist?._id === artistId

@@ -322,6 +322,30 @@ export const api = {
         body: formData,
       });
     },
+
+    /**
+     * Like an artist
+     * @param artistId - ID of the artist to like
+     * @returns Promise<Response> - API response
+     */
+    like: async (artistId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/artists/${artistId}/like`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+    },
+
+    /**
+     * Unlike an artist
+     * @param artistId - ID of the artist to unlike
+     * @returns Promise<Response> - API response
+     */
+    unlike: async (artistId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/artists/${artistId}/like`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+    },
   },
 
   playlist: {
@@ -420,23 +444,53 @@ export const api = {
     },
 
     /**
+     * Like a playlist
+     * @param playlistId - ID of the playlist to like
+     * @returns Promise<Response> - API response
+     */
+    like: async (playlistId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+    },
+
+    /**
+     * Unlike a playlist
+     * @param playlistId - ID of the playlist to unlike
+     * @returns Promise<Response> - API response
+     */
+    unlike: async (playlistId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+    },
+
+    /**
      * Get playlist like status for current user
      * @param playlistId - ID of the playlist
      * @returns Promise<Response> - API response with like status
      */
     getLikeStatus: async (playlistId: string): Promise<Response> => {
-      const token = localStorage.getItem("token");
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like-status`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+    },
 
-      return fetch(
-        `http://localhost:5000/api/playlists/${playlistId}/like-status`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    /**
+     * Get user's liked playlists
+     * @param options - Pagination options
+     * @returns Promise<Response> - API response with liked playlists
+     */
+    getLiked: async (
+      options: { page?: number; limit?: number } = {}
+    ): Promise<Response> => {
+      const query = buildQueryString(options);
+      return fetch(`${BASEURL}/api/playlists/user/liked${query}`, {
+        headers: getAuthHeaders(),
+      });
     },
 
     /**
@@ -445,18 +499,10 @@ export const api = {
      * @returns Promise<Response> - API response with playlist stats
      */
     getStats: async (playlistId: string): Promise<Response> => {
-      const token = localStorage.getItem("token");
-
-      return fetch(
-        `http://localhost:5000/api/playlists/${playlistId}/statistics`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/statistics`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
     },
 
     search: async (query: string, options: { limit?: number } = {}) => {
@@ -482,6 +528,26 @@ export const api = {
     getByTag: async (tag: string) => {
       return fetch(`${BASEURL}/api/playlists/tag/${tag}`, {
         headers: getAuthHeaders(false),
+      });
+    },
+
+    /**
+     * Get playlists by user ID
+     * @param userId - User ID
+     * @param options - Query options
+     * @returns Promise<Response> - API response
+     */
+    getByUser: async (
+      userId: string,
+      options: {
+        page?: number;
+        limit?: number;
+        privacy?: "public" | "private" | "unlisted";
+      } = {}
+    ): Promise<Response> => {
+      const query = buildQueryString(options);
+      return fetch(`${BASEURL}/api/playlists/user/${userId}${query}`, {
+        headers: getAuthHeaders(),
       });
     },
   },
@@ -517,6 +583,7 @@ export const api = {
       });
     },
   },
+
   track: {
     getById: async (trackId: string) => {
       return fetch(`${BASEURL}/api/tracks/${trackId}`, {
@@ -527,6 +594,51 @@ export const api = {
     getForPage: async (trackId: string) => {
       return fetch(`${BASEURL}/api/tracks/${trackId}/page`, {
         headers: getAuthHeaders(false),
+      });
+    },
+
+    /**
+     * Like a track
+     * @param trackId - ID of the track to like
+     * @returns Promise<Response> - API response
+     */
+    like: async (trackId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+    },
+
+    /**
+     * Unlike a track
+     * @param trackId - ID of the track to unlike
+     * @returns Promise<Response> - API response
+     */
+    unlike: async (trackId: string): Promise<Response> => {
+      return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+    },
+  },
+
+  /**
+   * Recommendations API
+   */
+  recommendations: {
+    /**
+     * Get recommendations for user
+     * @param userId - ID of the user
+     * @param options - Query options
+     * @returns Promise<Response> - API response with recommendations
+     */
+    getForUser: async (
+      userId: string,
+      options: { limit?: number } = {}
+    ): Promise<Response> => {
+      const query = buildQueryString({ userId, ...options });
+      return fetch(`${BASEURL}/api/recommendations${query}`, {
+        headers: getAuthHeaders(),
       });
     },
   },
@@ -646,4 +758,72 @@ export interface LikedPlaylistsResponse {
       hasPreviousPage: boolean;
     };
   };
+}
+
+export interface ArtistResponse {
+  success: boolean;
+  data: {
+    _id: string;
+    name: string;
+    slug: string;
+    avatar: string | null;
+    bio: string;
+    genres: string[];
+    isVerified: boolean;
+    followerCount: number;
+    socialLinks?: object;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface ArtistsResponse {
+  success: boolean;
+  data: {
+    artists: any[];
+    pagination?: {
+      currentPage: number;
+      totalPages: number;
+      totalArtists: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
+}
+
+export interface SearchArtistsResponse {
+  success: boolean;
+  data: {
+    artists: any[];
+    count: number;
+    query: string;
+  };
+}
+
+export interface PlaylistsResponse {
+  success: boolean;
+  data: {
+    playlists: any[];
+    pagination?: {
+      currentPage: number;
+      totalPages: number;
+      totalPlaylists: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  };
+}
+
+export interface SearchPlaylistsResponse {
+  success: boolean;
+  data: {
+    playlists: any[];
+    count: number;
+    query: string;
+  };
+}
+
+export interface RecommendationsResponse {
+  success: boolean;
+  data: any[];
 }

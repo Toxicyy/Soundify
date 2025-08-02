@@ -21,7 +21,13 @@ export const useFollowArtist = (artistId: string): UseFollowArtistReturn => {
 
   useEffect(() => {
     if (user && artistId) {
-      setIsFollowing(user.likedArtists.includes(artistId));
+      setIsFollowing(
+        user.likedArtists.some((artist) =>
+          typeof artist === "object"
+            ? artist._id === artistId
+            : artist === artistId
+        )
+      );
     }
   }, [user, artistId]);
 
