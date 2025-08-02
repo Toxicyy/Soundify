@@ -2,7 +2,7 @@ import SearchInput from "./components/SearchInput";
 import UserIcon from "./components/UserIcon";
 import SettingsMenu from "./components/SettingsMenu";
 import userAvatar from "../../../images/User/Anonym.jpg";
-import { SettingOutlined } from "@ant-design/icons";
+import { MenuOutlined } from "@ant-design/icons";
 import PlaylistModule from "./components/PlaylistModule";
 import ArtistModule from "./components/ArtistModule";
 import chartImage from "../../../images/chart/global.jpg";
@@ -10,7 +10,7 @@ import Queue from "./components/Queue";
 import { useSelector } from "react-redux";
 import type { AppState } from "../../../store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useGetUserQuery } from "../../../state/UserApi.slice";
 import { useEffect, useState } from "react";
 import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
@@ -22,7 +22,9 @@ export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
-  const { data: user, isFetching } = useGetUserQuery(token ? undefined : skipToken);
+  const { data: user, isFetching } = useGetUserQuery(
+    token ? undefined : skipToken
+  );
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
 
   // Используем новый хук
@@ -69,7 +71,7 @@ export default function MainMenu() {
               {/* Settings button for mobile/tablet */}
               {user && (
                 <div className="relative">
-                  <SettingOutlined
+                  <MenuOutlined
                     style={{ color: "white", fontSize: "24px" }}
                     className={`cursor-pointer transition-all duration-300 hover:scale-110 ${
                       isSettingsMenuOpen ? "scale-110 text-blue-400" : ""
@@ -110,20 +112,19 @@ export default function MainMenu() {
             transition={{ duration: 0.6, ease: "easeInOut" }}
             className="flex xl:hidden items-center justify-center gap-4 md:gap-6 mb-4 md:mb-6 flex-shrink-0"
           >
-            <div className="cursor-pointer w-20 md:w-24 xl:w-[100px] h-8 md:h-10 xl:h-[40px] rounded-full bg-transparent border-2 border-black flex items-center justify-center hover:scale-110 transition-all duration-300">
-              <Link to={"/signup"}>
-                <h1 className="text-black text-sm md:text-lg xl:text-xl font-bold">
-                  Sign up
-                </h1>
-              </Link>
-            </div>
-            <div className="cursor-pointer w-20 md:w-28 xl:w-[120px] h-10 md:h-12 xl:h-[50px] rounded-full bg-transparent border-2 border-white flex items-center justify-center hover:scale-110 transition-all duration-300">
-              <Link to={"/login"}>
-                <h1 className="text-white text-sm md:text-lg xl:text-xl font-bold">
-                  Log in
-                </h1>
-              </Link>
-            </div>
+            <button
+              className="px-6 py-2.5 rounded-lg bg-purple-900/30 backdrop-blur-md border border-purple-500/30 text-purple-100 font-medium hover:bg-purple-800/40 transition-all duration-300 shadow-lg hover:shadow-purple-900/30 hover:scale-[1.02] active:scale-95"
+              onClick={() => navigate("/signup")}
+            >
+              Sign Up
+            </button>
+
+            <button
+              className="px-6 py-2.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-purple-900/20 hover:scale-[1.02] active:scale-95"
+              onClick={() => navigate("/login")}
+            >
+              Sign In
+            </button>
           </motion.div>
         )}
 
@@ -200,7 +201,7 @@ export default function MainMenu() {
             </h1>
 
             <div className="relative px-7">
-              <SettingOutlined
+              <MenuOutlined
                 style={{ color: "white", fontSize: "28px" }}
                 className={`cursor-pointer transition-all duration-300 hover:scale-110 ${
                   isSettingsMenuOpen ? "scale-110 text-blue-400" : ""
@@ -217,7 +218,7 @@ export default function MainMenu() {
 
         {!user && (
           <motion.div
-            className="flex items-center mb-4 relative flex-shrink-0 gap-4 px-4"
+            className="flex items-center mb-4 relative flex-shrink-0 gap-4 mx-auto"
             initial={{ opacity: 1, height: 0, y: -400 }}
             animate={
               !queueOpen
@@ -227,11 +228,17 @@ export default function MainMenu() {
             exit={{ opacity: 0, height: 0, y: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
           >
-            <button className="px-6 py-2.5 rounded-lg bg-purple-900/30 backdrop-blur-md border border-purple-500/30 text-purple-100 font-medium hover:bg-purple-800/40 transition-all duration-300 shadow-lg hover:shadow-purple-900/30 hover:scale-[1.02] active:scale-95" onClick={() => navigate("/signup")}>
+            <button
+              className="px-6 py-2.5 rounded-lg bg-purple-900/30 backdrop-blur-md border border-purple-500/30 text-purple-100 font-medium hover:bg-purple-800/40 transition-all duration-300 shadow-lg hover:shadow-purple-900/30 hover:scale-[1.02] active:scale-95"
+              onClick={() => navigate("/signup")}
+            >
               Sign Up
             </button>
 
-            <button className="px-6 py-2.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-purple-900/20 hover:scale-[1.02] active:scale-95" onClick={() => navigate("/login")}>
+            <button
+              className="px-6 py-2.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-purple-900/20 hover:scale-[1.02] active:scale-95"
+              onClick={() => navigate("/login")}
+            >
               Sign In
             </button>
           </motion.div>

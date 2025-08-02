@@ -4,14 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { useDebounce } from "../../../../hooks/useDebounce";
 import { useGlobalSearch } from "../../../../hooks/useGlobalSearch";
 import SearchResultItem from "./SearchResultItem";
-import { useDispatch } from "react-redux";
-import { type AppDispatch } from "../../../../store";
+import { useDispatch, useSelector } from "react-redux";
+import { type AppDispatch, type AppState } from "../../../../store";
 import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
 import type { Track } from "../../../../types/TrackData";
 import { SearchOutlined } from "@ant-design/icons";
+import { clearQueue, setQueue } from "../../../../state/Queue.slice";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
 
 const SearchInput = () => {
   const [query, setQuery] = useState("");
@@ -20,6 +22,9 @@ const SearchInput = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const {data: user} = useGetUserQuery();
+
+  const currentTrack = useSelector((state: AppState) => state.currentTrack);
 
   const debouncedQuery = useDebounce(query, 300);
   const { searchResults, isLoading, searchGlobal, getPopularContent } =
@@ -53,12 +58,44 @@ const SearchInput = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const togglePlayPause = (item: Track) => {
+  const togglePlayPauseWithRecommendations = async (item: Track) => {
+  // Если это текущий трек и он уже играет - просто ставим на паузу
+  if (currentTrack?.currentTrack?._id === item._id && currentTrack.isPlaying) {
+    dispatch(setIsPlaying(false));
+    return;
+  }
+
+  try {
+    // 1. Устанавливаем текущий трек
     dispatch(setCurrentTrack(item));
+
+    const response = await fetch(`http://localhost:5000/api/recommendations?userId=${user?._id}`);
+    const recommendations = await response.json()
+
+    const filteredRecs = recommendations.filter(
+      (track: Track) => track._id !== item._id
+    );
+
+    // 4. Обновляем очередь в Redux
+    dispatch(setQueue({ 
+      tracks: filteredRecs,
+      startIndex: 0
+    }));
+
     setTimeout(() => {
       dispatch(setIsPlaying(true));
     }, 50);
-  };
+
+  } catch (error) {
+    console.error("Ошибка при получении рекомендаций:", error);
+    
+    dispatch(setCurrentTrack(item));
+    dispatch(clearQueue());
+    setTimeout(() => {
+      dispatch(setIsPlaying(true));
+    }, 50);
+  }
+};
 
   const handleItemClick = (item: any) => {
     setQuery(item.name);
@@ -67,7 +104,7 @@ const SearchInput = () => {
 
     switch (item.type) {
       case "track":
-        togglePlayPause(item);
+        togglePlayPauseWithRecommendations(item);
         break;
       case "artist":
         navigate(`/artist/${item._id}`);

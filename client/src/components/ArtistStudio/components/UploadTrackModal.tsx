@@ -1,126 +1,68 @@
-import { useState, useRef } from "react";
-import { Modal, Input, Select } from "antd";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { Modal } from "antd";
 import {
   CloseOutlined,
   UploadOutlined,
   DeleteOutlined,
   PlayCircleOutlined,
+  CloudUploadOutlined,
 } from "@ant-design/icons";
-import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotification } from "../../../hooks/useNotification";
+import { type Artist } from "../../../types/ArtistData";
+import {
+  StyledInput,
+  StyledSelect,
+  StyledMultiSelect,
+  GlassButton,
+  ModalContainer,
+  FileUploadZone,
+  ProgressBar,
+  GlassCard,
+} from "../../../shared/components/StyledComponents";
 
-interface Artist {
-  _id: string;
-  name: string;
-  avatar?: string;
-}
+/**
+ * UploadTrackModal - адаптивная модалка загрузки треков
+ *
+ * Особенности:
+ * - Полная адаптивность для всех устройств
+ * - Drag & Drop с визуальной обратной связью
+ * - Preview аудио и изображений
+ * - Валидация файлов с подробными ошибками
+ * - Прогресс загрузки с анимацией
+ * - Оптимизированная для мобильных устройств
+ * - Упрощенный интерфейс на маленьких экранах
+ */
 
 interface UploadTrackModalProps {
   isOpen: boolean;
   onClose: () => void;
-  artist: Artist;
+  artist: Pick<Artist, "_id" | "name" | "avatar">;
 }
 
-const StyledInput = styled(Input)`
-  &.ant-input {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 8px;
+interface TrackData {
+  name: string;
+  genre: string;
+  tags: string[];
+  audioFile: File | null;
+  coverFile: File | null;
+}
 
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.6) !important;
-      opacity: 1 !important;
-    }
+interface FileState {
+  audioFile: File | null;
+  coverFile: File | null;
+  audioPreview: string | null;
+  coverPreview: string | null;
+  audioIsDragActive: boolean;
+  coverIsDragActive: boolean;
+}
 
-    &:focus {
-      border-color: #1db954 !important;
-      box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
-      background-color: rgba(255, 255, 255, 0.15) !important;
-    }
-
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.12) !important;
-      border-color: rgba(255, 255, 255, 0.3) !important;
-    }
-  }
-`;
-
-const StyledSelect = styled(Select<string>)`
-  .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 8px !important;
-  }
-
-  .ant-select-selection-search-input {
-    color: white !important;
-  }
-
-  .ant-select-selection-placeholder {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  .ant-select-selection-item {
-    color: white !important;
-  }
-
-  &.ant-select-focused .ant-select-selector {
-    border-color: #1db954 !important;
-    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
-    background-color: rgba(255, 255, 255, 0.15) !important;
-  }
-
-  &:hover .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-  }
-`;
-
-const StyledMultiSelect = styled(Select<string[]>)`
-  .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 8px !important;
-  }
-
-  .ant-select-selection-search-input {
-    color: white !important;
-  }
-
-  .ant-select-selection-placeholder {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  .ant-select-selection-item {
-    color: white !important;
-    background-color: rgba(29, 185, 84, 0.8) !important;
-    border: 1px solid rgba(29, 185, 84, 0.4) !important;
-    border-radius: 4px !important;
-  }
-
-  .ant-select-selection-item-remove {
-    color: rgba(255, 255, 255, 0.8) !important;
-
-    &:hover {
-      color: white !important;
-    }
-  }
-
-  &.ant-select-focused .ant-select-selector {
-    border-color: #1db954 !important;
-    box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2) !important;
-    background-color: rgba(255, 255, 255, 0.15) !important;
-  }
-
-  &:hover .ant-select-selector {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-  }
-`;
+interface ValidationErrors {
+  name?: string;
+  genre?: string;
+  audioFile?: string;
+  coverFile?: string;
+}
 
 // Жанры и теги
 const genres = [
@@ -199,21 +141,14 @@ const predefinedTags = [
   "Downtempo",
 ];
 
-interface TrackData {
-  name: string;
-  genre: string;
-  tags: string[];
-  audioFile: File | null;
-  coverFile: File | null;
-}
-
 const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
   isOpen,
   onClose,
   artist,
 }) => {
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, showWarning } = useNotification();
 
+  // State management
   const [trackData, setTrackData] = useState<TrackData>({
     name: "",
     genre: "",
@@ -222,100 +157,263 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     coverFile: null,
   });
 
-  const [audioPreview, setAudioPreview] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [fileState, setFileState] = useState<FileState>({
+    audioFile: null,
+    coverFile: null,
+    audioPreview: null,
+    coverPreview: null,
+    audioIsDragActive: false,
+    coverIsDragActive: false,
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterAudio = useRef(0);
+  const dragCounterCover = useRef(0);
 
-  const resetForm = () => {
-    setTrackData({
-      name: "",
-      genre: "",
-      tags: [],
-      audioFile: null,
-      coverFile: null,
-    });
-    setAudioPreview(null);
-    setCoverPreview(null);
-    setUploadProgress(0);
-  };
+  // Валидация формы
+  const validateForm = useCallback((): ValidationErrors => {
+    const errors: ValidationErrors = {};
 
-  const handleClose = () => {
-    if (!isUploading) {
-      resetForm();
-      onClose();
-    }
-  };
-
-  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match("audio.*")) {
-      showError("Please select a valid audio file");
-      return;
-    }
-
-    if (file.size > 100 * 1024 * 1024) {
-      // 100MB limit
-      showError("Audio file size must be less than 100MB");
-      return;
-    }
-
-    setTrackData((prev) => ({ ...prev, audioFile: file }));
-    setAudioPreview(URL.createObjectURL(file));
-  };
-
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match("image.*")) {
-      showError("Please select a valid image file");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB limit
-      showError("Image file size must be less than 5MB");
-      return;
-    }
-
-    setTrackData((prev) => ({ ...prev, coverFile: file }));
-    setCoverPreview(URL.createObjectURL(file));
-  };
-
-  const removeAudio = () => {
-    setTrackData((prev) => ({ ...prev, audioFile: null }));
-    setAudioPreview(null);
-    if (audioInputRef.current) audioInputRef.current.value = "";
-  };
-
-  const removeCover = () => {
-    setTrackData((prev) => ({ ...prev, coverFile: null }));
-    setCoverPreview(null);
-    if (coverInputRef.current) coverInputRef.current.value = "";
-  };
-
-  const handleUpload = async () => {
-    // Валидация
     if (!trackData.name.trim()) {
-      showError("Track name is required");
-      return;
+      errors.name = "Track name is required";
+    } else if (trackData.name.trim().length < 2) {
+      errors.name = "Track name must be at least 2 characters";
     }
-    if (!trackData.audioFile) {
-      showError("Audio file is required");
-      return;
-    }
-    if (!trackData.coverFile) {
-      showError("Cover image is required");
-      return;
-    }
+
     if (!trackData.genre) {
-      showError("Genre is required");
+      errors.genre = "Genre is required";
+    }
+
+    if (!fileState.audioFile) {
+      errors.audioFile = "Audio file is required";
+    }
+
+    if (!fileState.coverFile) {
+      errors.coverFile = "Cover image is required";
+    }
+
+    return errors;
+  }, [trackData, fileState]);
+
+  // Валидация файлов
+  const validateFile = useCallback(
+    (file: File, type: "audio" | "image"): string | null => {
+      if (type === "audio") {
+        if (!file.type.match("audio.*")) {
+          return "Please select a valid audio file";
+        }
+        if (file.size > 100 * 1024 * 1024) {
+          // 100MB
+          return "Audio file size must be less than 100MB";
+        }
+        const allowedAudioTypes = [
+          "audio/mpeg",
+          "audio/mp3",
+          "audio/wav",
+          "audio/flac",
+        ];
+        if (!allowedAudioTypes.includes(file.type)) {
+          return "Only MP3, WAV and FLAC audio files are allowed";
+        }
+      } else {
+        if (!file.type.match("image.*")) {
+          return "Please select a valid image file";
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          // 5MB
+          return "Image file size must be less than 5MB";
+        }
+        const allowedImageTypes = [
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/webp",
+        ];
+        if (!allowedImageTypes.includes(file.type)) {
+          return "Only JPEG, PNG and WebP images are allowed";
+        }
+      }
+
+      return null;
+    },
+    []
+  );
+
+  // Drag & Drop handlers для аудио
+  const handleAudioDrag = useCallback(
+    (e: React.DragEvent, type: "enter" | "leave" | "over" | "drop") => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (type === "enter") {
+        dragCounterAudio.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+          setFileState((prev) => ({ ...prev, audioIsDragActive: true }));
+        }
+      } else if (type === "leave") {
+        dragCounterAudio.current--;
+        if (dragCounterAudio.current === 0) {
+          setFileState((prev) => ({ ...prev, audioIsDragActive: false }));
+        }
+      } else if (type === "drop") {
+        setFileState((prev) => ({ ...prev, audioIsDragActive: false }));
+        dragCounterAudio.current = 0;
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          handleAudioSelect(file);
+          e.dataTransfer.clearData();
+        }
+      }
+    },
+    []
+  );
+
+  // Drag & Drop handlers для обложки
+  const handleCoverDrag = useCallback(
+    (e: React.DragEvent, type: "enter" | "leave" | "over" | "drop") => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (type === "enter") {
+        dragCounterCover.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+          setFileState((prev) => ({ ...prev, coverIsDragActive: true }));
+        }
+      } else if (type === "leave") {
+        dragCounterCover.current--;
+        if (dragCounterCover.current === 0) {
+          setFileState((prev) => ({ ...prev, coverIsDragActive: false }));
+        }
+      } else if (type === "drop") {
+        setFileState((prev) => ({ ...prev, coverIsDragActive: false }));
+        dragCounterCover.current = 0;
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          handleCoverSelect(file);
+          e.dataTransfer.clearData();
+        }
+      }
+    },
+    []
+  );
+
+  // Обработка выбора аудио файла
+  const handleAudioSelect = useCallback(
+    (file: File) => {
+      const error = validateFile(file, "audio");
+      if (error) {
+        showError(error);
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      setFileState((prev) => ({
+        ...prev,
+        audioFile: file,
+        audioPreview: url,
+      }));
+
+      setTrackData((prev) => ({ ...prev, audioFile: file }));
+
+      // Очистка ошибки валидации
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.audioFile;
+        return newErrors;
+      });
+    },
+    [validateFile, showError]
+  );
+
+  // Обработка выбора обложки
+  const handleCoverSelect = useCallback(
+    (file: File) => {
+      const error = validateFile(file, "image");
+      if (error) {
+        showError(error);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setFileState((prev) => ({
+          ...prev,
+          coverFile: file,
+          coverPreview: result,
+        }));
+      };
+      reader.readAsDataURL(file);
+
+      setTrackData((prev) => ({ ...prev, coverFile: file }));
+
+      // Очистка ошибки валидации
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.coverFile;
+        return newErrors;
+      });
+    },
+    [validateFile, showError]
+  );
+
+  // Удаление файлов
+  const removeAudio = useCallback(() => {
+    if (fileState.audioPreview) {
+      URL.revokeObjectURL(fileState.audioPreview);
+    }
+    setFileState((prev) => ({
+      ...prev,
+      audioFile: null,
+      audioPreview: null,
+    }));
+    setTrackData((prev) => ({ ...prev, audioFile: null }));
+    if (audioInputRef.current) audioInputRef.current.value = "";
+  }, [fileState.audioPreview]);
+
+  const removeCover = useCallback(() => {
+    setFileState((prev) => ({
+      ...prev,
+      coverFile: null,
+      coverPreview: null,
+    }));
+    setTrackData((prev) => ({ ...prev, coverFile: null }));
+    if (coverInputRef.current) coverInputRef.current.value = "";
+  }, []);
+
+  // Обработка изменения полей формы
+  const handleInputChange = useCallback(
+    <K extends keyof TrackData>(field: K, value: TrackData[K]) => {
+      setTrackData((prev) => ({ ...prev, [field]: value }));
+
+      // Очистка ошибки валидации
+      if (validationErrors[field as keyof ValidationErrors]) {
+        setValidationErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[field as keyof ValidationErrors];
+          return newErrors;
+        });
+      }
+    },
+    [validationErrors]
+  );
+
+  // Обработка загрузки
+  const handleUpload = useCallback(async () => {
+    const errors = validateForm();
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      showWarning("Please fix all errors before uploading");
       return;
     }
 
@@ -325,8 +423,8 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     formData.append("name", trackData.name.trim());
     formData.append("artist", artist._id);
     formData.append("album", "single");
-    formData.append("audio", trackData.audioFile);
-    formData.append("cover", trackData.coverFile);
+    formData.append("audio", fileState.audioFile!);
+    formData.append("cover", fileState.coverFile!);
     formData.append("genre", trackData.genre);
     formData.append("tags", trackData.tags.join(","));
 
@@ -387,310 +485,635 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
+  }, [
+    validateForm,
+    trackData,
+    fileState,
+    artist._id,
+    showSuccess,
+    showError,
+    showWarning,
+  ]);
 
-  const isFormValid =
-    trackData.name.trim() &&
-    trackData.audioFile &&
-    trackData.coverFile &&
-    trackData.genre;
+  // Обработка закрытия
+  const resetForm = useCallback(() => {
+    setTrackData({
+      name: "",
+      genre: "",
+      tags: [],
+      audioFile: null,
+      coverFile: null,
+    });
+    if (fileState.audioPreview) {
+      URL.revokeObjectURL(fileState.audioPreview);
+    }
+    setFileState({
+      audioFile: null,
+      coverFile: null,
+      audioPreview: null,
+      coverPreview: null,
+      audioIsDragActive: false,
+      coverIsDragActive: false,
+    });
+    setUploadProgress(0);
+    setValidationErrors({});
+  }, [fileState.audioPreview]);
+
+  const handleClose = useCallback(() => {
+    if (isUploading) return;
+
+    const hasChanges =
+      trackData.name ||
+      trackData.genre ||
+      trackData.tags.length > 0 ||
+      fileState.audioFile ||
+      fileState.coverFile;
+
+    if (hasChanges) {
+      const confirmClose = window.confirm(
+        "You have unsaved changes. Are you sure you want to close?"
+      );
+      if (!confirmClose) return;
+    }
+
+    resetForm();
+    onClose();
+  }, [isUploading, trackData, fileState, resetForm, onClose]);
+
+  // Проверка валидности формы
+  const isFormValid = useMemo(() => {
+    return (
+      trackData.name.trim() &&
+      trackData.genre &&
+      fileState.audioFile &&
+      fileState.coverFile &&
+      Object.keys(validationErrors).length === 0
+    );
+  }, [trackData, fileState, validationErrors]);
 
   return (
-    <Modal
-      open={isOpen}
-      onCancel={handleClose}
-      closable={false}
-      width={600}
-      styles={{
-        content: {
-          backgroundColor: "rgba(40, 40, 40, 0.95)",
-          backdropFilter: "blur(15px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "16px",
-        },
-        header: { display: "none" },
-      }}
-      footer={null}
-      maskClosable={!isUploading}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="text-white text-2xl font-semibold tracking-wider">
-            Upload Track
-          </div>
-          <CloseOutlined
-            className="text-2xl cursor-pointer hover:text-white/70 transition-colors"
-            style={{ color: "white" }}
-            onClick={handleClose}
-          />
-        </div>
-
-        {/* Progress Bar */}
-        <AnimatePresence>
-          {isUploading && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-white/10 rounded-lg p-4 backdrop-blur-sm"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-white text-sm font-medium">
-                  {uploadProgress < 70
-                    ? "Uploading..."
-                    : "Converting to HLS..."}
-                </span>
-                <span className="text-white text-sm">
-                  {Math.round(uploadProgress)}%
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2">
-                <motion.div
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${uploadProgress}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Form */}
-        <div className="space-y-4">
-          {/* Track Name */}
-          <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">
-              Track Name *
-            </label>
-            <StyledInput
-              placeholder="Enter track name"
-              value={trackData.name}
-              onChange={(e) =>
-                setTrackData((prev) => ({ ...prev, name: e.target.value }))
-              }
+    <ModalContainer>
+      <Modal
+        open={isOpen}
+        onCancel={handleClose}
+        closable={false}
+        width="min(95vw, 700px)"
+        styles={{
+          content: {
+            backgroundColor: "rgba(40, 40, 40, 0.95)",
+            backdropFilter: "blur(15px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "16px",
+            margin: "10px",
+          },
+          header: { display: "none" },
+        }}
+        footer={null}
+        maskClosable={!isUploading}
+      >
+        <div className="space-y-4 sm:space-y-6 max-h-[85vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex justify-between items-center sticky top-0 bg-gray-800/90 backdrop-blur-sm p-3 sm:p-4 -m-3 sm:-m-4 mb-2 rounded-t-2xl">
+            <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold tracking-wider">
+              Upload Track
+            </div>
+            <button
+              onClick={handleClose}
               disabled={isUploading}
-            />
+              className="text-xl sm:text-2xl text-white hover:text-white/70 transition-colors disabled:opacity-50"
+              aria-label="Close modal"
+            >
+              <CloseOutlined />
+            </button>
           </div>
 
-          {/* Audio and Cover Upload */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Audio Upload */}
-            <div>
+          {/* Progress Bar */}
+          <AnimatePresence>
+            {isUploading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <GlassCard padding="1rem">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white text-sm font-medium">
+                      {uploadProgress < 70
+                        ? "Uploading..."
+                        : "Converting to HLS..."}
+                    </span>
+                    <span className="text-white text-sm">
+                      {Math.round(uploadProgress)}%
+                    </span>
+                  </div>
+                  <ProgressBar progress={uploadProgress} />
+                </GlassCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Track Name */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
               <label className="block text-white/80 text-sm font-medium mb-2">
-                Audio File * (MP3)
+                Track Name *
               </label>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  {audioPreview ? (
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          const audio = new Audio(audioPreview);
-                          audio.play();
-                        }}
-                        className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
-                        disabled={isUploading}
-                      >
-                        <PlayCircleOutlined className="text-green-400 text-xl" />
-                      </button>
-                      <button
-                        onClick={removeAudio}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                        disabled={isUploading}
-                      >
-                        <DeleteOutlined />
-                      </button>
+              <StyledInput
+                placeholder="Enter track name"
+                value={trackData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                disabled={isUploading}
+                status={validationErrors.name ? "error" : ""}
+              />
+              <AnimatePresence>
+                {validationErrors.name && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-red-400 text-xs mt-1"
+                  >
+                    {validationErrors.name}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Audio and Cover Upload - Desktop */}
+            <div className="hidden sm:grid sm:grid-cols-2 gap-4 lg:gap-6">
+              {/* Audio Upload */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Audio File * (MP3, WAV, FLAC)
+                </label>
+                <FileUploadZone
+                  isDragActive={fileState.audioIsDragActive}
+                  hasFile={!!fileState.audioFile}
+                  onDragEnter={(e) => handleAudioDrag(e, "enter")}
+                  onDragLeave={(e) => handleAudioDrag(e, "leave")}
+                  onDragOver={(e) => handleAudioDrag(e, "over")}
+                  onDrop={(e) => handleAudioDrag(e, "drop")}
+                  onClick={() => audioInputRef.current?.click()}
+                  className="h-32 text-center"
+                >
+                  {fileState.audioFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (fileState.audioPreview) {
+                              const audio = new Audio(fileState.audioPreview);
+                              audio.play();
+                            }
+                          }}
+                          className="p-2 bg-green-500/20 rounded-full hover:bg-green-500/30 transition-colors"
+                          disabled={isUploading}
+                        >
+                          <PlayCircleOutlined className="text-green-400 text-xl" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeAudio();
+                          }}
+                          className="p-2 bg-red-500/20 rounded-full hover:bg-red-500/30 transition-colors"
+                          disabled={isUploading}
+                        >
+                          <DeleteOutlined className="text-red-400" />
+                        </button>
+                      </div>
+                      <span className="text-white text-sm truncate max-w-full">
+                        {fileState.audioFile.name}
+                      </span>
+                      <span className="text-white/50 text-xs">
+                        {(fileState.audioFile.size / (1024 * 1024)).toFixed(2)}{" "}
+                        MB
+                      </span>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => audioInputRef.current?.click()}
-                      className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
-                      disabled={isUploading}
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUploadOutlined className="text-white/60 text-3xl" />
+                      <span className="text-white/80 text-sm font-medium">
+                        {fileState.audioIsDragActive
+                          ? "Drop audio here"
+                          : "Drop audio or click"}
+                      </span>
+                      <span className="text-white/50 text-xs">Max 100MB</span>
+                    </div>
+                  )}
+                </FileUploadZone>
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/mp3,audio/mpeg,audio/wav,audio/flac"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAudioSelect(file);
+                  }}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <AnimatePresence>
+                  {validationErrors.audioFile && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-400 text-xs mt-1"
                     >
-                      <UploadOutlined className="text-white/60" />
-                    </button>
+                      {validationErrors.audioFile}
+                    </motion.p>
                   )}
-                  <input
-                    ref={audioInputRef}
-                    type="file"
-                    accept="audio/mp3,audio/mpeg"
-                    onChange={handleAudioChange}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </div>
-                <div className="flex-1">
-                  <button
-                    onClick={() => audioInputRef.current?.click()}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left"
-                    disabled={isUploading}
-                  >
-                    {trackData.audioFile
-                      ? trackData.audioFile.name
-                      : "Select audio file"}
-                  </button>
-                  {trackData.audioFile && (
-                    <span className="text-xs text-white/50 mt-1 block">
-                      {(trackData.audioFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+                </AnimatePresence>
+              </motion.div>
 
-            {/* Cover Upload */}
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Cover Image *
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  {coverPreview ? (
-                    <div className="relative">
+              {/* Cover Upload */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Cover Image *
+                </label>
+                <FileUploadZone
+                  isDragActive={fileState.coverIsDragActive}
+                  hasFile={!!fileState.coverFile}
+                  onDragEnter={(e) => handleCoverDrag(e, "enter")}
+                  onDragLeave={(e) => handleCoverDrag(e, "leave")}
+                  onDragOver={(e) => handleCoverDrag(e, "over")}
+                  onDrop={(e) => handleCoverDrag(e, "drop")}
+                  onClick={() => coverInputRef.current?.click()}
+                  className="h-32"
+                >
+                  {fileState.coverFile && fileState.coverPreview ? (
+                    <div className="relative w-full h-full">
                       <img
-                        src={coverPreview}
+                        src={fileState.coverPreview}
                         alt="Cover preview"
-                        className="w-12 h-12 rounded-lg object-cover border border-white/20"
+                        className="w-full h-full object-cover rounded-lg"
                       />
                       <button
-                        onClick={removeCover}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeCover();
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500/80 rounded-full hover:bg-red-500 transition-colors"
                         disabled={isUploading}
                       >
-                        <DeleteOutlined />
+                        <DeleteOutlined className="text-white text-xs" />
                       </button>
+                      <div className="absolute bottom-2 left-2 bg-black/50 rounded px-2 py-1">
+                        <span className="text-white text-xs">
+                          {(fileState.coverFile.size / (1024 * 1024)).toFixed(
+                            2
+                          )}{" "}
+                          MB
+                        </span>
+                      </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => coverInputRef.current?.click()}
-                      className="w-12 h-12 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors"
-                      disabled={isUploading}
-                    >
-                      <UploadOutlined className="text-white/60" />
-                    </button>
+                    <div className="flex flex-col items-center gap-2">
+                      <CloudUploadOutlined className="text-white/60 text-3xl" />
+                      <span className="text-white/80 text-sm font-medium text-center">
+                        {fileState.coverIsDragActive
+                          ? "Drop image here"
+                          : "Drop image or click"}
+                      </span>
+                      <span className="text-white/50 text-xs">Max 5MB</span>
+                    </div>
                   )}
-                  <input
-                    ref={coverInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleCoverChange}
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                </div>
-                <div className="flex-1">
+                </FileUploadZone>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleCoverSelect(file);
+                  }}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <AnimatePresence>
+                  {validationErrors.coverFile && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.coverFile}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+
+            {/* Audio and Cover Upload - Mobile */}
+            <div className="sm:hidden space-y-4">
+              {/* Audio Upload Mobile */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Audio File *
+                </label>
+                {fileState.audioFile ? (
+                  <GlassCard padding="0.75rem">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          if (fileState.audioPreview) {
+                            const audio = new Audio(fileState.audioPreview);
+                            audio.play();
+                          }
+                        }}
+                        className="p-2 bg-green-500/20 rounded-full"
+                        disabled={isUploading}
+                      >
+                        <PlayCircleOutlined className="text-green-400" />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">
+                          {fileState.audioFile.name}
+                        </p>
+                        <p className="text-white/50 text-xs">
+                          {(fileState.audioFile.size / (1024 * 1024)).toFixed(
+                            2
+                          )}{" "}
+                          MB
+                        </p>
+                      </div>
+                      <button
+                        onClick={removeAudio}
+                        className="p-2 bg-red-500/20 rounded-full"
+                        disabled={isUploading}
+                      >
+                        <DeleteOutlined className="text-red-400" />
+                      </button>
+                    </div>
+                  </GlassCard>
+                ) : (
                   <button
-                    onClick={() => coverInputRef.current?.click()}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-colors text-left"
+                    onClick={() => audioInputRef.current?.click()}
+                    className="w-full p-4 border-2 border-dashed border-white/30 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                     disabled={isUploading}
                   >
-                    {trackData.coverFile
-                      ? trackData.coverFile.name
-                      : "Select cover image"}
+                    <div className="flex flex-col items-center gap-2">
+                      <UploadOutlined className="text-white/60 text-2xl" />
+                      <span className="text-white/80 text-sm">
+                        Select Audio File
+                      </span>
+                      <span className="text-white/50 text-xs">
+                        MP3, WAV, FLAC • Max 100MB
+                      </span>
+                    </div>
                   </button>
-                  {trackData.coverFile && (
-                    <span className="text-xs text-white/50 mt-1 block">
-                      {(trackData.coverFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </span>
+                )}
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/mp3,audio/mpeg,audio/wav,audio/flac"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAudioSelect(file);
+                  }}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <AnimatePresence>
+                  {validationErrors.audioFile && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.audioFile}
+                    </motion.p>
                   )}
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Cover Upload Mobile */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Cover Image *
+                </label>
+                {fileState.coverFile && fileState.coverPreview ? (
+                  <GlassCard padding="0.75rem">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={fileState.coverPreview}
+                        alt="Cover preview"
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">
+                          {fileState.coverFile.name}
+                        </p>
+                        <p className="text-white/50 text-xs">
+                          {(fileState.coverFile.size / (1024 * 1024)).toFixed(
+                            2
+                          )}{" "}
+                          MB
+                        </p>
+                      </div>
+                      <button
+                        onClick={removeCover}
+                        className="p-2 bg-red-500/20 rounded-full"
+                        disabled={isUploading}
+                      >
+                        <DeleteOutlined className="text-red-400" />
+                      </button>
+                    </div>
+                  </GlassCard>
+                ) : (
+                  <button
+                    onClick={() => coverInputRef.current?.click()}
+                    className="w-full p-4 border-2 border-dashed border-white/30 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    disabled={isUploading}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <UploadOutlined className="text-white/60 text-2xl" />
+                      <span className="text-white/80 text-sm">
+                        Select Cover Image
+                      </span>
+                      <span className="text-white/50 text-xs">
+                        JPG, PNG, WebP • Max 5MB
+                      </span>
+                    </div>
+                  </button>
+                )}
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleCoverSelect(file);
+                  }}
+                  className="hidden"
+                  disabled={isUploading}
+                />
+                <AnimatePresence>
+                  {validationErrors.coverFile && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.coverFile}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+
+            {/* Genre and Tags */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Genre */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Genre *
+                </label>
+                <StyledSelect
+                  placeholder="Select genre"
+                  value={trackData.genre || undefined}
+                  onChange={(value) => handleInputChange("genre", value)}
+                  options={genres.map((genre) => ({
+                    label: genre,
+                    value: genre,
+                  }))}
+                  className="w-full"
+                  disabled={isUploading}
+                  showSearch
+                  filterOption={(input, option) =>
+                    String(option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  status={validationErrors.genre ? "error" : ""}
+                />
+                <AnimatePresence>
+                  {validationErrors.genre && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.genre}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Tags */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Tags (Optional) - Max 5
+                </label>
+                <StyledMultiSelect
+                  mode="multiple"
+                  placeholder="Select tags"
+                  value={trackData.tags}
+                  onChange={(values) => {
+                    if (values.length <= 5) {
+                      handleInputChange("tags", values);
+                    }
+                  }}
+                  options={predefinedTags.map((tag) => ({
+                    label: tag,
+                    value: tag,
+                  }))}
+                  className="w-full"
+                  disabled={isUploading}
+                  showSearch
+                  maxTagCount="responsive"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
+                <span className="text-xs text-white/50 mt-1 block">
+                  Selected: {trackData.tags.length}/5
+                </span>
+              </motion.div>
+            </div>
+
+            {/* Artist Info */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <GlassCard padding="0.75rem">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={artist.avatar || "/default-artist-avatar.png"}
+                    alt={artist.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div>
+                    <span className="text-white/60 text-xs">Artist:</span>
+                    <p className="text-white font-medium">{artist.name}</p>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </GlassCard>
+            </motion.div>
           </div>
 
-          {/* Genre */}
-          <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">
-              Genre *
-            </label>
-            <StyledSelect
-              placeholder="Select genre"
-              value={trackData.genre || undefined}
-              onChange={(value) =>
-                setTrackData((prev) => ({ ...prev, genre: value }))
-              }
-              options={genres.map((genre) => ({ label: genre, value: genre }))}
-              className="w-full"
+          {/* Footer */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+            <GlassButton
+              onClick={handleClose}
               disabled={isUploading}
-              showSearch
-              filterOption={(input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-            />
-          </div>
+              variant="secondary"
+              size="md"
+            >
+              Cancel
+            </GlassButton>
 
-          {/* Tags */}
-          <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">
-              Tags (Optional) - Max 5
-            </label>
-            <StyledMultiSelect
-              mode="multiple"
-              placeholder="Select tags that describe your track"
-              value={trackData.tags}
-              onChange={(values) => {
-                if (values.length <= 5) {
-                  setTrackData((prev) => ({ ...prev, tags: values }));
-                }
-              }}
-              options={predefinedTags.map((tag) => ({
-                label: tag,
-                value: tag,
-              }))}
-              className="w-full"
-              disabled={isUploading}
-              showSearch
-              maxTagCount="responsive"
-              filterOption={(input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-            />
-            <span className="text-xs text-white/50 mt-1 block">
-              Selected: {trackData.tags.length}/5
-            </span>
-          </div>
-
-          {/* Artist Info */}
-          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-            <div className="flex items-center gap-3">
-              <img
-                src={artist.avatar || "/default-artist-avatar.png"}
-                alt={artist.name}
-                className="w-8 h-8 rounded-full object-cover"
-              />
-              <div>
-                <span className="text-white/60 text-xs">Artist:</span>
-                <p className="text-white font-medium">{artist.name}</p>
-              </div>
-            </div>
+            <GlassButton
+              onClick={handleUpload}
+              disabled={!isFormValid || isUploading}
+              variant="primary"
+              size="md"
+            >
+              {isUploading ? "Uploading..." : "Upload Track"}
+            </GlassButton>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-4">
-          <button
-            onClick={handleClose}
-            disabled={isUploading}
-            className="px-6 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpload}
-            disabled={!isFormValid || isUploading}
-            className="px-8 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold hover:from-green-600 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-emerald-500"
-          >
-            {isUploading ? "Uploading..." : "Upload Track"}
-          </button>
-        </div>
-      </div>
-    </Modal>
+      </Modal>
+    </ModalContainer>
   );
 };
 

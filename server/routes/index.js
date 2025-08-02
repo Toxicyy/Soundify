@@ -9,6 +9,7 @@ import globalSearchRoutes from "./globalSearch.routes.js";
 import chartRoutes from "./chart.routes.js";
 import batchRoutes from "./batchAlbum.routes.js";
 import analyticsRoutes from "./analytics.routes.js";
+import recomendationRoutes from "./recommendation.routes.js";
 /**
  * Main API routes configuration
  * Combines all feature-specific route modules
@@ -27,6 +28,7 @@ router.use("/search", globalSearchRoutes);
 router.use('/charts', chartRoutes);
 router.use("/albums/batch", batchRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/recommendations", recomendationRoutes);
 
 // API health check endpoint
 router.get("/", (req, res) => {

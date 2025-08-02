@@ -183,6 +183,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
   function logOut() {
     localStorage.removeItem("token");
     dispatch(userApiSlice.util.resetApiState());
+    window.location.reload();
   }
 
   return (

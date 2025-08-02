@@ -16,10 +16,11 @@ import {
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
 import ContextMenu from "./ContextMenu";
-import { addToQueue } from "../../../../state/Queue.slice";
+import { addToQueue, playTrackAndQueue } from "../../../../state/Queue.slice";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../../../../hooks/useNotification";
 import { motion } from "framer-motion";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -36,6 +37,7 @@ export default function TrackLayout({
   const [ellipsisHover, setEllipsisHover] = useState(false);
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { data: user } = useGetUserQuery();
 
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
@@ -49,19 +51,41 @@ export default function TrackLayout({
   const navigate = useNavigate();
   const { showError, showSuccess } = useNotification();
 
-  // Используем кастомный хук для лайков
   const {
     isLiked,
     isPending: likePending,
     toggleLike,
   } = useLike(track?._id || "");
 
-  const togglePlayPause = () => {
+  const togglePlayPauseWithRecommendations = async () => {
     if (!track || isLoading) return;
 
+    // Если это текущий трек - просто переключаем паузу
     if (isCurrentTrack) {
       dispatch(setIsPlaying(!currentTrack.isPlaying));
-    } else {
+      return;
+    }
+
+    try {
+       const response = await fetch(`http://localhost:5000/api/recommendations?userId=${user?._id}`);
+    const recommendations = await response.json()
+
+      const playQueue = [track, ...recommendations];
+
+      dispatch(
+        playTrackAndQueue({
+          track, // Текущий трек
+          contextTracks: playQueue,
+          startIndex: 0,
+        })
+      );
+
+      setTimeout(() => {
+        dispatch(setIsPlaying(true));
+      }, 50);
+    } catch (error) {
+      console.error("Ошибка при получении рекомендаций:", error);
+
       dispatch(setCurrentTrack(track));
       setTimeout(() => {
         dispatch(setIsPlaying(true));
@@ -176,7 +200,7 @@ export default function TrackLayout({
         menuOpen || likeHover || ellipsisHover
           ? () => {}
           : () => {
-              togglePlayPause();
+              togglePlayPauseWithRecommendations();
             }
       }
       whileHover={{ scale: 1.02 }}
@@ -320,7 +344,7 @@ export default function TrackLayout({
         menuOpen || likeHover || ellipsisHover
           ? () => {}
           : () => {
-              togglePlayPause();
+              togglePlayPauseWithRecommendations();
             }
       }
     >
