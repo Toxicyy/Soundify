@@ -193,7 +193,7 @@ export const router = createBrowserRouter([
       {
         path: "*",
         loader: () => {
-          return redirect("/discover");
+          return redirect("/");
         },
       },
     ],

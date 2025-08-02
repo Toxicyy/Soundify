@@ -131,7 +131,6 @@ export const useArtistData = (artistId: string): UseArtistDataReturn => {
       // Если нет ID, сбрасываем состояние
       setData(null);
       setLoading(false);
-      setError("ID артиста не указан");
     }
 
     // Cleanup функция

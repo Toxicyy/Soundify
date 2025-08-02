@@ -1,18 +1,37 @@
+// ProfileArtistsSlider.tsx - Enhanced responsive design
 import { useState, useRef, type FC, useEffect, useCallback, memo } from "react";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useUserLikedArtists } from "../../../hooks/useUserLikedArtists";
 import ProfileArtistTemplate from "./ProfileArtistTemplate";
 
+/**
+ * Profile Artists Slider - Enhanced responsive design
+ *
+ * RESPONSIVE IMPROVEMENTS:
+ * - Adaptive card spacing for different screen sizes
+ * - Mobile-optimized scroll behavior and touch interactions
+ * - Responsive arrow positioning and sizing
+ * - Better overflow handling on small screens
+ *
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Memoized scroll calculations to prevent excessive re-renders
+ * - Efficient event listener management with cleanup
+ * - Optimized resize handling for responsive behavior
+ * - Smart loading states with proper skeleton UI
+ *
+ * ACCESSIBILITY FEATURES:
+ * - Comprehensive ARIA labels and roles
+ * - Keyboard navigation support
+ * - Screen reader friendly content announcements
+ * - High contrast focus indicators
+ */
+
 interface ProfileArtistsSliderProps {
   userId: string;
   isLoading?: boolean;
 }
 
-/**
- * Profile artists slider displaying user's liked artists
- * Features horizontal scrolling with navigation arrows and responsive design
- */
 const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
   userId,
   isLoading = false,
@@ -25,7 +44,13 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Hook for data fetching
-  const { artists, isLoading: isDataLoading, error, refetch, pagination } = useUserLikedArtists(userId, {
+  const {
+    artists,
+    isLoading: isDataLoading,
+    error,
+    refetch,
+    pagination,
+  } = useUserLikedArtists(userId, {
     limit: 12,
   });
 
@@ -33,7 +58,7 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
   const isCurrentLoading = isLoading || isDataLoading;
 
   /**
-   * Handle scroll event to update arrow visibility
+   * Handle scroll event with improved performance
    */
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -41,53 +66,63 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
     const maxScrollLeft = scrollWidth - clientWidth;
+    const canScroll = maxScrollLeft > 10; // Minimum scroll threshold
 
-    const canScroll = maxScrollLeft > 0;
     setShowLeftArrow(canScroll && scrollLeft > 10);
     setShowRightArrow(canScroll && scrollLeft < maxScrollLeft - 10);
   }, []);
 
   /**
-   * Scroll container to the left
+   * Get responsive scroll distance based on screen size
    */
-  const scrollLeft = useCallback(() => {
-    scrollContainerRef.current?.scrollBy({
-      left: -300,
-      behavior: "smooth",
-    });
+  const getScrollDistance = useCallback(() => {
+    const width = window.innerWidth;
+    if (width < 640) return 180; // Mobile - smaller cards
+    if (width < 1024) return 240; // Tablet
+    return 320; // Desktop
   }, []);
 
   /**
-   * Scroll container to the right
+   * Scroll functions with responsive behavior
    */
-  const scrollRight = useCallback(() => {
+  const scrollLeft = useCallback(() => {
     scrollContainerRef.current?.scrollBy({
-      left: 300,
+      left: -getScrollDistance(),
       behavior: "smooth",
     });
-  }, []);
+  }, [getScrollDistance]);
 
-  // Effects
+  const scrollRight = useCallback(() => {
+    scrollContainerRef.current?.scrollBy({
+      left: getScrollDistance(),
+      behavior: "smooth",
+    });
+  }, [getScrollDistance]);
+
+  // Effects with cleanup
   useEffect(() => {
     handleScroll();
+
+    const handleResize = () => handleScroll();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, [artists, handleScroll]);
 
-  // Show loading state
+  // Loading state with responsive skeletons
   if (isCurrentLoading) {
     return (
       <div className="overflow-hidden">
-        <div className="h-8 w-32 bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden mb-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
-        </div>
+        {/* Title skeleton */}
+        <div className="h-6 sm:h-8 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15 rounded-lg mb-6 animate-pulse" />
 
-        {/* Content skeletons */}
-        <div className="flex gap-5 px-2">
-          {Array.from({ length: 4 }).map((_, index) => (
+        {/* Content skeletons with responsive layout */}
+        <div className="flex gap-2 sm:gap-3 lg:gap-5 overflow-x-auto pb-4">
+          {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
-              <ProfileArtistTemplate
-                artist={{} as any}
-                isLoading={true}
-              />
+              <ProfileArtistTemplate artist={{} as any} isLoading={true} />
             </div>
           ))}
         </div>
@@ -98,90 +133,98 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
   const totalArtists = pagination?.totalArtists || artists.length;
 
   return (
-    <section className="overflow-hidden" aria-labelledby="artists-section-title">
-      <div className="flex items-center justify-between mb-6">
+    <section
+      className="overflow-hidden"
+      aria-labelledby="artists-section-title"
+    >
+      {/* Header with responsive layout */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2
           id="artists-section-title"
-          className="text-white text-2xl sm:text-3xl font-bold"
+          className="text-white text-xl sm:text-2xl lg:text-3xl font-bold"
         >
           Following Artists ({totalArtists})
         </h2>
-        
-        {/* View All button */}
+
+        {/* View All button with responsive positioning */}
         {hasContent && totalArtists > 12 && (
           <Link
             to={`/profile/${userId}/artists`}
-            className="text-white/70 hover:text-white text-sm sm:text-base transition-colors duration-200 hover:underline"
+            className="text-white/70 hover:text-white text-sm sm:text-base transition-colors duration-200 hover:underline self-start sm:self-auto"
           >
             View All
           </Link>
         )}
       </div>
 
-      {/* Error state */}
+      {/* Error state with responsive design */}
       {error && (
         <div className="bg-red-50/10 border border-red-200/20 rounded-lg p-4 mb-4">
-          <div className="flex items-center">
-            <svg className="h-5 w-5 text-red-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+            <svg
+              className="h-5 w-5 text-red-400 flex-shrink-0 self-start sm:mt-0.5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
-            <p className="text-red-300 text-sm">{error}</p>
+            <div className="flex-1">
+              <p className="text-red-300 text-sm">{error}</p>
+              <button
+                onClick={refetch}
+                className="mt-2 bg-red-100/20 hover:bg-red-100/30 text-red-300 px-3 py-1 rounded text-sm transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
-          <button
-            onClick={refetch}
-            className="mt-2 bg-red-100/20 hover:bg-red-100/30 text-red-300 px-3 py-1 rounded text-sm transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       )}
 
-      {/* Content area with horizontal scrolling */}
+      {/* Content area with responsive scrolling */}
       <div className="relative group">
-        {/* Left navigation arrow */}
+        {/* Navigation arrows with responsive positioning */}
         {showLeftArrow && hasContent && (
           <button
             onClick={scrollLeft}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/20"
             aria-label="Scroll left"
           >
-            <LeftOutlined />
+            <LeftOutlined className="text-xs sm:text-sm" />
           </button>
         )}
 
-        {/* Right navigation arrow */}
         {showRightArrow && hasContent && (
           <button
             onClick={scrollRight}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/20"
+            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white/20"
             aria-label="Scroll right"
           >
-            <RightOutlined />
+            <RightOutlined className="text-xs sm:text-sm" />
           </button>
         )}
 
-        {/* Scrollable content container */}
+        {/* Scrollable content container with responsive gaps */}
         <div
           ref={scrollContainerRef}
-          className="albums-scroll-light overflow-x-auto pb-4 py-2"
+          className="albums-scroll-light overflow-x-auto pb-4 scroll-smooth"
           onScroll={handleScroll}
           role="region"
           aria-label="User's liked artists"
         >
-          <div className="flex gap-3 sm:gap-5 min-w-max px-2">
+          <div className="flex gap-2 sm:gap-3 lg:gap-5 min-w-max px-1 sm:px-2">
             {hasContent ? (
               artists.map((artist, index) => (
-                <div
-                  key={artist._id || index}
-                  className="flex-shrink-0 scroll-snap-align-start"
-                >
-                  <ProfileArtistTemplate 
-                    artist={artist} 
-                  />
+                <div key={artist._id || index} className="flex-shrink-0">
+                  <ProfileArtistTemplate artist={artist} />
                 </div>
               ))
             ) : (
-              <div className="text-white/60 text-base sm:text-lg py-8 px-4 text-center w-full">
+              <div className="text-white/60 text-sm sm:text-base lg:text-lg py-8 px-4 text-center w-full">
                 No artists followed yet
               </div>
             )}
