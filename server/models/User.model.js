@@ -45,7 +45,6 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Artist",
       default: null,
-      unique: true, // One user can have only one artist profile
       sparse: true, // Allows multiple null values
     },
     playlists: [
