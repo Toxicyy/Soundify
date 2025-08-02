@@ -45,7 +45,6 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Artist",
       default: null,
-      sparse: true, // Allows multiple null values
     },
     playlists: [
       {

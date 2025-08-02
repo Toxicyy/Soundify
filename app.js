@@ -18,7 +18,7 @@ connectDB();
 // Middleware
 app.use(
   cors({
-    origin: config.corsOrigin,
+    origin: true,
     credentials: true,
   })
 );
