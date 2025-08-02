@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet, redirect } from "react-router-dom";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import Main from "./Pages/Main";
 import SignUp from "./Pages/SignUp";
 import Login from "./Pages/Login";
@@ -32,6 +32,7 @@ import Recently from "./Pages/Recently";
 import Premium from "./Pages/Premium";
 import Search from "./Pages/Search";
 import Charts from "./Pages/Charts";
+import NotFound404 from "./Pages/NotFound404";
 
 export const router = createBrowserRouter([
   {
@@ -192,9 +193,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "*",
-        loader: () => {
-          return redirect("/");
-        },
+        element: <NotFound404 />,
       },
     ],
   },
