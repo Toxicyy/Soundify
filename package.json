@@ -3,15 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "dev:client": "cd client && npm run dev",
-    "dev:server": "cd server && npm run dev", 
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "build:client": "cd client && npm run build",
-    "build": "npm run build:client",
-    "start": "cd server && npm start"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2"
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm install && npm start"
   },
   "engines": {
     "node": ">=18.0.0"
