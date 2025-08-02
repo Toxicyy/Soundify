@@ -25,6 +25,7 @@
     "mongoose": "^8.15.0",
     "multer": "^2.0.0",
     "node-cron": "^4.2.1",
+    "path": "^0.12.7",
     "path-to-regexp": "^8.2.0",
     "uuid": "^11.1.0"
   },

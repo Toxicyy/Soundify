@@ -4,12 +4,16 @@ import connectDB from "./config/db.js";
 import { config } from "./config/config.js";
 import routes from "./routes/index.js";
 import { errorHandler } from "./middleware/error.middleware.js";
-import chartCronJobs from "./cron/chart-cron-jobs.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Подключение к базе данных
-connectDB();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Подключение к БД
+connectDB();
 
 // Middleware
 app.use(
@@ -21,57 +25,39 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Маршруты
+// API роуты должны быть ПЕРВЫМИ
 app.use("/api", routes);
 
-// Обработка 404 - используем функцию без параметра пути
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "Маршрут не найден",
+// Статические файлы
+const staticPath = path.join(__dirname, "../client/dist");
+app.use(express.static(staticPath));
+
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (req.path.startsWith('/api')) return next();
+  
+  if (path.extname(req.path)) return next();
+
+  if (req.accepts('html')) {
+    res.sendFile(path.join(staticPath, 'index.html'));
+  } else {
+    next();
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
-// Глобальная обработка ошибок
+// Обработчик ошибок
 app.use(errorHandler);
 
 const PORT = config.port;
 
-/**
- * Initialize chart system cron jobs
- * Only start in production or if explicitly enabled
- */
-const initializeChartJobs = () => {
-  const shouldStartCron =
-    process.env.NODE_ENV === "production" ||
-    process.env.ENABLE_CHART_CRON === "true";
-
-  if (shouldStartCron) {
-    console.log("Initializing chart cron jobs...");
-    chartCronJobs.start();
-
-    // Graceful shutdown handling
-    process.on("SIGTERM", () => {
-      console.log("SIGTERM received, stopping chart cron jobs...");
-      chartCronJobs.stop();
-    });
-
-    process.on("SIGINT", () => {
-      console.log("SIGINT received, stopping chart cron jobs...");
-      chartCronJobs.stop();
-      process.exit(0);
-    });
-  } else {
-    console.log(
-      "Chart cron jobs disabled (set ENABLE_CHART_CRON=true to enable)"
-    );
-  }
-};
-
-initializeChartJobs();
-
-export { initializeChartJobs, chartCronJobs };
-
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT} в режиме ${config.nodeEnv}`);
+  console.log(`Server running on port ${PORT}`);
 });
