@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
-import connectDB from "./config/db.js";
-import { config } from "./config/config.js";
-import routes from "./routes/index.js";
-import { errorHandler } from "./middleware/error.middleware.js";
+import connectDB from "./server/config/db.js";
+import { config } from "./server/config/config.js";
+import routes from "./server/routes/index.js";
+import { errorHandler } from "./server/middleware/error.middleware.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", routes);
 
 // Статические файлы
-const staticPath = path.join(__dirname, "../client/dist");
+const staticPath = path.join(__dirname, "client/dist");
 app.use(express.static(staticPath));
 
 app.use((req, res, next) => {
