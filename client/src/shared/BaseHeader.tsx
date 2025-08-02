@@ -104,10 +104,10 @@ export const HeaderContent: FC<HeaderContentProps> = ({
         onClick={image.callback}
       />
 
-      <div className="flex-1 text-center sm:text-left">
+      <div className="flex-1 sm:text-left">
         {/* Verified badge */}
         {badge?.show && (
-          <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
+          <div className="flex items-center gap-2 mb-2 sm:justify-start">
             {badge.showVerified && (
               <VerifiedBadge size={24} aria-hidden="true" />
             )}

@@ -15,23 +15,6 @@ import UploadTrackModal from "./components/UploadTrackModal";
 import EditProfileModal from "./components/EditProfileModal";
 import AdvancedSettingsModal from "./components/AdvancedSettingsModal";
 
-/**
- * ArtistStudioHeader - FINAL FIXED VERSION
- *
- * CRITICAL FIXES:
- * - Fixed More menu to include ALL options (Edit Profile, Advanced Settings, Create Album)
- * - Welcome text ALWAYS stays aligned to left edge of avatar, never centers
- * - Action buttons ALWAYS stay within header bounds, never overflow
- * - Fixed invalid Tailwind classes (w-25, h-25, etc.)
- * - Proper responsive layout that maintains structure at all breakpoints
- *
- * LAYOUT CONSTRAINTS:
- * - Text alignment: Always left-aligned relative to avatar
- * - Button positioning: Always within header container
- * - Avatar sizing: Proper Tailwind classes (w-16, w-20, etc.)
- * - Responsive behavior: Consistent across all screen sizes
- */
-
 interface ArtistStudioHeaderProps {
   artist: Artist;
   tracksCount: number;
@@ -57,9 +40,6 @@ interface ActionButtonProps {
   className?: string;
 }
 
-/**
- * Enhanced action button with proper sizing
- */
 const ActionButton: FC<ActionButtonProps> = ({
   icon,
   text,
@@ -90,7 +70,7 @@ const ActionButton: FC<ActionButtonProps> = ({
 );
 
 /**
- * FIXED Mobile menu with ALL options included
+ * ИСПРАВЛЕННОЕ мобильное меню с ВСЕМИ 3 опциями
  */
 const MobileActionsMenu: FC<{
   isOpen: boolean;
@@ -116,61 +96,69 @@ const MobileActionsMenu: FC<{
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998] sm:hidden"
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9998] md:hidden"
             onClick={onClose}
           />
 
-          {/* FIXED: Menu with ALL options */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="fixed top-20 right-3 w-52 bg-gray-900/98 backdrop-blur-xl rounded-xl border border-white/15 shadow-2xl z-[9999] sm:hidden overflow-hidden"
+            className="fixed top-20 right-3 w-56 bg-gray-900/98 backdrop-blur-xl rounded-xl border border-white/15 shadow-2xl z-[9999] md:hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ALL menu items included */}
-            <div className="py-2">
-              {[
-                {
-                  key: "edit",
-                  icon: <EditOutlined />,
-                  text: "Edit Profile",
-                  variant: "secondary" as const,
-                },
-                {
-                  key: "advanced",
-                  icon: <SettingOutlined />,
-                  text: "Advanced Settings",
-                  variant: "secondary" as const,
-                },
-                {
-                  key: "album",
-                  icon: <UnorderedListOutlined />,
-                  text: "Create Album",
-                  variant: "secondary" as const,
-                },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => {
-                    onAction(item.key);
-                    onClose();
-                  }}
-                  className="w-full px-4 py-3 text-left transition-all duration-150 hover:bg-white/10 active:bg-white/15 text-white"
-                  aria-label={item.text}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-base text-white/80"
-                      aria-hidden="true"
-                    >
-                      {item.icon}
-                    </span>
-                    <span className="font-medium text-sm">{item.text}</span>
-                  </div>
-                </button>
-              ))}
+            <div className="py-2 flex flex-col">
+              {/* Edit Profile */}
+              <button
+                onClick={() => {
+                  onAction("edit");
+                  onClose();
+                }}
+                className="w-full px-4 py-3 text-left transition-all duration-150 hover:bg-white/10 active:bg-white/15 text-white border-b border-white/5"
+                aria-label="Edit Profile"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-base text-white/80" aria-hidden="true">
+                    <EditOutlined />
+                  </span>
+                  <span className="font-medium text-sm">Edit Profile</span>
+                </div>
+              </button>
+
+              {/* Advanced Settings */}
+              <button
+                onClick={() => {
+                  onAction("advanced");
+                  onClose();
+                }}
+                className="w-full px-4 py-3 text-left transition-all duration-150 hover:bg-white/10 active:bg-white/15 text-white border-b border-white/5"
+                aria-label="Advanced Settings"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-base text-white/80" aria-hidden="true">
+                    <SettingOutlined />
+                  </span>
+                  <span className="font-medium text-sm">Advanced Settings</span>
+                </div>
+              </button>
+
+              {/* Create Album */}
+              <button
+                onClick={() => {
+                  onAction("album");
+                  onClose();
+                }}
+                className="w-full px-4 py-3 text-left transition-all duration-150 hover:bg-white/10 active:bg-white/15 text-white"
+                aria-label="Create Album"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-base text-white/80" aria-hidden="true">
+                    <UnorderedListOutlined />
+                  </span>
+                  <span className="font-medium text-sm">Create Album</span>
+                </div>
+              </button>
             </div>
           </motion.div>
         </>
@@ -207,7 +195,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
   );
 
   /**
-   * Fixed navigation handler with proper async handling
+   * Navigation handler with proper async handling
    */
   const handleNavigation = useCallback(
     async (path: string) => {
@@ -226,10 +214,12 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
   );
 
   /**
-   * Mobile action handler with fixed navigation
+   * ИСПРАВЛЕННЫЙ Mobile action handler
    */
   const handleMobileAction = useCallback(
     (action: string) => {
+      console.log("Mobile action triggered:", action); // Для отладки
+
       switch (action) {
         case "edit":
           toggleModal("edit", true);
@@ -240,6 +230,8 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
         case "album":
           handleNavigation("/artist-studio/create-album");
           break;
+        default:
+          console.log("Unknown action:", action);
       }
     },
     [toggleModal, handleNavigation]
@@ -260,7 +252,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     []
   );
 
-  // FIXED: Welcome title with proper left alignment
+  // Welcome title with proper left alignment
   const welcomeTitle = useMemo(
     () => (
       <div className="flex flex-col text-left">
@@ -285,11 +277,11 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     [artist.name]
   );
 
-  // FIXED: Stats and actions layout - buttons stay within header
+  // Stats and actions layout
   const statsSubtitle = useMemo(
     () => (
       <div className="flex flex-col space-y-3">
-        {/* Stats with better mobile layout */}
+        {/* Stats */}
         <div className="flex flex-wrap gap-3 sm:gap-4">
           <motion.div
             className="flex items-center gap-2"
@@ -342,7 +334,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
           )}
         </div>
 
-        {/* FIXED: Desktop Actions - constrained within header */}
+        {/* Desktop Actions */}
         <motion.div
           className="hidden md:flex items-center gap-2 lg:gap-3 justify-end"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -383,7 +375,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
           />
         </motion.div>
 
-        {/* FIXED: Mobile Actions - constrained within header */}
+        {/* Mobile Actions */}
         <motion.div
           className="flex md:hidden items-center gap-2"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -405,7 +397,10 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
             <ActionButton
               icon={<EllipsisOutlined />}
               text="More"
-              onClick={() => toggleModal("mobileMenu")}
+              onClick={() => {
+                console.log("More button clicked"); // Для отладки
+                toggleModal("mobileMenu");
+              }}
               variant="secondary"
               size="sm"
               ariaLabel="Open more actions menu"
@@ -414,7 +409,10 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
 
             <MobileActionsMenu
               isOpen={modals.mobileMenu}
-              onClose={() => toggleModal("mobileMenu", false)}
+              onClose={() => {
+                console.log("Closing mobile menu");
+                toggleModal("mobileMenu", false);
+              }}
               onAction={handleMobileAction}
             />
           </div>
@@ -433,16 +431,16 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     ]
   );
 
-  // FIXED: Image props with correct Tailwind classes
+  // Image props with correct Tailwind classes
   const imageProps = useMemo(
     () => ({
       src: artist.avatar || "/default-artist-avatar.png",
       alt: `${artist.name} avatar`,
       className: `
-        w-16 h-16 
-        sm:w-20 sm:h-20 
-        md:w-24 md:h-24 
-        lg:w-28 lg:h-28
+        w-30 h-30 
+        sm:w-36 sm:h-36
+        md:w-40 md:h-40
+        lg:w-45 lg:h-45
         rounded-full object-cover border-3 border-white/20 shadow-lg
       `,
     }),
@@ -467,10 +465,10 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
 
   return (
     <>
-      {/* FIXED: Header with proper height constraints */}
+      {/* Header */}
       <BaseHeader
         isLoading={isLoading}
-        className="min-h-[160px] max-h-[200px] overflow-hidden"
+        className="h-[210px] sm:h-[230px] md:h-[235px] lg:h-[240px] xl:h-[250px]"
       >
         <HeaderContent
           image={imageProps}
@@ -495,7 +493,7 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
         )}
       </BaseHeader>
 
-      {/* Modals with proper scroll handling */}
+      {/* Modals */}
       <AnimatePresence>
         {modals.upload && (
           <UploadTrackModal
