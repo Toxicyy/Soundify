@@ -31,13 +31,18 @@ export const generateSignedUrl = async (fileName, durationInSeconds = 3600) => {
     await ensureAuthorized();
 
     const response = await b2.getDownloadAuthorization({
-      bucketId: config.b2.bucketId, // ID вашего бакета
+      bucketId: config.b2.bucketId,
       fileNamePrefix: fileName,
       validDurationInSeconds: durationInSeconds,
     });
 
-    // Формируем подписанный URL
-    const downloadUrl = `${authData.data.downloadUrl}/file/${config.b2.bucketName}/${fileName}?Authorization=${response.data.authorizationToken}`;
+    // Принудительно заменяем HTTP на HTTPS
+    const baseDownloadUrl = authData.data.downloadUrl.replace(
+      "http://",
+      "https://"
+    );
+
+    const downloadUrl = `${baseDownloadUrl}/file/${config.b2.bucketName}/${fileName}?Authorization=${response.data.authorizationToken}`;
 
     return downloadUrl;
   } catch (error) {
