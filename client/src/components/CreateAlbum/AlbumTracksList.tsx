@@ -6,6 +6,7 @@ import AlbumTrackItem from "./AlbumTrackItem";
 import { playTrackAndQueue } from "../../state/Queue.slice";
 import type { AppDispatch } from "../../store";
 import type { LocalTrack, AlbumTracksListProps } from "../../types/LocalTrack";
+import type { Track } from "../../types/TrackData";
 
 /**
  * Album Tracks List Component
@@ -84,7 +85,7 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
           },
           coverUrl: freshCoverUrl,
           audioUrl: freshAudioUrl,
-          album: null,
+          album: "single",
           preview: freshAudioUrl,
           duration: localTrack.duration || 0,
           genre: localTrack.metadata.genre,
@@ -101,7 +102,7 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
       // Dispatch to Redux queue
       dispatch(
         playTrackAndQueue({
-          contextTracks: convertedTracks,
+          contextTracks: convertedTracks as Track[],
           startIndex: trackIndex,
         })
       );

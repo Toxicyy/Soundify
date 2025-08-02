@@ -3,7 +3,6 @@ import queueReducer from "./state/Queue.slice";
 import dashboardMenuSliceReducer from "./state/DashboardMenu.slice";
 import tokenReducer from "./state/Token.slice";
 import { userApiSlice } from "./state/UserApi.slice";
-import audioQueueSliceReducer from "./state/AudioQueue.slice";
 import currentTrackSliceReducer from "./state/CurrentTrack.slice";
 import isGenreSelectOpenSliceReducer from "./state/isGenreSelectOpen.slice";
 import likeUpdateSliceReducer from "./state/LikeUpdate.slice";
@@ -14,18 +13,12 @@ export const store = configureStore({
     dashboardMenu: dashboardMenuSliceReducer,
     token: tokenReducer,
     userApi: userApiSlice.reducer,
-    audioQueue: audioQueueSliceReducer,
     currentTrack: currentTrackSliceReducer,
     isGenreSelectOpen: isGenreSelectOpenSliceReducer,
     likeUpdate: likeUpdateSliceReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ["audioQueue/addToQueueState"],
-        ignoredPaths: ["audioQueue.cover", "audioQueue.queue.0.cover"],
-      },
-    }).concat(userApiSlice.middleware),
+    getDefaultMiddleware().concat(userApiSlice.middleware),
 });
 
 export type AppState = ReturnType<typeof store.getState>;

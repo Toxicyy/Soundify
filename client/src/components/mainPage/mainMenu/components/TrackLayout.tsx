@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useNotification } from "../../../../hooks/useNotification";
 import { motion } from "framer-motion";
 import { useGetUserQuery } from "../../../../state/UserApi.slice";
+import { api } from "../../../../shared/api";
 
 interface TrackLayoutProps {
   track: Track | undefined;
@@ -67,8 +68,9 @@ export default function TrackLayout({
     }
 
     try {
-       const response = await fetch(`http://localhost:5000/api/recommendations?userId=${user?._id}`);
-    const recommendations = await response.json()
+      if (!user?._id) return;
+      const response = await api.recommendations.getForUser(user?._id);
+      const recommendations = await response.json()
 
       const playQueue = [track, ...recommendations];
 

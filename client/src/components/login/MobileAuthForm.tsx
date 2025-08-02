@@ -338,7 +338,7 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}
         >
-          🎵 Soundify
+          Soundify
         </motion.h1>
 
         <div className="w-10"></div>

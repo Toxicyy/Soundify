@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useGetUserQuery } from "../state/UserApi.slice";
+import { api } from "../shared/api";
 
 interface UseLikePlaylistReturn {
   isLiked: boolean;
@@ -64,17 +65,7 @@ export const useLikePlaylist = (
       setLikeCount(newCount);
 
       // API call
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:5000/api/playlists/${playlistId}/like`,
-        {
-          method: newLikedState ? "POST" : "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await api.playlist.likePlaylist(playlistId, newLikedState);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

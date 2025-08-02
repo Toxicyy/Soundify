@@ -54,7 +54,6 @@ export const Player = () => {
   const [likeHover, setLikeHover] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isShare, setIsShare] = useState(false);
 
   // Skip limit states
   const [skipCount, setSkipCount] = useState(0);
@@ -75,7 +74,7 @@ export const Player = () => {
   const { data: user, isFetching } = useGetUserQuery();
   // Custom skip limit notification
   const showSkipLimitNotification = useCallback((remainingSkips: number) => {
-    const { showCustom } = useNotification();
+    const { showCustom} = useNotification();
 
     return showCustom(
       <div className="max-w-md w-full bg-yellow-500/10 backdrop-blur-lg border border-yellow-500/30 shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-yellow-500/20">
@@ -127,7 +126,7 @@ export const Player = () => {
     );
   }, []);
 
-  const { showWarning, showError } = useNotification();
+  const { showWarning, showError, showSuccess } = useNotification();
   const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
 
   // Like functionality
@@ -321,7 +320,7 @@ export const Player = () => {
 
     return {
       url: isHLS
-        ? `http://localhost:5000/api/tracks/${currentTrack.currentTrack._id}/playlist.m3u8`
+        ? api.track.getPlaylistUrl(currentTrack.currentTrack._id)
         : currentTrack.currentTrack.audioUrl,
       isHLS,
     };
@@ -439,6 +438,46 @@ export const Player = () => {
     repeat,
     currentTrack.isPlaying,
   ]);
+
+  const handleShareClick = useCallback(async () => {
+    try {
+      if (!currentTrack.currentTrack) return;
+      const url = `${window.location.origin}/track/${currentTrack.currentTrack._id}`;
+
+      // Проверяем поддержку Web Share API (для мобильных устройств)
+      if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+        const artistName =
+          typeof currentTrack.currentTrack.artist === "string" ? currentTrack.currentTrack.artist : currentTrack.currentTrack.artist?.name;
+
+        await navigator.share({
+          title: `${currentTrack.currentTrack.name} - ${artistName}`,
+          text: `Listen to "${currentTrack.currentTrack.name}" by ${artistName} on Soundify`,
+          url: url,
+        });
+
+        showSuccess("Track shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      }
+    } catch (error) {
+      // Обработка ошибок
+      if (error === "AbortError") {
+        return;
+      }
+
+      console.error("Share failed:", error);
+
+      try {
+        if (!currentTrack.currentTrack) return;
+        const url = `${window.location.origin}/track/${currentTrack.currentTrack._id}`;
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      } catch (clipboardError) {
+        showError("Failed to share track. Please copy the URL manually.");
+      }
+    }
+  }, [currentTrack.currentTrack, showSuccess, showError]);
 
   const handlePrevious = useCallback(() => {
     if (audioRef.current && audioRef.current.currentTime > 3) {
@@ -1018,8 +1057,7 @@ export const Player = () => {
               <button
                 onClick={() => {
                   setShowUpgradeModal(false);
-                  // Navigate to upgrade page
-                  window.location.href = "/upgrade";
+                  window.location.href = "/upgrade-to-premium";
                 }}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-medium transition-all shadow-lg"
               >
@@ -1265,10 +1303,9 @@ export const Player = () => {
         <ShareAltOutlined
           style={{
             fontSize: "24px",
-            color: isShare ? "white" : "rgba(255, 255, 255, 0.3)",
           }}
           className="cursor-pointer hover:scale-110 transition-all duration-200"
-          onClick={() => setIsShare(!isShare)}
+          onClick={handleShareClick}
         />
       </motion.div>
     </div>

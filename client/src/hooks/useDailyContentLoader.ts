@@ -44,14 +44,7 @@ export const useDailyContentLoader = () => {
       // Функция получения последнего платформенного плейлиста
       const getLatestFeaturedPlaylist = async () => {
         // Используем существующий роут /playlists/featured
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/featured?limit=1`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await api.playlist.getFeatured({limit: 1});
         
         if (!response.ok) {
           throw new Error("Failed to fetch featured playlist");

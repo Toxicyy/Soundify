@@ -17,6 +17,7 @@ import {
   ModalContainer,
   GlassCard,
 } from "../../../shared/components/StyledComponents";
+import { api } from "../../../shared/api";
 
 /**
  * AdvancedSettingsModal - Fixed modal with proper scroll handling and responsive design
@@ -341,17 +342,7 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
           Object.keys(tempSocialLinks).length > 0 ? tempSocialLinks : null,
       };
 
-      const response = await fetch(
-        `http://localhost:5000/api/artists/${artist._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(updatedData),
-        }
-      );
+      const response = await api.artist.update(artist._id, updatedData);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

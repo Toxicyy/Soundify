@@ -7,6 +7,7 @@ import { usePlaylistSave } from "../hooks/usePlaylistSave";
 import { useNotification } from "../hooks/useNotification";
 import MainMenu from "../components/Playlist/MainMenu";
 import type { Track } from "../types/TrackData";
+import { api } from "../shared/api";
 
 /**
  * Main playlist page component with enhanced security and batch saving
@@ -239,21 +240,8 @@ export default function Playlist() {
         const trackIds = tracksToSave.map((track) => track._id);
         console.log("💾 Saving track order:", trackIds.length, "tracks");
 
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://localhost:5000/api/playlists/${id}/tracks/order`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              trackIds,
-              skipValidation: true,
-            }),
-          }
-        );
+        if(!id) return
+        const response = await api.playlist.updateTrackOrder(id, trackIds, true);
 
         if (!response.ok) {
           throw new Error(`Failed to save track order: ${response.status}`);

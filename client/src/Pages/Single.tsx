@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, memo } from "react";
 import type { Track } from "../types/TrackData";
 import Header from "../components/Single/Header";
 import MainMenu from "../components/Single/MainMenu";
+import { api } from "../shared/api";
 
 /**
  * Single track page component displaying individual track information and controls
@@ -32,15 +33,7 @@ const Single = () => {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/tracks/${encodeURIComponent(trackId)}`,
-        {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await api.track.getTrack(trackId, false);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

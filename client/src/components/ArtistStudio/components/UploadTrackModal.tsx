@@ -19,6 +19,7 @@ import {
   ProgressBar,
   GlassCard,
 } from "../../../shared/components/StyledComponents";
+import { api } from "../../../shared/api";
 
 /**
  * UploadTrackModal - Fixed modal with proper scroll handling and responsive design
@@ -479,45 +480,8 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     formData.append("tags", trackData.tags.join(","));
 
     try {
-      const response = await new Promise<Response>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        // Upload progress tracking
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const progress = (event.loaded / event.total) * 70; // 70% for upload
-            setUploadProgress(progress);
-          }
-        });
-
-        xhr.onload = function () {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            // Simulate HLS conversion with smoother progress
-            let conversionProgress = 70;
-            const conversionInterval = setInterval(() => {
-              conversionProgress += Math.random() * 3 + 1;
-              if (conversionProgress >= 100) {
-                conversionProgress = 100;
-                clearInterval(conversionInterval);
-                resolve(new Response(xhr.responseText, { status: xhr.status }));
-              }
-              setUploadProgress(conversionProgress);
-            }, 200);
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error("Network error occurred"));
-        xhr.ontimeout = () => reject(new Error("Upload timeout"));
-
-        xhr.open("POST", "http://localhost:5000/api/tracks");
-        xhr.setRequestHeader(
-          "Authorization",
-          `Bearer ${localStorage.getItem("token")}`
-        );
-        xhr.timeout = 300000; // 5 minute timeout
-        xhr.send(formData);
+      const response = await api.track.uploadTrack(formData, (progress) => {
+        setUploadProgress(progress);
       });
 
       const data = await response.json();

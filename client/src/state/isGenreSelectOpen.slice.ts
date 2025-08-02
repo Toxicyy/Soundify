@@ -6,7 +6,7 @@ export const isGenreSelectOpenSlice = createSlice({
     name: "isGenreSelectOpen",
     initialState,
     reducers: {
-        setIsGenreSelectOpen: (state, action) => action.payload
+        setIsGenreSelectOpen: (_state, action) => action.payload
     },
 });
 

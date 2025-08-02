@@ -1,6 +1,7 @@
 // hooks/useAnalytics.ts
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
+import { api } from "../shared/api";
 
 interface DashboardStats {
   totalUsers: number;
@@ -42,14 +43,7 @@ export const useDashboardStats = (options: UseAnalyticsOptions = {}) => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/analytics/dashboard",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.analytics.getDashboard();
 
       if (!response.ok) {
         throw new Error("Failed to fetch dashboard stats");
@@ -122,14 +116,7 @@ export const useUserStats = (
       if (params.startDate) queryParams.append("startDate", params.startDate);
       if (params.endDate) queryParams.append("endDate", params.endDate);
 
-      const response = await fetch(
-        `http://localhost:5000/api/analytics/users?${queryParams}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.analytics.getUsers(queryParams.toString());
 
       if (!response.ok) {
         throw new Error("Failed to fetch user stats");
@@ -194,14 +181,7 @@ export const useStreamStats = (
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/analytics/streams?period=${period}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.analytics.getStreams(period);
 
       if (!response.ok) {
         throw new Error("Failed to fetch stream stats");

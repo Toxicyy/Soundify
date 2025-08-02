@@ -47,6 +47,7 @@ const SingleHeader: FC<SingleHeaderProps> = ({ track, isLoading }) => {
             "w-[120px] h-[120px] sm:w-[8vw] sm:h-[8vw] lg:w-[10vw] lg:h-[10vw] rounded-2xl mx-auto sm:mx-0",
         }}
         badge={{
+          showVerified: false,
           show: true,
           text: "Single",
         }}

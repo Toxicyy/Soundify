@@ -6,6 +6,7 @@ import { useArtistData } from "../hooks/useArtistData";
 import { useGetUserQuery } from "../state/UserApi.slice";
 import { useNotification } from "../hooks/useNotification";
 import { type Artist } from "../types/ArtistData";
+import { api } from "../shared/api";
 
 /**
  * Artist Studio - main page for artists
@@ -112,14 +113,7 @@ export default function ArtistStudio() {
       setIsStatsLoading(true);
       try {
         const [tracksResponse] = await Promise.allSettled([
-          fetch(
-            `http://localhost:5000/api/artists/${artistId}/tracks?limit=1`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          ),
+          api.artist.getArtistTracks(artistId, 1),
         ]);
 
         let tracksCount = 0;

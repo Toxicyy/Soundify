@@ -14,6 +14,7 @@ import {
   CaretRightOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
+import { api } from "../shared/api";
 
 /**
  * Represents a track in the charts with additional chart-specific metadata
@@ -151,14 +152,7 @@ const Charts: React.FC = () => {
 
         // Fetch full track data if audioUrl is missing
         if (!track.audioUrl) {
-          const response = await fetch(
-            `http://localhost:5000/api/tracks/${track._id}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
+          const response = await api.track.getTrack(track._id);
 
           if (response.ok) {
             const result = await response.json();

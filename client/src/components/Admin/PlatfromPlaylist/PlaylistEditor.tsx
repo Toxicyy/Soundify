@@ -55,27 +55,19 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
             const trackIds = playlist.tracks as string[];
             console.log("Loading tracks by IDs:", trackIds);
 
-            const trackPromises = trackIds.map(async (trackId) => {
-              const response = await fetch(
-                `http://localhost:5000/api/tracks/${trackId}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  },
-                }
+            const response = await api.track.getMultipleById(trackIds);
+
+            if (response.ok) {
+              const data = await response.json();
+              const validTracks = data.data.filter(
+                (track: any) => track !== null
               );
-              if (response.ok) {
-                const data = await response.json();
-                return data.data;
-              }
-              return null;
-            });
 
-            const loadedTracks = await Promise.all(trackPromises);
-            const validTracks = loadedTracks.filter((track) => track !== null);
-
-            console.log("Loaded tracks:", validTracks);
-            setTracks(validTracks);
+              console.log("Loaded tracks:", validTracks);
+              setTracks(validTracks);
+            } else {
+              throw new Error("Failed to fetch tracks");
+            }
           } catch (error) {
             console.error("Error loading tracks:", error);
             showError("Failed to load playlist tracks");
@@ -157,28 +149,13 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
             );
           }
         } else {
-          const headers = {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          };
 
           if (isCreating) {
-            response = await fetch(
-              "http://localhost:5000/api/playlists/admin/platform",
-              {
-                method: "POST",
-                headers,
-                body: JSON.stringify(requestData),
-              }
-            );
+            response = await api.admin.playlist.createPlatform(requestData);
           } else {
-            response = await fetch(
-              `http://localhost:5000/api/playlists/admin/platform/${playlist._id}`,
-              {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(requestData),
-              }
+            response = await api.admin.playlist.updatePlatform(
+              playlist._id,
+              requestData
             );
           }
         }

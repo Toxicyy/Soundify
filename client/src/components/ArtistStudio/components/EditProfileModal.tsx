@@ -11,6 +11,7 @@ import {
   ModalContainer,
   FileUploadZone,
 } from "../../../shared/components/StyledComponents";
+import { api } from "../../../shared/api";
 
 /**
  * EditProfileModal - Fixed modal with proper scroll handling and responsive design
@@ -281,16 +282,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
         formDataToSend.append("avatar", fileState.file);
       }
 
-      const response = await fetch(
-        `http://localhost:5000/api/artists/${artist._id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: formDataToSend,
-        }
-      );
+      const response = await api.artist.update(artist._id, formDataToSend, true);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

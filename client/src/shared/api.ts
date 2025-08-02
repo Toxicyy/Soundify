@@ -1,7 +1,7 @@
 import type { ArtistCreate } from "../Pages/BecomeAnArtist";
 import type { Playlist } from "../types/Playlist";
 
-export const BASEURL = "http://localhost:5000";
+export const BASEURL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper function to get auth headers
 const getAuthHeaders = (includeAuth = true) => {
@@ -108,16 +108,13 @@ export const api = {
       if (options.page) params.append("page", options.page.toString());
       if (options.limit) params.append("limit", options.limit.toString());
 
-      return fetch(
-        `http://localhost:5000/api/users/${userId}/liked-playlists?${params}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      return fetch(`${BASEURL}/api/users/${userId}/liked-playlists?${params}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
     },
 
     getLikedArtists: async (
@@ -183,7 +180,7 @@ export const api = {
     ): Promise<Response> => {
       const token = localStorage.getItem("token");
 
-      return fetch(`http://localhost:5000/api/playlists/${playlistId}/like`, {
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -205,7 +202,7 @@ export const api = {
     ): Promise<Response> => {
       const token = localStorage.getItem("token");
 
-      return fetch(`http://localhost:5000/api/playlists/${playlistId}/like`, {
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -343,6 +340,25 @@ export const api = {
     unlike: async (artistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/artists/${artistId}/like`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+    },
+    update: async (artistId: string, artistData: any, isFormData = false) => {
+      return fetch(`${BASEURL}/api/artists/${artistId}`, {
+        method: "PUT",
+        headers: {
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: isFormData ? artistData : JSON.stringify(artistData),
+      });
+    },
+    getArtistTracks: async (
+      artistId: string,
+      limit?: number
+    ): Promise<Response> => {
+      const query = buildQueryString({ limit });
+      return fetch(`${BASEURL}/api/artists/${artistId}/tracks${query}`, {
         headers: getAuthHeaders(),
       });
     },
@@ -550,6 +566,19 @@ export const api = {
         headers: getAuthHeaders(),
       });
     },
+
+    likePlaylist: async (
+      playlistId: string,
+      like: boolean
+    ): Promise<Response> => {
+      return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
+        method: like ? "POST" : "DELETE",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+      });
+    },
   },
 
   album: {
@@ -618,6 +647,88 @@ export const api = {
       return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
         method: "DELETE",
         headers: getAuthHeaders(),
+      });
+    },
+    getMultipleById: async (trackIds: string[]) => {
+      const query = buildQueryString({ ids: trackIds.join(",") });
+      return fetch(`${BASEURL}/api/tracks/multiple${query}`, {
+        headers: getAuthHeaders(),
+      });
+    },
+    getPlaylistUrl: (trackId: string) => {
+      return `${BASEURL}/api/tracks/${trackId}/playlist.m3u8`;
+    },
+
+    search: async (query: string, options: { limit?: number } = {}) => {
+      const params = buildQueryString({ q: query, ...options });
+      return fetch(`${BASEURL}/api/tracks/search${params}`, {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    getTrack: async (
+      trackId: string,
+      auth: boolean = true
+    ): Promise<Response> => {
+      return fetch(`${BASEURL}/api/tracks/${encodeURIComponent(trackId)}`, {
+        headers: auth
+          ? getAuthHeaders()
+          : {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+      });
+    },
+    uploadTrack: (
+      formData: FormData,
+      progressCallback?: (progress: number) => void
+    ): Promise<Response> => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        // Отслеживание прогресса загрузки
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable && progressCallback) {
+            const progress = (event.loaded / event.total) * 70; // 70% для загрузки
+            progressCallback(progress);
+          }
+        });
+
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            // Имитация конвертации HLS
+            let conversionProgress = 70;
+            const conversionInterval = setInterval(() => {
+              if (progressCallback) {
+                conversionProgress += Math.random() * 3 + 1;
+                if (conversionProgress >= 100) {
+                  conversionProgress = 100;
+                  clearInterval(conversionInterval);
+                  progressCallback(conversionProgress);
+                  resolve(
+                    new Response(xhr.responseText, { status: xhr.status })
+                  );
+                }
+                progressCallback(conversionProgress);
+              }
+            }, 200);
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error occurred"));
+        xhr.ontimeout = () => reject(new Error("Upload timeout"));
+
+        xhr.open("POST", `${BASEURL}/api/tracks`);
+        xhr.setRequestHeader(
+          "Authorization",
+          `Bearer ${localStorage.getItem("token")}`
+        );
+        xhr.timeout = 300000; // 5 минут таймаут
+        xhr.send(formData);
       });
     },
   },
@@ -719,6 +830,102 @@ export const api = {
           headers: getAuthHeaders(),
         });
       },
+      createPlatform: async (playlistData: any) => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(playlistData),
+        });
+      },
+      updatePlatform: async (playlistId: string, playlistData: any) => {
+        return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(playlistData),
+        });
+      },
+    },
+  },
+  analytics: {
+    getDashboard: async () => {
+      return fetch(`${BASEURL}/api/analytics/dashboard`, {
+        headers: getAuthHeaders(),
+      });
+    },
+    getUsers: async (queryParams: string) => {
+      return fetch(`${BASEURL}/api/analytics/users?${queryParams}`, {
+        headers: getAuthHeaders(),
+      });
+    },
+    getStreams: async (period: string) => {
+      return fetch(`${BASEURL}/api/analytics/streams?period=${period}`, {
+        headers: getAuthHeaders(),
+      });
+    },
+  },
+  charts: {
+    /**
+     * Получить глобальный чарт
+     * @param limit - количество треков
+     */
+    getGlobal: async (limit: number = 50): Promise<Response> => {
+      const query = buildQueryString({ limit });
+      return fetch(`${BASEURL}/api/charts/global${query}`, {
+        headers: getAuthHeaders(),
+        cache: "no-store",
+      });
+    },
+
+    /**
+     * Получить чарт трендов
+     * @param limit - количество треков
+     */
+    getTrending: async (limit: number = 50): Promise<Response> => {
+      const query = buildQueryString({ limit });
+      return fetch(`${BASEURL}/api/charts/trending${query}`, {
+        headers: getAuthHeaders(),
+        cache: "no-store",
+      });
+    },
+
+    /**
+     * Получить страновой чарт
+     * @param countryCode - код страны (например, 'US')
+     * @param limit - количество треков
+     */
+    getCountry: async (
+      countryCode: string,
+      limit: number = 50
+    ): Promise<Response> => {
+      const query = buildQueryString({ limit });
+      return fetch(`${BASEURL}/api/charts/country/${countryCode}${query}`, {
+        headers: getAuthHeaders(),
+        cache: "no-store",
+      });
+    },
+
+    /**
+     * Получить список доступных стран
+     */
+    getAvailableCountries: async (): Promise<Response> => {
+      return fetch(`${BASEURL}/api/charts/countries`, {
+        headers: getAuthHeaders(),
+      });
+    },
+
+    /**
+     * Получить статистику чартов (для админов)
+     */
+    getStats: async (): Promise<Response> => {
+      return fetch(`${BASEURL}/api/charts/stats`, {
+        headers: getAuthHeaders(),
+      });
     },
   },
 };
@@ -826,4 +1033,61 @@ export interface SearchPlaylistsResponse {
 export interface RecommendationsResponse {
   success: boolean;
   data: any[];
+}
+
+export interface ChartTrack {
+  rank: number;
+  track: {
+    _id: string;
+    name: string;
+    artist: {
+      _id: string;
+      name: string;
+      avatar?: string;
+    };
+    coverUrl?: string;
+    duration: number;
+    validListenCount?: number;
+  };
+  chartScore: number;
+  trend: "up" | "down" | "stable" | "new";
+  rankChange: number;
+  daysInChart: number;
+  peakPosition: number;
+  lastUpdated: string;
+}
+
+export interface ChartMetadata {
+  type: string;
+  country: string;
+  limit: number;
+  totalTracks: number;
+  lastUpdated: string;
+  generatedAt: string;
+}
+
+export interface ChartResponse {
+  success: boolean;
+  message: string;
+  data: {
+    chart?: ChartTrack[];
+    trending?: ChartTrack[];
+    metadata: ChartMetadata;
+  };
+}
+
+export interface CountriesResponse {
+  success: boolean;
+  data: {
+    countries: Array<{
+      countryCode: string;
+      trackCount: number;
+      lastUpdated: string;
+    }>;
+  };
+}
+
+export interface ChartStatsResponse {
+  success: boolean;
+  data: any; // Можно заменить на конкретный тип, если известна структура
 }

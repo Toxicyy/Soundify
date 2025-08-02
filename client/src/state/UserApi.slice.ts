@@ -8,7 +8,7 @@ type ApiResponse<T> = {
 };
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:5000",
+  baseUrl: import.meta.env.VITE_API_BASE_URL,
   prepareHeaders(headers) {
     const token = localStorage.getItem("token");
     if (!token) {

@@ -4,6 +4,7 @@ import type { Track } from "../../../types/TrackData";
 import { useNotification } from "../../../hooks/useNotification";
 import SearchResults from "./SearchResults";
 import TrackList from "./TrackList";
+import { api } from "../../../shared/api";
 
 interface TrackManagerProps {
   tracks: Track[];
@@ -61,18 +62,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   // Enhanced API search function
   const searchAPI = async (query: string): Promise<SearchData> => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/search?q=${encodeURIComponent(
-          query
-        )}&limit=10`,
-        {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.search.global(query, { limit: 10 });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -140,14 +130,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
         setIsSearching(true);
         console.log("Loading tracks for artist:", artistName, artistId);
 
-        const response = await fetch(
-          `http://localhost:5000/api/artists/${artistId}/tracks?limit=20`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await api.artist.getTracks(artistId, { limit: 20 });
 
         if (!response.ok) throw new Error("Failed to fetch artist tracks");
 
@@ -187,14 +170,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     async (albumId: string, albumName: string) => {
       try {
         setIsSearching(true);
-        const response = await fetch(
-          `http://localhost:5000/api/albums/${albumId}/tracks?limit=50`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const response = await api.album.getTracks(albumId, { limit: 50 });
 
         if (!response.ok) throw new Error("Failed to fetch album tracks");
 

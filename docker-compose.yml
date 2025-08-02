@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Основное приложение
+  soundify:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      # Эти переменные нужно будет задать при деплое
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID}
+      - B2_SECRET_KEY=${B2_SECRET_KEY}
+      - B2_BUCKET_ID=${B2_BUCKET_ID}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME}
+      - B2_KEY_NAME=${B2_KEY_NAME}
+      - ENABLE_CHART_CRON=true
+    volumes:
+      # Персистентное хранение для uploads
+      - uploads_data:/app/server/uploads
+      - logs_data:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    networks:
+      - soundify-network
+
+  # MongoDB (для локальной разработки/тестирования)
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password123
+      - MONGO_INITDB_DATABASE=soundify
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - soundify-network
+
+  # MongoDB Express (для администрирования БД)
+  mongo-express:
+    image: mongo-express:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password123
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+    depends_on:
+      - mongo
+    networks:
+      - soundify-network
+    profiles:
+      - dev # Запускается только в dev режиме
+
+volumes:
+  mongo_data:
+  uploads_data:
+  logs_data:
+
+networks:
+  soundify-network:
+    driver: bridge

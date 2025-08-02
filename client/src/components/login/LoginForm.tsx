@@ -319,7 +319,7 @@ export const LoginForm: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.8 }}
           >
-            <h3 className="text-2xl font-bold text-white mb-4">🎵 Soundify</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Soundify</h3>
             <p className="text-purple-100/80 text-sm leading-relaxed">
               Discover millions of songs, create playlists, and share your
               favorite music with friends.

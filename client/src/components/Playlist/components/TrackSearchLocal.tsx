@@ -5,6 +5,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import type { Track } from "../../../types/TrackData";
+import { api } from "../../../shared/api";
 
 interface TrackSearchLocalProps {
   /** Функция для локального добавления трека */
@@ -177,17 +178,7 @@ const TrackSearchLocal: React.FC<TrackSearchLocalProps> = ({
       setSearchError(null);
 
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/tracks/search?q=${encodeURIComponent(
-            searchQuery
-          )}&limit=10`, // Увеличиваем лимит для лучшего UX
-          {
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await api.track.search(searchQuery, { limit: 10 });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
