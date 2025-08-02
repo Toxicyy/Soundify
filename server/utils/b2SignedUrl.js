@@ -28,7 +28,10 @@ const ensureAuthorized = async () => {
 // Генерация подписанного URL для скачивания
 export const generateSignedUrl = async (fileName, durationInSeconds = 3600) => {
   try {
+    console.log("🔍 GENERATING SIGNED URL FOR:", fileName);
+
     await ensureAuthorized();
+    console.log("🔍 AUTH DATA:", authData.data.downloadUrl);
 
     const response = await b2.getDownloadAuthorization({
       bucketId: config.b2.bucketId,
@@ -36,17 +39,27 @@ export const generateSignedUrl = async (fileName, durationInSeconds = 3600) => {
       validDurationInSeconds: durationInSeconds,
     });
 
-    // Принудительно заменяем HTTP на HTTPS
-    const baseDownloadUrl = authData.data.downloadUrl.replace(
-      "http://",
-      "https://"
-    );
+    console.log("🔍 B2 RESPONSE:", response.data);
 
-    const downloadUrl = `${baseDownloadUrl}/file/${config.b2.bucketName}/${fileName}?Authorization=${response.data.authorizationToken}`;
+    // Проверяем что получили
+    let baseUrl = authData.data.downloadUrl;
+    console.log("🔍 BASE URL BEFORE:", baseUrl);
+
+    // Принудительно HTTPS
+    baseUrl = baseUrl.replace("http://", "https://");
+    console.log("🔍 BASE URL AFTER:", baseUrl);
+
+    const downloadUrl = `${baseUrl}/file/${config.b2.bucketName}/${fileName}?Authorization=${response.data.authorizationToken}`;
+
+    console.log("🔍 FINAL URL:", downloadUrl);
+    console.log(
+      "🔍 URL STARTS WITH HTTPS?",
+      downloadUrl.startsWith("https://")
+    );
 
     return downloadUrl;
   } catch (error) {
-    console.error("Ошибка создания подписанного URL:", error);
+    console.error("❌ Ошибка создания подписанного URL:", error);
     return null;
   }
 };

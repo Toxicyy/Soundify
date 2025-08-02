@@ -133,7 +133,10 @@ const handleSegmentRequest = async (req, res, track, segmentName) => {
 
   // Generate signed URL and proxy the content
   const signedUrl = await generateSignedUrl(extractFileName(segmentUrl), 7200);
+  console.log("🔍 SIGNED URL TO FETCH:", signedUrl);
+
   const response = await fetch(signedUrl);
+  console.log("🔍 FETCH RESPONSE STATUS:", response.status);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch segment: ${response.status}`);
