@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "echo 'Build completed'",
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "cd client && npm run dev"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

@@ -99,7 +99,6 @@ export const api = {
      * @returns Promise<Response> - API response with liked playlists
      */
     getLikedPlaylists: async (
-      userId: string,
       options: { page?: number; limit?: number } = {}
     ): Promise<Response> => {
       const token = localStorage.getItem("token");
@@ -108,7 +107,7 @@ export const api = {
       if (options.page) params.append("page", options.page.toString());
       if (options.limit) params.append("limit", options.limit.toString());
 
-      return fetch(`${BASEURL}/api/users/${userId}/liked-playlists?${params}`, {
+      return fetch(`${BASEURL}/api/playlists/user/liked?${params}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -646,12 +645,6 @@ export const api = {
     unlike: async (trackId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
         method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-    },
-    getMultipleById: async (trackIds: string[]) => {
-      const query = buildQueryString({ ids: trackIds.join(",") });
-      return fetch(`${BASEURL}/api/tracks/multiple${query}`, {
         headers: getAuthHeaders(),
       });
     },

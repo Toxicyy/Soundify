@@ -68,7 +68,7 @@ export const useUserLikedPlaylists = (
       setError(null);
 
       try {
-        const response = await api.user.getLikedPlaylists(id, {
+        const response = await api.user.getLikedPlaylists({
           page: pageNum,
           limit: limitNum,
         });

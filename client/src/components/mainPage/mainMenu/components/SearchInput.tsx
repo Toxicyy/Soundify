@@ -185,7 +185,7 @@ const SearchInput = () => {
     const hasMoreResults = searchResults.totalResults > MAX_ITEMS;
 
     return (
-      <div className="max-h-80 md:max-h-96 overflow-hidden">
+      <div className="max-h-80 md:max-h-106 overflow-hidden">
         {allResults.map((item) => (
           <SearchResultItem
             key={item._id}

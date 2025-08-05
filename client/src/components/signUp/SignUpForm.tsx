@@ -44,6 +44,36 @@ export const SignUpModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const getErrorMessage = (errorMessage: string, status: number) => {
+    // Обработка русских сообщений с бекенда
+    if (errorMessage.includes("Пользователь с таким email уже существует")) {
+      return "User with this email already exists";
+    }
+    if (errorMessage.includes("Пользователь с таким username уже существует")) {
+      return "User with this username already exists";
+    }
+
+    // Обработка по статус кодам
+    switch (status) {
+      case 409:
+        if (errorMessage.toLowerCase().includes("email")) {
+          return "User with this email already exists";
+        }
+        if (errorMessage.toLowerCase().includes("username")) {
+          return "User with this username already exists";
+        }
+        return "User with this email or username already exists";
+      case 400:
+        return "Invalid data provided. Please check your information";
+      case 429:
+        return "Too many registration attempts. Please try again later";
+      case 500:
+        return "Server error. Please try again later";
+      default:
+        return errorMessage || "Something went wrong. Please try again";
+    }
+  };
+
   /**
    * Form validation on data change
    */
@@ -73,27 +103,15 @@ export const SignUpModal: React.FC = () => {
         if (response.ok) {
           navigate("/login");
         } else {
-          // Handle API errors
           const errorData = await response.json();
-          switch (response.status) {
-            case 409:
-              setApiError("User with this email or username already exists");
-              break;
-            case 400:
-              setApiError("Invalid data provided");
-              break;
-            case 429:
-              setApiError(
-                "Too many registration attempts. Please try again later"
-              );
-              break;
-            default:
-              setApiError(
-                errorData.message || "Something went wrong. Please try again"
-              );
-          }
+          const errorMessage = getErrorMessage(
+            errorData.message || errorData.error,
+            response.status
+          );
+          setApiError(errorMessage);
         }
       } catch (error) {
+        console.error("Signup error:", error);
         setApiError("Network error. Please check your connection");
       } finally {
         setIsLoading(false);
@@ -155,14 +173,16 @@ export const SignUpModal: React.FC = () => {
           placeholder={placeholder}
           value={formData[id] as string}
           onChange={(e) => setFormData({ ...formData, [id]: e.target.value })}
+          disabled={isLoading}
         />
         {id === "password" && (
           <motion.button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-all duration-200"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-50"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            disabled={isLoading}
           >
             {showPassword ? (
               <svg
@@ -252,11 +272,28 @@ export const SignUpModal: React.FC = () => {
             {/* API Error Display */}
             {apiError && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="bg-red-500/20 border border-red-500/30 rounded-xl p-3"
+                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, type: "spring" }}
+                className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm"
               >
-                <p className="text-red-300 text-sm text-center">{apiError}</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-3 h-3 text-red-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-red-300 text-sm font-medium">{apiError}</p>
+                </div>
               </motion.div>
             )}
 
@@ -295,7 +332,6 @@ export const SignUpModal: React.FC = () => {
 
         {/* Правая часть - Декоративная секция с чекбоксом и кнопкой */}
         <div className="relative w-[46%] flex flex-col justify-center items-center bg-gradient-to-br from-purple-600/30 to-violet-700/30 backdrop-blur-sm">
-          {/* Content */}
           <motion.div
             className="relative z-10 flex flex-col items-start pl-8 pr-6"
             initial={{ opacity: 0, y: 50 }}
@@ -309,6 +345,7 @@ export const SignUpModal: React.FC = () => {
                 onChange={() =>
                   setFormData({ ...formData, check: !formData.check })
                 }
+                disabled={isLoading}
               >
                 I agree to the{" "}
                 <a
@@ -345,8 +382,8 @@ export const SignUpModal: React.FC = () => {
                   ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   : "bg-gray-600/50 cursor-not-allowed opacity-50"
               }`}
-              whileHover={isFormValid() ? { scale: 1.02 } : {}}
-              whileTap={isFormValid() ? { scale: 0.98 } : {}}
+              whileHover={isFormValid() && !isLoading ? { scale: 1.02 } : {}}
+              whileTap={isFormValid() && !isLoading ? { scale: 0.98 } : {}}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9, duration: 0.5 }}
@@ -374,6 +411,7 @@ export const SignUpModal: React.FC = () => {
                   type="button"
                   onClick={() => navigate("/login")}
                   className="text-purple-300 hover:text-white font-medium transition-colors duration-200 underline decoration-purple-400/50 hover:decoration-white"
+                  disabled={isLoading}
                 >
                   Sign in here
                 </button>
@@ -384,12 +422,13 @@ export const SignUpModal: React.FC = () => {
           {/* Close Button */}
           <motion.button
             onClick={() => navigate("/")}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex items-center justify-center group"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex items-center justify-center group disabled:opacity-50"
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             initial={{ opacity: 0, rotate: -90 }}
             animate={{ opacity: 1, rotate: 0 }}
             transition={{ delay: 0.8, duration: 0.5 }}
+            disabled={isLoading}
           >
             <svg
               className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300"

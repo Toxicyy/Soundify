@@ -2,12 +2,14 @@ import { RightOutlined } from "@ant-design/icons";
 import PlaylistCard from "./PlaylistCard";
 import type { Playlist } from "../../../../types/Playlist";
 import type { FC } from "react";
+import { useNavigate } from "react-router-dom";
 
 type PlaylistModuleProps = {
   playlist: Playlist;
 };
 
 const PlaylistModule: FC<PlaylistModuleProps> = ({ playlist }) => {
+    const navigate = useNavigate();
   return (
     <div className="w-full">
       {/* Header */}
@@ -22,6 +24,7 @@ const PlaylistModule: FC<PlaylistModuleProps> = ({ playlist }) => {
           <h1
             style={{ color: "rgba(255, 255, 255, 0.5)" }}
             className="tracking-wider text-sm md:text-lg xl:text-xl"
+            onClick={() => navigate("/playlists")}
           >
             More
           </h1>

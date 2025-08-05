@@ -16,13 +16,13 @@ export default function ArtistCard({
   isMobile = false,
 }: ArtistCardProps) {
   // Mobile Layout
-  const MobileLayout = () => (
-    <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+const MobileLayout = () => (
+    <div className="glass-card rounded-2xl p-4">
       {/* Artist Info */}
       <div className="flex items-center gap-4 mb-4">
         <div className="w-16 h-16 rounded-2xl relative overflow-hidden flex-shrink-0">
           {isLoading ? (
-            <div className="w-full h-full bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-2xl relative overflow-hidden">
+            <div className="skeleton-glass rounded-2xl relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-2xl">👤</div>
@@ -39,7 +39,7 @@ export default function ArtistCard({
 
         <div className="flex-1 min-w-0">
           {isLoading ? (
-            <div className="h-5 w-24 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+            <div className="skeleton-text h-5 w-24 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
           ) : (

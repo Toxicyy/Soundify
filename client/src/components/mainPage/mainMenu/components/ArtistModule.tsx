@@ -3,6 +3,7 @@ import ArtistCard from "./ArtistCard";
 import type { Track } from "../../../../types/TrackData";
 import type { Artist } from "../../../../types/ArtistData";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface ArtistModuleProps {
   dailyTracks: { artist: Artist; tracks: Track[] }[];
@@ -16,6 +17,7 @@ export default function ArtistModule({
   useEffect(() => {
     console.log(dailyTracks);
   }, []);
+  const navigate = useNavigate();
 
   return (
     <div className="w-full">
@@ -31,6 +33,7 @@ export default function ArtistModule({
           <h1
             style={{ color: "rgba(255, 255, 255, 0.5)" }}
             className="tracking-wider text-sm md:text-lg xl:text-xl"
+            onClick={() => navigate("/artists")}
           >
             More
           </h1>

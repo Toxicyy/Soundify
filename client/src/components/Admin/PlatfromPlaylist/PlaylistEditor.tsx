@@ -54,20 +54,22 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
           try {
             const trackIds = playlist.tracks as string[];
             console.log("Loading tracks by IDs:", trackIds);
+            const trackPromises = trackIds.map(async (trackId) => {
+              const response = await api.track.getById(trackId);
+              if (response.ok) {
+                const data = await response.json();
+                return data.data;
+              }
+              return null;
+            });
 
-            const response = await api.track.getMultipleById(trackIds);
+            const loadedTracks = await Promise.all(trackPromises);
+            const validTracks = loadedTracks.filter(
+              (track: any) => track !== null
+            );
 
-            if (response.ok) {
-              const data = await response.json();
-              const validTracks = data.data.filter(
-                (track: any) => track !== null
-              );
-
-              console.log("Loaded tracks:", validTracks);
-              setTracks(validTracks);
-            } else {
-              throw new Error("Failed to fetch tracks");
-            }
+            console.log("Loaded tracks:", validTracks);
+            setTracks(validTracks);
           } catch (error) {
             console.error("Error loading tracks:", error);
             showError("Failed to load playlist tracks");
@@ -149,7 +151,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
             );
           }
         } else {
-
           if (isCreating) {
             response = await api.admin.playlist.createPlatform(requestData);
           } else {
@@ -245,7 +246,7 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-col md:flex-row">
             <button
               onClick={onClose}
               disabled={isSaving || isPublishing}

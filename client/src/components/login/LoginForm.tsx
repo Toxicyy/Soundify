@@ -19,7 +19,6 @@ import { api } from "../../shared/api";
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
 
-  // Состояния формы
   const [formData, setFormData] = useState<LoginFormData>({
     username: "",
     password: "",
@@ -34,19 +33,50 @@ export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  /**
-   * Form validation on data change
-   */
   useEffect(() => {
     const errorCheck = LoginValid(formData);
     setErrors(errorCheck);
-    // Очищаем API ошибку при изменении полей
     if (apiError) setApiError("");
   }, [formData, apiError]);
 
   /**
-   * Form submit handler with API error handling
+   * Обработка ошибок с бекенда с учетом русских сообщений
    */
+  const getErrorMessage = (errorMessage: string, status: number) => {
+    // Обработка русских сообщений с бекенда
+    if (errorMessage.includes("Неверный email или пароль")) {
+      return "Invalid email or password";
+    }
+    if (errorMessage.includes("Пользователь с таким email уже существует")) {
+      return "User with this email already exists";
+    }
+    if (errorMessage.includes("Пользователь с таким username уже существует")) {
+      return "User with this username already exists";
+    }
+    if (errorMessage.includes("Current password is incorrect")) {
+      return "Current password is incorrect";
+    }
+    if (errorMessage.includes("New password must be different")) {
+      return "New password must be different from current password";
+    }
+
+    // Обработка по статус кодам
+    switch (status) {
+      case 401:
+        return "Invalid email or password";
+      case 404:
+        return "User not found";
+      case 409:
+        return "User with this email already exists";
+      case 429:
+        return "Too many attempts. Please try again later";
+      case 400:
+        return "Invalid data provided";
+      default:
+        return errorMessage || "Something went wrong. Please try again";
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -60,30 +90,27 @@ export const LoginForm: React.FC = () => {
           formData.password
         );
 
-        if (response.ok) {
-          const data = await response.json();
+        const data = await response.json();
+
+        // Проверяем и HTTP статус И поле success
+        if (response.ok && data.success) {
           localStorage.setItem("token", data.data.tokenInfo.token);
           navigate("/");
         } else {
-          // Обработка ошибок API
-          const errorData = await response.json();
-          switch (response.status) {
-            case 401:
-              setApiError("Invalid username or password");
-              break;
-            case 404:
-              setApiError("User not found");
-              break;
-            case 429:
-              setApiError("Too many attempts. Please try again later");
-              break;
-            default:
-              setApiError(
-                errorData.message || "Something went wrong. Please try again"
-              );
+          // Ошибка либо в HTTP статусе, либо в success: false
+          const errorMessage = data.message || "Something went wrong";
+
+          // Переводим русские сообщения
+          if (errorMessage.includes("Неверный email или пароль")) {
+            setApiError("Invalid email or password");
+          } else {
+            setApiError(errorMessage);
           }
+
+          console.log("Login failed:", data); // для отладки
         }
       } catch (error) {
+        console.error("Login error:", error);
         setApiError("Network error. Please check your connection");
       } finally {
         setIsLoading(false);
@@ -91,9 +118,6 @@ export const LoginForm: React.FC = () => {
     }
   };
 
-  /**
-   * Checks if form is valid
-   */
   const isFormValid = () => {
     return (
       errors.username.length === 0 &&
@@ -131,14 +155,31 @@ export const LoginForm: React.FC = () => {
           </motion.div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* API Error Display */}
+            {/* API Error Display с улучшенным дизайном */}
             {apiError && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="bg-red-500/20 border border-red-500/30 rounded-xl p-3"
+                initial={{ opacity: 1, height: 0, scale: 0.95 }}
+                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                exit={{ opacity: 1, height: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, type: "spring" }}
+                className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm"
               >
-                <p className="text-red-300 text-sm text-center">{apiError}</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-3 h-3 text-red-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-red-300 text-sm font-medium">{apiError}</p>
+                </div>
               </motion.div>
             )}
 
@@ -167,6 +208,7 @@ export const LoginForm: React.FC = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, username: e.target.value })
                 }
+                disabled={isLoading}
               />
               {errors.username.length > 0 && (
                 <motion.p
@@ -205,13 +247,15 @@ export const LoginForm: React.FC = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  disabled={isLoading}
                 />
                 <motion.button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-purple-300 hover:text-white hover:bg-white/10 transition-all duration-200 disabled:opacity-50"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <svg
@@ -259,9 +303,6 @@ export const LoginForm: React.FC = () => {
                   {errors.password[0]}
                 </motion.p>
               )}
-              <div className="text-xs text-purple-200/50 mt-2">
-                Minimum 6 characters, at least one letter and one number
-              </div>
             </motion.div>
 
             {/* Submit Button */}
@@ -276,8 +317,8 @@ export const LoginForm: React.FC = () => {
                   ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   : "bg-gray-600/50 cursor-not-allowed opacity-50"
               }`}
-              whileHover={isFormValid() ? { scale: 1.02 } : {}}
-              whileTap={isFormValid() ? { scale: 0.98 } : {}}
+              whileHover={isFormValid() && !isLoading ? { scale: 1.02 } : {}}
+              whileTap={isFormValid() && !isLoading ? { scale: 0.98 } : {}}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -302,6 +343,7 @@ export const LoginForm: React.FC = () => {
                   type="button"
                   onClick={() => navigate("/signup")}
                   className="text-purple-300 hover:text-white font-medium transition-colors duration-200 underline decoration-purple-400/50 hover:decoration-white"
+                  disabled={isLoading}
                 >
                   Sign up here
                 </button>
@@ -312,7 +354,6 @@ export const LoginForm: React.FC = () => {
 
         {/* Правая часть - Декоративная секция */}
         <div className="relative w-[46%] flex flex-col justify-center items-center bg-gradient-to-br from-purple-600/30 to-violet-700/30 backdrop-blur-sm">
-          {/* Decorative Content */}
           <motion.div
             className="relative z-10 text-center px-8"
             initial={{ opacity: 0, y: 50 }}
@@ -326,7 +367,6 @@ export const LoginForm: React.FC = () => {
             </p>
           </motion.div>
 
-          {/* Close Button */}
           <motion.button
             onClick={() => navigate("/")}
             className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex items-center justify-center group"
@@ -335,6 +375,7 @@ export const LoginForm: React.FC = () => {
             initial={{ opacity: 0, rotate: -90 }}
             animate={{ opacity: 1, rotate: 0 }}
             transition={{ delay: 0.8, duration: 0.5 }}
+            disabled={isLoading}
           >
             <svg
               className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300"
