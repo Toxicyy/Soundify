@@ -307,7 +307,7 @@ const Charts: React.FC = () => {
           transition={{ duration: 0.6, delay: 1.1 }}
         >
           <motion.button
-            onClick={() => navigate('/auth/login')}
+            onClick={() => navigate('/login')}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl xs:rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
@@ -317,7 +317,7 @@ const Charts: React.FC = () => {
           </motion.button>
           
           <motion.button
-            onClick={() => navigate('/auth/register')}
+            onClick={() => navigate('/signup')}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl xs:rounded-lg transition-all duration-300 border border-white/20 hover:border-white/30 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}

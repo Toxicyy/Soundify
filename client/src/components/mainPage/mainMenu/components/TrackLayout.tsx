@@ -193,9 +193,9 @@ export default function TrackLayout({
   // Mobile Layout
   const MobileLayout = () => (
     <motion.div
-      className={`glass-card rounded-xl p-3 transition-all duration-200 ${
+      className={`bg-white/10 rounded-xl p-3 border border-white/10 transition-all duration-200 ${
         isLoading ? "pointer-events-none" : "cursor-pointer"
-      } ${hover && !isLoading ? "glass-card-hover" : ""}`}
+      } ${hover && !isLoading ? "bg-white/10" : ""}`}
       onMouseEnter={() => !isLoading && setHover(true)}
       onMouseLeave={() => !isLoading && setHover(false)}
       onClick={
@@ -212,7 +212,7 @@ export default function TrackLayout({
         {/* Cover Image */}
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative">
           {isLoading ? (
-            <div className="skeleton-glass rounded-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-lg">🎵</div>
@@ -251,8 +251,8 @@ export default function TrackLayout({
         <div className="flex-1 min-w-0">
           {isLoading ? (
             <div className="space-y-2">
-              <div className="skeleton-text h-4 w-3/4 rounded"></div>
-              <div className="skeleton-text h-3 w-1/2 rounded"></div>
+              <div className="h-4 bg-gradient-to-r from-white/10 via-white/20 to-white/10 rounded w-3/4"></div>
+              <div className="h-3 bg-gradient-to-r from-white/8 via-white/15 to-white/8 rounded w-1/2"></div>
             </div>
           ) : (
             <>
@@ -270,7 +270,7 @@ export default function TrackLayout({
           )}
         </div>
 
-        {/* Actions - остальной код без изменений */}
+        {/* Actions */}
         <div className="flex items-center gap-2">
           {isLoading ? (
             <div className="flex items-center gap-2">

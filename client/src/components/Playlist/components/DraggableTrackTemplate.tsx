@@ -310,7 +310,7 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   }
 
   const containerClasses = `
-    grid grid-cols-[20px_50px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-2 sm:gap-4 items-center px-2 sm:px-4 py-3 rounded-lg transition-all duration-200 group
+    grid grid-cols-[0px_40px_1.47fr_1fr_0.1fr_0.1fr_40px] md:grid-cols-[20px_50px_1.47fr_1fr_0.1fr_0.1fr_40px]  sm:gap-4 items-center px-2 sm:px-4 py-3 rounded-lg transition-all duration-200 group
     ${isDragging ? "opacity-50 scale-95" : "opacity-100 scale-100"}
     ${isCurrentTrack ? "bg-white/5" : "hover:bg-white/5"}
     ${dragOverIndex === index ? "ring-2 ring-blue-400/50" : ""}

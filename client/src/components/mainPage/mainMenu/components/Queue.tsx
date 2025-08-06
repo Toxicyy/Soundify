@@ -271,7 +271,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             className={`fixed z-50 flex flex-col ${
               window.innerWidth < 768
                 ? "inset-0" // Mobile: full screen
-                : "inset-y-0 right-0 w-[40%]" // Tablet: 40% width
+                : "inset-y-0 right-0 w-[60%]" // Tablet: 40% width
             }`}
             initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}

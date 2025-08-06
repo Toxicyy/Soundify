@@ -10,6 +10,11 @@ import {
   StarFilled,
   LockOutlined,
   GlobalOutlined,
+  LoginOutlined,
+  PlayCircleOutlined,
+  SoundOutlined,
+  ArrowLeftOutlined,
+  FolderOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useGetUserQuery } from "../state/UserApi.slice";
@@ -23,6 +28,7 @@ import { type AppDispatch } from "../store";
  * Playlists Discovery Page
  *
  * Features:
+ * - Beautiful authentication required state for non-users
  * - Tabbed interface (Featured, User Playlists, Liked)
  * - Real-time search with debounce
  * - Featured platform playlists showcase
@@ -76,6 +82,246 @@ interface PlaylistCardProps {
 }
 
 type TabType = "featured" | "user" | "liked" | "search";
+
+/**
+ * Animation configuration constants
+ */
+const ANIMATION_CONFIG = {
+  pageTransition: { duration: 0.4 },
+  itemStagger: 0.05,
+  buttonHover: { scale: 1.05 },
+  buttonTap: { scale: 0.95 },
+} as const;
+
+/**
+ * Authentication required state component
+ */
+const AuthRequiredState: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <motion.div
+      className="flex flex-col items-center justify-center py-16 xs:py-12 px-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      {/* Animated music icons background */}
+      <div className="absolute inset-0 overflow-hidden opacity-5">
+        <motion.div
+          className="absolute top-10 left-10"
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [0, 10, 0]
+          }}
+          transition={{ 
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <SoundOutlined className="text-6xl text-white" />
+        </motion.div>
+        <motion.div
+          className="absolute top-20 right-20"
+          animate={{ 
+            y: [0, 20, 0],
+            rotate: [0, -15, 0]
+          }}
+          transition={{ 
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        >
+          <PlayCircleOutlined className="text-8xl text-white" />
+        </motion.div>
+        <motion.div
+          className="absolute bottom-20 left-20"
+          animate={{ 
+            y: [0, -15, 0],
+            rotate: [0, 20, 0]
+          }}
+          transition={{ 
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2
+          }}
+        >
+          <HeartOutlined className="text-5xl text-white" />
+        </motion.div>
+        <motion.div
+          className="absolute bottom-16 right-16"
+          animate={{ 
+            y: [0, 25, 0],
+            rotate: [0, -10, 0]
+          }}
+          transition={{ 
+            duration: 3.5,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.5
+          }}
+        >
+          <FolderOutlined className="text-7xl text-white" />
+        </motion.div>
+      </div>
+
+      {/* Main content */}
+      <motion.div
+        className="relative z-10 text-center max-w-md"
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ 
+          duration: 0.8,
+          type: "spring",
+          bounce: 0.4,
+          delay: 0.2
+        }}
+      >
+        {/* Playlist icon with glow effect */}
+        <motion.div
+          className="relative mb-6 xs:mb-4"
+          initial={{ rotate: -180, scale: 0 }}
+          animate={{ rotate: 0, scale: 1 }}
+          transition={{
+            duration: 1.2,
+            type: "spring",
+            bounce: 0.6,
+            delay: 0.3
+          }}
+        >
+          <div className="relative inline-block">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-purple-400/30 to-pink-500/30 rounded-full blur-xl scale-150"
+              animate={{ 
+                opacity: [0.3, 0.7, 0.3],
+                scale: [1.4, 1.6, 1.4]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            <div className="relative p-6 xs:p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl border border-purple-500/30">
+              <FolderOutlined className="text-purple-400 text-6xl xs:text-5xl" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Title */}
+        <motion.h2
+          className="text-2xl xs:text-xl font-bold text-white mb-3 xs:mb-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          Discover Amazing Playlists
+        </motion.h2>
+
+        {/* Description */}
+        <motion.p
+          className="text-white/70 text-base xs:text-sm leading-relaxed mb-8 xs:mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+        >
+          Sign in to explore curated collections, create your own playlists, and connect with the music community
+        </motion.p>
+
+        {/* Features list */}
+        <motion.div
+          className="mb-8 xs:mb-6 space-y-3 xs:space-y-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.9 }}
+        >
+          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
+            <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex-shrink-0" />
+            <span>Browse featured and community playlists</span>
+          </div>
+          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
+            <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0" />
+            <span>Create and customize your own collections</span>
+          </div>
+          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
+            <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex-shrink-0" />
+            <span>Like and save playlists to your library</span>
+          </div>
+          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
+            <div className="w-2 h-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex-shrink-0" />
+            <span>Share your musical taste with others</span>
+          </div>
+        </motion.div>
+
+        {/* Action buttons */}
+        <motion.div
+          className="flex flex-col xs:flex-row gap-3 xs:gap-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.1 }}
+        >
+          <motion.button
+            onClick={() => navigate('/login')}
+            className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl xs:rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-sm xs:text-xs"
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <LoginOutlined className="text-base xs:text-sm" />
+            Sign In
+          </motion.button>
+          
+          <motion.button
+            onClick={() => navigate('/signup')}
+            className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl xs:rounded-lg transition-all duration-300 border border-white/20 hover:border-white/30 text-sm xs:text-xs"
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <UserOutlined className="text-base xs:text-sm" />
+            Create Account
+          </motion.button>
+        </motion.div>
+
+        {/* Additional info */}
+        <motion.p
+          className="text-white/50 text-xs xs:text-[10px] mt-6 xs:mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 1.3 }}
+        >
+          Free forever • No credit card required
+        </motion.p>
+      </motion.div>
+
+      {/* Floating particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-white/20 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: 4 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+};
 
 /**
  * Playlist card component with multiple variants
@@ -430,7 +676,7 @@ const TabNavigation: React.FC<{
  */
 export default function Playlists() {
   const navigate = useNavigate();
-  const { data: user } = useGetUserQuery();
+  const { data: user, isLoading: userLoading } = useGetUserQuery();
 
   // State management
   const [activeTab, setActiveTab] = useState<TabType>("featured");
@@ -747,6 +993,87 @@ export default function Playlists() {
   const isLoading = getCurrentLoadingState();
   const isSearchMode = Boolean(searchQuery.trim());
 
+  // Show loading state while checking user auth
+  if (userLoading) {
+    return (
+      <motion.main
+        className="w-full min-h-screen pl-3 pr-3 xs:pl-4 xs:pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 xs:w-12 xs:h-12 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+          <p className="text-white/70 text-sm xs:text-base">Loading...</p>
+        </div>
+      </motion.main>
+    );
+  }
+
+  // Show auth required state if user is not logged in
+  if (!user) {
+    return (
+      <motion.main
+        className="w-full min-h-screen pl-3 pr-3 xs:pl-4 xs:pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-4 xs:gap-6 mb-32 xs:mb-45 xl:mb-6 py-4 xs:py-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={ANIMATION_CONFIG.pageTransition}
+      >
+        {/* Page Header */}
+        <motion.header
+          className="flex items-center gap-3 xs:gap-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <motion.button
+            onClick={() => navigate(-1)}
+            className="p-2 xs:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-lg xs:rounded-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0"
+            whileHover={ANIMATION_CONFIG.buttonHover}
+            whileTap={ANIMATION_CONFIG.buttonTap}
+            aria-label="Go back"
+          >
+            <ArrowLeftOutlined className="text-white text-base xs:text-xl" />
+          </motion.button>
+
+          <div className="flex items-center gap-2 xs:gap-3">
+            <motion.div
+              className="p-2 xs:p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-lg xs:rounded-xl border border-purple-500/30"
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{
+                duration: 0.8,
+                delay: 0.3,
+                type: "spring",
+                bounce: 0.6,
+              }}
+            >
+              <FolderOutlined className="text-purple-400 text-lg xs:text-2xl" />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <h1 className="text-white text-2xl xs:text-3xl font-bold">Playlists</h1>
+              <p className="text-white/70 text-sm xs:text-lg">Discover music collections</p>
+            </motion.div>
+          </div>
+        </motion.header>
+
+        {/* Auth Required Content */}
+        <motion.section
+          className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <AuthRequiredState />
+        </motion.section>
+      </motion.main>
+    );
+  }
+
+  // Regular playlists content for authenticated users
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Main content with responsive padding */}
@@ -849,33 +1176,6 @@ export default function Playlists() {
             )}
           </h2>
         </motion.div>
-
-        {/* Auth required message for liked playlists */}
-        {activeTab === "liked" && !user && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
-          >
-            <div className="w-24 h-24 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
-              <HeartOutlined
-                style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "48px" }}
-              />
-            </div>
-            <h3 className="text-white text-xl font-semibold mb-2">
-              Sign in to view liked playlists
-            </h3>
-            <p className="text-white/60 mb-6">
-              Create an account to like and save your favorite playlists
-            </p>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-medium transition-colors"
-            >
-              Sign In
-            </button>
-          </motion.div>
-        )}
 
         {/* Playlists Grid */}
         <AnimatePresence mode="wait">
