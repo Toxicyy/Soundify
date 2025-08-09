@@ -22,7 +22,7 @@ export default function ArtistCard({
       <div className="flex items-center gap-4 mb-4">
         <div className="w-16 h-16 rounded-2xl relative overflow-hidden flex-shrink-0">
           {isLoading ? (
-            <div className="w-full h-full bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-2xl relative overflow-hidden">
+            <div className="w-full h-full bg-gradient-to-br from-white/10 via-white/20 to-white/5 xl:backdrop-blur-md border border-white/20 rounded-2xl relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-2xl">👤</div>
@@ -39,7 +39,7 @@ export default function ArtistCard({
 
         <div className="flex-1 min-w-0">
           {isLoading ? (
-            <div className="h-5 w-24 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+            <div className="h-5 w-24 bg-gradient-to-r from-white/10 via-white/20 to-white/10 xl:backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
           ) : (
@@ -78,7 +78,7 @@ export default function ArtistCard({
       <div className="flex flex-col items-center gap-2">
         <div className="w-24 h-24 md:w-32 md:h-32 xl:w-[140px] xl:h-[140px] rounded-3xl xl:rounded-[45px] relative overflow-hidden">
           {isLoading ? (
-            <div className="w-full h-full bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-3xl xl:rounded-[45px] relative overflow-hidden">
+            <div className="w-full h-full bg-gradient-to-br from-white/10 via-white/20 to-white/5 xl:backdrop-blur-md border border-white/20 rounded-3xl xl:rounded-[45px] relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-3xl xl:text-5xl">👤</div>
@@ -94,7 +94,7 @@ export default function ArtistCard({
         </div>
 
         {isLoading ? (
-          <div className="h-5 xl:h-6 w-20 xl:w-28 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+          <div className="h-5 xl:h-6 w-20 xl:w-28 bg-gradient-to-r from-white/10 via-white/20 to-white/10 xl:backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
           </div>
         ) : (

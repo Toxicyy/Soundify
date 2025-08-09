@@ -365,7 +365,7 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
               placeholder="Search tracks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-10 py-2 text-white placeholder-white/40 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all duration-200 w-full sm:w-[300px]"
+              className="bg-white/20 border border-white/30 rounded-full px-10 py-2 text-white placeholder-white/40 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all duration-200 w-full sm:w-[300px]"
             />
             {searchQuery && (
               <button

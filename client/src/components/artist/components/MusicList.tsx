@@ -89,7 +89,7 @@ const MusicList: FC<MusicListProps> = ({
   if (isLoading) {
     return (
       <div className="overflow-hidden">
-        <div className="h-8 w-32 bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden mb-4">
+        <div className="h-8 w-32 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden mb-4">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
@@ -98,7 +98,7 @@ const MusicList: FC<MusicListProps> = ({
           {Array.from({ length: 2 }).map((_, index) => (
             <div
               key={index}
-              className="h-10 w-28 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden"
+              className="h-10 w-28 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-full relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
@@ -109,13 +109,13 @@ const MusicList: FC<MusicListProps> = ({
         <div className="flex gap-5 px-2">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
-              <div className="w-[160px] h-[160px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden mb-2">
+              <div className="w-[160px] h-[160px] bg-gradient-to-br from-white/10 via-white/20 to-white/5  border border-white/20 rounded-lg relative overflow-hidden mb-2">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               </div>
-              <div className="h-4 w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden mb-1">
+              <div className="h-4 w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden mb-1">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
               </div>
-              <div className="h-3 w-20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 backdrop-blur-md border border-white/10 rounded-md relative overflow-hidden">
+              <div className="h-3 w-20 bg-gradient-to-r from-white/5 via-white/10 to-white/5 border border-white/10 rounded-md relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
               </div>
             </div>

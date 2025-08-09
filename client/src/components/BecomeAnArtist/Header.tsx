@@ -187,7 +187,7 @@ const Header: FC<HeaderProps> = ({
     <div>
       <BaseHeader
         isLoading={false}
-        className="min-h-[180px] sm:min-h-[200px] lg:min-h-[220px]"
+        className="h-[140px] sm:h-[180px] lg:h-[180px] xl:h-[200px]"
       >
         <HeaderContent
           image={{
@@ -206,14 +206,15 @@ const Header: FC<HeaderProps> = ({
             callback: () => setIsModalOpen(true),
           }}
           title={{
-            text: localChanges.name || "Become an artist",
+            text: localChanges.name || "Become an artist (click)",
             callback: () => setIsModalOpen(true),
             className:
-              "cursor-pointer hover:text-green-400 transition-colors text-center sm:text-left",
+              "cursor-pointer hover:text-green-400 transition-colors truncate text-center sm:text-left",
           }}
           subtitle={
-            localChanges.bio ||
-            "Create your own music and share it with the world."
+            <div className="truncate">
+              {localChanges.bio || "Create your own music and share it with the world."}
+            </div>
           }
           isLoading={false}
         />

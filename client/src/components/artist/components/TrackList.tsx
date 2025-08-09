@@ -105,7 +105,7 @@ const TracksList: FC<TracksListProps> = ({
       {/* Section title */}
       {isLoading ? (
         <div className="mb-6 flex-shrink-0">
-          <div className="h-6 sm:h-8 w-48 sm:w-64 bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden">
+          <div className="h-6 sm:h-8 w-48 sm:w-64 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         </div>

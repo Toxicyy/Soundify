@@ -161,7 +161,7 @@ export default function BecomeAnArtist() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
+    <div className="min-h-screen w-full flex flex-col mb-30">
       {/* 
         Responsive container with adaptive padding:
         - Mobile: pl-4 pr-4 (no sidebar)

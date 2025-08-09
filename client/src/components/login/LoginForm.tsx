@@ -36,44 +36,43 @@ export const LoginForm: React.FC = () => {
   useEffect(() => {
     const errorCheck = LoginValid(formData);
     setErrors(errorCheck);
-    if (apiError) setApiError("");
   }, [formData, apiError]);
 
   
-  // const getErrorMessage = (errorMessage: string, status: number) => {
-  //   // Обработка русских сообщений с бекенда
-  //   if (errorMessage.includes("Неверный email или пароль")) {
-  //     return "Invalid email or password";
-  //   }
-  //   if (errorMessage.includes("Пользователь с таким email уже существует")) {
-  //     return "User with this email already exists";
-  //   }
-  //   if (errorMessage.includes("Пользователь с таким username уже существует")) {
-  //     return "User with this username already exists";
-  //   }
-  //   if (errorMessage.includes("Current password is incorrect")) {
-  //     return "Current password is incorrect";
-  //   }
-  //   if (errorMessage.includes("New password must be different")) {
-  //     return "New password must be different from current password";
-  //   }
+  const getErrorMessage = (errorMessage: string, status: number) => {
+    // Обработка русских сообщений с бекенда
+    if (errorMessage.includes("Неверный email или пароль")) {
+      return "Invalid email or password";
+    }
+    if (errorMessage.includes("Пользователь с таким email уже существует")) {
+      return "User with this email already exists";
+    }
+    if (errorMessage.includes("Пользователь с таким username уже существует")) {
+      return "User with this username already exists";
+    }
+    if (errorMessage.includes("Current password is incorrect")) {
+      return "Current password is incorrect";
+    }
+    if (errorMessage.includes("New password must be different")) {
+      return "New password must be different from current password";
+    }
 
-  //   // Обработка по статус кодам
-  //   switch (status) {
-  //     case 401:
-  //       return "Invalid email or password";
-  //     case 404:
-  //       return "User not found";
-  //     case 409:
-  //       return "User with this email already exists";
-  //     case 429:
-  //       return "Too many attempts. Please try again later";
-  //     case 400:
-  //       return "Invalid data provided";
-  //     default:
-  //       return errorMessage || "Something went wrong. Please try again";
-  //   }
-  // };
+    // Обработка по статус кодам
+    switch (status) {
+      case 401:
+        return "Invalid email or password";
+      case 404:
+        return "User not found";
+      case 409:
+        return "User with this email already exists";
+      case 429:
+        return "Too many attempts. Please try again later";
+      case 400:
+        return "Invalid data provided";
+      default:
+        return errorMessage || "Something went wrong. Please try again";
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,17 +94,14 @@ export const LoginForm: React.FC = () => {
           localStorage.setItem("token", data.data.tokenInfo.token);
           navigate("/");
         } else {
-          // Ошибка либо в HTTP статусе, либо в success: false
           const errorMessage = data.message || "Something went wrong";
 
           // Переводим русские сообщения
-          if (errorMessage.includes("Неверный email или пароль")) {
-            setApiError("Invalid email or password");
-          } else {
-            setApiError(errorMessage);
-          }
+          setApiError(getErrorMessage(errorMessage, response.status));
 
-          console.log("Login failed:", data); // для отладки
+          console.log("Login failed:", data);
+          console.log(data.message)
+          console.log(apiError)
         }
       } catch (error) {
         console.error("Login error:", error);

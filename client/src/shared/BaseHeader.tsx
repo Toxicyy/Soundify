@@ -33,7 +33,7 @@ interface HeaderContentProps {
  */
 const HeaderSkeleton: FC<{ className: string }> = ({ className }) => (
   <div
-    className={`bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden ${className}`}
+    className={`bg-gradient-to-r from-white/15 via-white/25 to-white/15 border border-white/25 rounded-lg relative overflow-hidden ${className}`}
   >
     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
   </div>
@@ -69,7 +69,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
       <div className="flex gap-3 sm:gap-5 items-end flex-row">
         {/* Image skeleton */}
         <div
-          className={`${image.className} bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 relative overflow-hidden`}
+          className={`${image.className} bg-gradient-to-br from-white/10 via-white/20 to-white/5 border border-white/20 relative overflow-hidden`}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>

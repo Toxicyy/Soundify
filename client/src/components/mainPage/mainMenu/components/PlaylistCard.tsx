@@ -194,30 +194,6 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
           </h1>
         </div>
       </div>
-      {hover && (
-        <div className="mb-[-30px]">
-          <button className="w-14 h-14 bg-black rounded-full flex items-center justify-center shadow-lg cursor-pointer">
-            <div
-              className="bg-black rounded-full w-14 h-14 flex items-center justify-center cursor-pointer transition-all duration-200"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPlaying(!isPlaying);
-              }}
-              onMouseEnter={() => setPlayHover(true)}
-              onMouseLeave={() => setPlayHover(false)}
-            >
-              {isPlaying ? (
-                <PauseOutlined style={{ fontSize: "34px", color: "#5cec8c" }} />
-              ) : (
-                <CaretRightOutlined
-                  style={{ fontSize: "34px", color: "#5cec8c" }}
-                  className="ml-[4px]"
-                />
-              )}
-            </div>
-          </button>
-        </div>
-      )}
     </div>
   );
 

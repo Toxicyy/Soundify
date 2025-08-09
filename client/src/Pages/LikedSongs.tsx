@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { 
-  LoginOutlined, 
-  UserOutlined, 
-  PlayCircleOutlined, 
-  SoundOutlined, 
+import {
+  LoginOutlined,
+  UserOutlined,
+  PlayCircleOutlined,
+  SoundOutlined,
   HeartOutlined,
   HeartFilled,
   ArrowLeftOutlined,
@@ -18,6 +18,7 @@ import { useLikedTracksLoader } from "../hooks/useLikedTracksLoader";
 
 /**
  * Authentication required state component
+ * Displays a beautiful animated interface encouraging users to sign in
  */
 const AuthRequiredState: React.FC = () => {
   const navigate = useNavigate();
@@ -30,62 +31,62 @@ const AuthRequiredState: React.FC = () => {
       transition={{ duration: 0.6 }}
     >
       {/* Animated music icons background */}
-      <div className="absolute inset-0 overflow-hidden opacity-5">
+      <div className="absolute inset-0 overflow-hidden opacity-5" aria-hidden="true">
         <motion.div
           className="absolute top-10 left-10"
-          animate={{ 
+          animate={{
             y: [0, -20, 0],
-            rotate: [0, 10, 0]
+            rotate: [0, 10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 4,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         >
           <SoundOutlined className="text-6xl text-white" />
         </motion.div>
         <motion.div
           className="absolute top-20 right-20"
-          animate={{ 
+          animate={{
             y: [0, 20, 0],
-            rotate: [0, -15, 0]
+            rotate: [0, -15, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 1,
           }}
         >
           <PlayCircleOutlined className="text-8xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-20 left-20"
-          animate={{ 
+          animate={{
             y: [0, -15, 0],
-            rotate: [0, 20, 0]
+            rotate: [0, 20, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 2
+            delay: 2,
           }}
         >
           <StarFilled className="text-5xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-16 right-16"
-          animate={{ 
+          animate={{
             y: [0, 25, 0],
-            rotate: [0, -10, 0]
+            rotate: [0, -10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3.5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 0.5
+            delay: 0.5,
           }}
         >
           <HeartOutlined className="text-7xl text-white" />
@@ -97,11 +98,11 @@ const AuthRequiredState: React.FC = () => {
         className="relative z-10 text-center max-w-md"
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
-        transition={{ 
+        transition={{
           duration: 0.8,
           type: "spring",
           bounce: 0.4,
-          delay: 0.2
+          delay: 0.2,
         }}
       >
         {/* Heart icon with glow effect */}
@@ -113,21 +114,22 @@ const AuthRequiredState: React.FC = () => {
             duration: 1.2,
             type: "spring",
             bounce: 0.6,
-            delay: 0.3
+            delay: 0.3,
           }}
         >
           <div className="relative inline-block">
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-red-400/30 to-pink-500/30 rounded-full blur-xl scale-150"
-              animate={{ 
+              animate={{
                 opacity: [0.3, 0.7, 0.3],
-                scale: [1.4, 1.6, 1.4]
+                scale: [1.4, 1.6, 1.4],
               }}
               transition={{
                 duration: 3,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
+              aria-hidden="true"
             />
             <div className="relative p-6 xs:p-4 bg-gradient-to-br from-red-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl border border-red-500/30">
               <HeartFilled className="text-red-400 text-6xl xs:text-5xl" />
@@ -152,7 +154,8 @@ const AuthRequiredState: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
         >
-          Sign in to access your personal collection of liked songs and create your ultimate music library
+          Sign in to access your personal collection of liked songs and create
+          your ultimate music library
         </motion.p>
 
         {/* Features list */}
@@ -162,22 +165,35 @@ const AuthRequiredState: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.9 }}
         >
-          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
-            <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex-shrink-0" />
-            <span>Like unlimited songs and build your library</span>
-          </div>
-          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
-            <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex-shrink-0" />
-            <span>Access your favorites anytime, anywhere</span>
-          </div>
-          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
-            <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0" />
-            <span>Get personalized music recommendations</span>
-          </div>
-          <div className="flex items-center gap-3 text-white/80 text-sm xs:text-xs">
-            <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex-shrink-0" />
-            <span>Create playlists from your liked songs</span>
-          </div>
+          {[
+            {
+              gradient: "from-red-500 to-pink-500",
+              text: "Like unlimited songs and build your library",
+            },
+            {
+              gradient: "from-purple-500 to-pink-500",
+              text: "Access your favorites anytime, anywhere",
+            },
+            {
+              gradient: "from-blue-500 to-cyan-500",
+              text: "Get personalized music recommendations",
+            },
+            {
+              gradient: "from-green-500 to-emerald-500",
+              text: "Create playlists from your liked songs",
+            },
+          ].map((feature, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 text-white/80 text-sm xs:text-xs"
+            >
+              <div
+                className={`w-2 h-2 bg-gradient-to-r ${feature.gradient} rounded-full flex-shrink-0`}
+                aria-hidden="true"
+              />
+              <span>{feature.text}</span>
+            </div>
+          ))}
         </motion.div>
 
         {/* Action buttons */}
@@ -188,20 +204,22 @@ const AuthRequiredState: React.FC = () => {
           transition={{ duration: 0.6, delay: 1.1 }}
         >
           <motion.button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold rounded-xl xs:rounded-lg transition-all duration-300 shadow-lg hover:shadow-red-500/25 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
+            aria-label="Sign in to your account"
           >
             <LoginOutlined className="text-base xs:text-sm" />
             Sign In
           </motion.button>
-          
+
           <motion.button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate("/signup")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl xs:rounded-lg transition-all duration-300 border border-white/20 hover:border-white/30 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
+            aria-label="Create a new account"
           >
             <UserOutlined className="text-base xs:text-sm" />
             Create Account
@@ -220,7 +238,7 @@ const AuthRequiredState: React.FC = () => {
       </motion.div>
 
       {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
             key={i}
@@ -244,7 +262,7 @@ const AuthRequiredState: React.FC = () => {
       </div>
 
       {/* Floating hearts */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         {Array.from({ length: 4 }).map((_, i) => (
           <motion.div
             key={`heart-${i}`}
@@ -276,43 +294,66 @@ const AuthRequiredState: React.FC = () => {
 };
 
 /**
- * Страница любимых треков с адаптивным дизайном и красивой обработкой неавторизованных пользователей
- * Поддерживает desktop, tablet и mobile layout
+ * Loading component for authentication state
+ */
+const LoadingComponent: React.FC = () => (
+  <motion.div
+    className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] flex items-center justify-center"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.4 }}
+  >
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-8 h-8 xs:w-12 xs:h-12 border-3 border-white/20 border-t-white rounded-full animate-spin" />
+      <p className="text-white/70 text-sm xs:text-base">Loading...</p>
+    </div>
+  </motion.div>
+);
+
+/**
+ * Liked Songs page with responsive design and beautiful handling for unauthorized users
+ * Supports desktop, tablet, and mobile layouts
  *
- * @returns JSX.Element - Страница со списком любимых треков или экран авторизации
+ * Features:
+ * - Authentication state management
+ * - Infinite request prevention using useRef
+ * - Responsive design across all breakpoints
+ * - Beautiful loading and empty states
+ * - Optimized user experience flow
+ *
+ * @returns JSX.Element - Page with liked tracks list or authentication screen
  */
 export default function LikedSongs() {
   const navigate = useNavigate();
   const { data: user, isFetching: userLoading } = useGetUserQuery();
   const { isLoading, likedTracks, loadLikedTracks } = useLikedTracksLoader();
 
+  // Use useRef to track already loaded userId to prevent infinite requests
+  const loadedUserIdRef = useRef<string | null>(null);
+
   /**
-   * Загружает любимые треки пользователя при изменении данных
-   * Только для авторизованных пользователей
+   * Effect to load liked tracks when user data changes
+   * Only triggers for authenticated users and prevents duplicate requests
    */
   useEffect(() => {
-    if (user?._id && !userLoading) {
+    // Check if user exists, is not loading, and we haven't loaded tracks for this user yet
+    if (user?._id && !userLoading && loadedUserIdRef.current !== user._id) {
+      loadedUserIdRef.current = user._id;
       loadLikedTracks(user._id);
     }
-  }, [user, userLoading, loadLikedTracks]);
 
-  // Show loading state while checking user auth
+    // Reset ref if user logs out
+    if (!user) {
+      loadedUserIdRef.current = null;
+    }
+  }, [user?._id, userLoading, loadLikedTracks]);
+
+  // Show loading state while checking user authentication
   if (userLoading) {
-    return (
-      <motion.div
-        className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 xs:w-12 xs:h-12 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-white/70 text-sm xs:text-base">Loading...</p>
-        </div>
-      </motion.div>
-    );
+    return <LoadingComponent />;
   }
 
-  // Show auth required state if user is not logged in - FIRST PRIORITY
+  // Show authentication required state if user is not logged in
   if (!user) {
     return (
       <motion.div
@@ -328,16 +369,18 @@ export default function LikedSongs() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
+          {/* Back Button */}
           <motion.button
             onClick={() => navigate(-1)}
             className="p-2 xs:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-lg xs:rounded-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            aria-label="Go back"
+            aria-label="Go back to previous page"
           >
             <ArrowLeftOutlined className="text-white text-base xs:text-xl" />
           </motion.button>
 
+          {/* Page Title Section */}
           <div className="flex items-center gap-2 xs:gap-3">
             <motion.div
               className="p-2 xs:p-3 bg-gradient-to-br from-red-500/20 to-pink-500/20 backdrop-blur-lg rounded-lg xs:rounded-xl border border-red-500/30"
@@ -357,18 +400,24 @@ export default function LikedSongs() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <h1 className="text-white text-2xl xs:text-3xl font-bold">Liked Songs</h1>
-              <p className="text-white/70 text-sm xs:text-lg">Your personal favorites</p>
+              <h1 className="text-white text-2xl xs:text-3xl font-bold">
+                Liked Songs
+              </h1>
+              <p className="text-white/70 text-sm xs:text-lg">
+                Your personal favorites
+              </p>
             </motion.div>
           </div>
         </motion.header>
 
-        {/* Auth Required Content */}
+        {/* Authentication Required Content */}
         <motion.section
           className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
+          role="main"
+          aria-label="Authentication required section"
         >
           <AuthRequiredState />
         </motion.section>
@@ -376,13 +425,13 @@ export default function LikedSongs() {
     );
   }
 
-  // Regular content for authenticated users
+  // Main content for authenticated users
   return (
     <div className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] md:mb-30 flex flex-col gap-3 md:gap-4 xl:gap-5 pt-3 md:pt-6 mb-35 xl:mb-0">
-      {/* Header компонент с адаптивными размерами */}
+      {/* Header component with responsive sizing */}
       <Header tracks={likedTracks} />
 
-      {/* MainMenu компонент занимает оставшееся пространство */}
+      {/* MainMenu component takes remaining space */}
       <div className="flex-1 min-h-0 mb-2 md:mb-4 xl:mb-5">
         <MainMenu tracks={likedTracks} isLoading={isLoading} />
       </div>

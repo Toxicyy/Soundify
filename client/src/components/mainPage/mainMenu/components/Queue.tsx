@@ -20,6 +20,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
   const queueState = useSelector((state: AppState) => state.queue);
   const { queue, currentTrack } = queueState;
   const dispatch = useDispatch<AppDispatch>();
+  const currentTrackState = useSelector(
+    (state: AppState) => state.currentTrack
+  );
 
   // Check if desktop
   useEffect(() => {
@@ -371,9 +374,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             </div>
 
             {/* Content */}
-            <div className="relative flex-1 overflow-hidden">
+            <div className="relative flex-1">
               {active === "Queue" ? (
-                <div className="h-full p-4 flex flex-col">
+                <div className="p-4">
                   {/* Playing Now Section */}
                   {currentTrack && (
                     <div className="flex-shrink-0 mb-4">
@@ -393,7 +396,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
 
                   {/* Next Up Section */}
                   {queue.length > 0 ? (
-                    <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 flex flex-col">
                       <div className="flex items-center py-3 gap-3 border-b border-white/10">
                         <CustomerServiceOutlined
                           style={{ color: "#5cec8c", fontSize: "20px" }}
@@ -406,7 +409,14 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                         </span>
                       </div>
 
-                      <div className="queue-scroll flex flex-col gap-2 overflow-auto flex-1 mt-3 pr-2">
+                      <div
+                        className="queue-scroll-simplyfied gap-2 flex-1 mt-3 pr-2 overflow-y-auto"
+                        style={{
+                          maxHeight: currentTrackState.isPlaying
+                            ? "calc(100vh - 420px)"
+                            : "calc(100vh - 395px)",
+                        }}
+                      >
                         {queue.map((track, index) => (
                           <QueueTemplate
                             key={`${track._id}-${index}`}

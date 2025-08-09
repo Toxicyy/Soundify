@@ -67,7 +67,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute top-2 right-2 flex gap-2 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity duration-300">
           {playlist.isDraft && (
             <button
               onClick={(e) => {

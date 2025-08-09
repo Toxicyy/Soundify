@@ -1303,6 +1303,7 @@ export const Player = () => {
         <ShareAltOutlined
           style={{
             fontSize: "24px",
+            color: "rgba(255, 255, 255, 0.3)",
           }}
           className="cursor-pointer hover:scale-110 transition-all duration-200"
           onClick={handleShareClick}

@@ -34,7 +34,7 @@ interface ActionButtonProps {
   text: string;
   onClick?: () => void;
   variant?: "primary" | "secondary";
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   ariaLabel?: string;
   disabled?: boolean;
   className?: string;
@@ -387,9 +387,8 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
             text="Upload Track"
             onClick={() => toggleModal("upload", true)}
             variant="primary"
-            size="sm"
+            size="xs"
             ariaLabel="Upload new track"
-            className="flex-1"
           />
 
           {/* Mobile menu button */}

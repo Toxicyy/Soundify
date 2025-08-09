@@ -186,7 +186,7 @@ export const StyledMultiSelect = styled(Select<string[]>)`
 // === BUTTON COMPONENTS ===
 export const GlassButton = styled(motion.button)<{
   variant?: "primary" | "secondary" | "danger";
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 }>`
   display: flex;
   align-items: center;
@@ -201,6 +201,12 @@ export const GlassButton = styled(motion.button)<{
 
   ${({ size = "md" }) => {
     switch (size) {
+      case "xs":
+        return `
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          min-height: 1.5rem;
+        `;
       case "sm":
         return `
           padding: 0.5rem 1rem;

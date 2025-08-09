@@ -110,7 +110,6 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
     } else {
       setSignupErrors(SignUpValid(signupData));
     }
-    if (apiError) setApiError("");
   }, [loginData, signupData, mode, apiError]);
 
   const handleLogin = async () => {
@@ -162,12 +161,8 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
         );
 
         if (response.ok) {
-          // Успешная регистрация - показываем сообщение и переключаемся на логин
           setMode("login");
-          setApiError(""); // Очищаем ошибки
-
-          // Можно показать успешное сообщение (опционально)
-          // setSuccessMessage("Account created successfully! Please sign in.");
+          setApiError("");
         } else {
           const errorData = await response.json();
           const errorMessage = getErrorMessage(

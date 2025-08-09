@@ -201,7 +201,7 @@ const handlePlaylistRequest = async (req, res, track, trackId) => {
  */
 const updatePlaylistUrls = (playlist, req, trackId) => {
   const lines = playlist.split("\n");
-  const baseUrl = `${req.protocol}://${req.get("host")}/api/tracks/${trackId}`;
+  const baseUrl = `https://${req.get("host")}/api/tracks/${trackId}`;
 
   return lines
     .map((line) => {

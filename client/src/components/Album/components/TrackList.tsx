@@ -293,6 +293,8 @@ const TracksList: FC<TracksListProps> = ({
                 transition-all 
                 duration-200
                 w-full sm:w-[300px]
+                md:text-base
+                text-sm
               "
               aria-label="Search tracks"
             />

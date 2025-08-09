@@ -347,11 +347,11 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
                 Changes will be applied locally until you save
               </div>
               <button
-                className="px-10 py-2 rounded-full text-xl bg-white text-black hover:scale-105 transition-all duration-200 disabled:opacity-50"
+                className="px-5 py-2 rounded-full text-xl bg-white text-black hover:scale-105 transition-all duration-200 disabled:opacity-50"
                 onClick={handleApplyChanges}
                 aria-label="Apply changes locally"
               >
-                Apply Changes
+                Apply
               </button>
             </div>
           }

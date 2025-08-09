@@ -36,11 +36,11 @@ const TrackPage = () => {
   if (loading) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-8 mb-45 xl:mb-5">
-        <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/20">
+        <div className="mt-12 bg-white/10 rounded-2xl p-6 sm:p-8 border border-white/20">
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
             {/* Cover skeleton */}
             <div className="w-full max-w-[250px] sm:max-w-[300px] mx-auto lg:mx-0">
-              <div className="aspect-square bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden shadow-lg">
+              <div className="aspect-square bg-gradient-to-br from-white/10 via-white/20 to-white/5  border border-white/20 rounded-lg relative overflow-hidden shadow-lg">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
               </div>
             </div>
@@ -48,19 +48,19 @@ const TrackPage = () => {
             {/* Info skeleton */}
             <div className="flex-1 flex flex-col gap-6 w-full">
               <div className="space-y-4">
-                <div className="h-8 sm:h-12 w-3/4 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+                <div className="h-8 sm:h-12 w-3/4 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-md relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
                 </div>
-                <div className="h-6 sm:h-8 w-1/2 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+                <div className="h-6 sm:h-8 w-1/2 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
+                <div className="w-16 h-16 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-full relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
                 </div>
-                <div className="w-8 h-8 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-full relative overflow-hidden">
+                <div className="w-8 h-8 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-full relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
                 </div>
               </div>
@@ -69,10 +69,10 @@ const TrackPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {[...Array(6)].map((_, index) => (
                   <div key={index} className="space-y-2">
-                    <div className="h-3 w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+                    <div className="h-3 w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
                     </div>
-                    <div className="h-5 w-24 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+                    <div className="h-5 w-24 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-md relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
                     </div>
                   </div>
@@ -89,7 +89,7 @@ const TrackPage = () => {
   if (error) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
-        <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 max-w-md w-full">
+        <div className="mt-12 bg-white/10  rounded-2xl p-8 border border-white/20 max-w-md w-full">
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
               <svg
@@ -164,7 +164,7 @@ const TrackPage = () => {
   if (!track) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
-        <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+        <div className="mt-12 bg-white/10 rounded-2xl p-8 border border-white/20">
           <div className="flex flex-col items-center gap-4">
             <div className="text-white/60 text-lg">Track data unavailable</div>
             <button

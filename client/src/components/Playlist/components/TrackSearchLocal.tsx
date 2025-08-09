@@ -305,10 +305,9 @@ const TrackSearchLocal: React.FC<TrackSearchLocalProps> = ({
             disabled={isPlaylistLoading}
             className={`
               w-full 
-              bg-white/10 
-              backdrop-blur-md 
+              bg-white/20  
               border 
-              border-white/20 
+              border-white/30 
               rounded-2xl 
               px-12 
               py-3 

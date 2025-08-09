@@ -33,7 +33,7 @@ const ArtistInfo: FC<ArtistInfoProps> = ({ artist, isLoading = false }) => {
     return (
       <section className="animate-pulse" aria-labelledby="artist-info-title">
         {/* Title skeleton */}
-        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden mb-3">
+        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden mb-3">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
@@ -41,23 +41,23 @@ const ArtistInfo: FC<ArtistInfoProps> = ({ artist, isLoading = false }) => {
         <div className="flex bg-white/10 rounded-2xl p-3 sm:p-4 lg:p-6 gap-3 sm:gap-5">
           {/* Avatar skeleton */}
           <div className="flex-shrink-0">
-            <div className="w-[180px] h-[180px] sm:w-[200px] sm:h-[200px] lg:w-[230px] lg:h-[230px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden mb-2">
+            <div className="w-[180px] h-[180px] sm:w-[200px] sm:h-[200px] lg:w-[230px] lg:h-[230px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 border border-white/20 rounded-full relative overflow-hidden mb-2">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
             </div>
-            <div className="h-5 w-24 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden mx-auto">
+            <div className="h-5 w-24 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
           </div>
 
           {/* Bio skeleton */}
           <div className="flex-1 space-y-3">
-            <div className="h-6 w-16 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+            <div className="h-6 w-16 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
             </div>
             {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={index}
-                className={`h-4 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden ${
+                className={`h-4 bg-gradient-to-r from-white/8 via-white/15 to-white/8 border border-white/15 rounded-md relative overflow-hidden ${
                   index === 3 ? "w-3/4" : "w-full"
                 }`}
               >

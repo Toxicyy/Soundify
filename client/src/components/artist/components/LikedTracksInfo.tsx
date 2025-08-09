@@ -43,23 +43,23 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
         aria-labelledby="liked-tracks-title"
       >
         {/* Title skeleton */}
-        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15 backdrop-blur-md border border-white/25 rounded-lg relative overflow-hidden mb-3">
+        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden mb-3">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
         {/* Content skeleton */}
         <div className="flex gap-3 sm:gap-5 items-center">
           {/* Avatar skeleton */}
-          <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden flex-shrink-0">
+          <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] bg-gradient-to-br from-white/10 via-white/20 to-white/5  border border-white/20 rounded-full relative overflow-hidden flex-shrink-0">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
 
           {/* Text content skeleton */}
           <div className="flex flex-col justify-center space-y-2 flex-1">
-            <div className="h-5 sm:h-6 w-32 sm:w-40 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
+            <div className="h-5 sm:h-6 w-32 sm:w-40 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
-            <div className="h-5 sm:h-6 w-24 sm:w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
+            <div className="h-5 sm:h-6 w-24 sm:w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
             </div>
           </div>

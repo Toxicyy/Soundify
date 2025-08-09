@@ -14,31 +14,123 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, AppState } from "../../store";
 
 /**
- * Props для MainMenu компонента
+ * Props for the MainMenu component
  */
 interface MainMenuProps {
-  /** Массив треков для отображения */
+  /** Array of tracks to display */
   tracks: Track[];
-  /** Флаг загрузки данных */
+  /** Loading state flag */
   isLoading?: boolean;
 }
 
 /**
- * Главный компонент для отображения списка любимых треков
- * Включает поиск, управление воспроизведением и адаптивную таблицу треков
+ * Track skeleton component for loading state
+ * Renders different layouts for desktop and mobile views
+ */
+const TrackSkeleton = () => {
+  return (
+    <>
+      {/* Desktop Track Skeleton */}
+      <div className="hidden xl:block">
+        <div className="grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_50px] gap-4 items-center px-4 py-3 hover:bg-white/5 transition-colors duration-200 rounded-lg group animate-pulse">
+          {/* Track Number */}
+          <div className="text-center">
+            <div className="w-6 h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded"></div>
+          </div>
+
+          {/* Track Info */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-lg flex-shrink-0"></div>
+            <div className="flex flex-col gap-2 flex-1 min-w-0">
+              <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-3/4"></div>
+              <div className="h-3 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-1/2"></div>
+            </div>
+          </div>
+
+          {/* Album */}
+          <div className="text-center">
+            <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-2/3 mx-auto"></div>
+          </div>
+
+          {/* Date Added */}
+          <div className="text-center">
+            <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-16 mx-auto"></div>
+          </div>
+
+          {/* Like Button */}
+          <div className="text-center">
+            <div className="w-6 h-6 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-full mx-auto"></div>
+          </div>
+
+          {/* Duration */}
+          <div className="text-center">
+            <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-12 mx-auto"></div>
+          </div>
+
+          {/* More Options */}
+          <div className="text-center">
+            <div className="w-6 h-6 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-full mx-auto"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Track Skeleton */}
+      <div className="block xl:hidden">
+        <div className="flex items-center justify-between px-3 py-3 hover:bg-white/5 transition-colors duration-200 rounded-lg relative overflow-hidden animate-pulse">
+          {/* Left Side - Track Info */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-lg flex-shrink-0"></div>
+            <div className="flex flex-col gap-2 flex-1 min-w-0">
+              <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-3/4"></div>
+              <div className="h-3 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-1/2"></div>
+            </div>
+          </div>
+
+          {/* Right Side - Duration & Actions */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="h-3 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-10"></div>
+            <div className="w-6 h-6 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-full"></div>
+          </div>
+
+          {/* Shimmer Effect */}
+          <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+/**
+ * Skeleton loader for the entire track list
+ * Renders multiple track skeletons during loading state
+ */
+const TracksListSkeleton: FC = () => {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <TrackSkeleton key={index} />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Main component for displaying the liked tracks list
+ * Includes search functionality, playback controls, and responsive track table
  *
  * Features:
- * - Умная кнопка воспроизведения (play/pause based on context)
- * - Поиск по треку, артисту и альбому
- * - Shuffle функционал
- * - Адаптивный дизайн для всех устройств
- * - Skeleton loading состояния
+ * - Smart play/pause button based on current playback context
+ * - Search functionality across track, artist, and album names
+ * - Shuffle functionality
+ * - Responsive design for all device sizes
+ * - Skeleton loading states
+ * - Empty state handling
  */
 const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
-  // Локальные состояния
+  // Local state for search functionality
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Redux селекторы
+  // Redux selectors for playback state
   const { shuffle } = useSelector((state: AppState) => state.queue);
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
@@ -47,7 +139,7 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
   const dispatch = useDispatch<AppDispatch>();
 
   /**
-   * Проверяет, принадлежит ли текущий трек к этому плейлисту
+   * Determines if the currently playing track belongs to this playlist
    */
   const isCurrentTrackFromThisPlaylist = useMemo(() => {
     if (!currentTrackState.currentTrack) return false;
@@ -58,32 +150,32 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
   }, [currentTrackState.currentTrack, tracks]);
 
   /**
-   * Определяет, должна ли кнопка показывать состояние "играет"
+   * Determines if the play button should show the "playing" state
    */
   const isPlaylistPlaying = useMemo(() => {
     return isCurrentTrackFromThisPlaylist && currentTrackState.isPlaying;
   }, [isCurrentTrackFromThisPlaylist, currentTrackState.isPlaying]);
 
   /**
-   * Обработчик кнопки shuffle
+   * Handles shuffle button click
    */
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
   /**
-   * Умная логика кнопки плейлиста
-   * - Если играет трек из этого плейлиста: переключает play/pause
-   * - Если играет другой трек или ничего не играет: запускает плейлист
+   * Smart playlist play/pause logic
+   * - If a track from this playlist is playing: toggles play/pause
+   * - If another track is playing or nothing is playing: starts this playlist
    */
   const handlePlaylistPlayPause = useCallback(() => {
     if (isLoading || tracks.length === 0) return;
 
     if (isCurrentTrackFromThisPlaylist) {
-      // Переключаем play/pause для текущего трека из плейлиста
+      // Toggle play/pause for current track from this playlist
       dispatch(setIsPlaying(!currentTrackState.isPlaying));
     } else {
-      // Запускаем плейлист с первого трека
+      // Start playlist from the first track
       dispatch(
         playTrackAndQueue({
           contextTracks: tracks,
@@ -101,8 +193,8 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
   ]);
 
   /**
-   * Фильтрация треков по поисковому запросу
-   * Поиск осуществляется по названию трека, артисту и альбому
+   * Filters tracks based on search query
+   * Searches through track name, artist name, and album name
    */
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -120,14 +212,14 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
   }, [tracks, searchQuery]);
 
   /**
-   * Очищает поисковый запрос
+   * Clears the search query
    */
   const clearSearch = useCallback(() => {
     setSearchQuery("");
   }, []);
 
   /**
-   * Рендерит кнопку воспроизведения с правильной иконкой
+   * Renders the appropriate play button icon based on current state
    */
   const renderPlayButton = () => {
     if (isLoading) {
@@ -158,29 +250,65 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
     );
   };
 
+  /**
+   * Renders the main content based on loading and data state
+   */
+  const renderContent = () => {
+    if (isLoading) {
+      return <TracksListSkeleton />;
+    }
+
+    if (filteredTracks.length > 0) {
+      return filteredTracks.map((track, index) => (
+        <TrackTemplate
+          key={track._id || index}
+          track={track}
+          index={index}
+          isLoading={false}
+          allTracks={filteredTracks}
+        />
+      ));
+    }
+
+    // Empty state
+    return (
+      <div className="flex flex-col items-center justify-center h-40 text-white/60">
+        <SearchOutlined className="text-3xl md:text-4xl mb-2" />
+        <p className="text-base md:text-lg font-medium">No tracks found</p>
+        <p className="text-xs md:text-sm mt-1">
+          Try changing your search query
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg md:rounded-xl shadow-2xl w-full h-full flex flex-col">
       {/* Control Panel */}
       <div className="pt-2 md:pt-3 px-2 md:px-3 flex-shrink-0">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 md:mb-5 px-2 md:px-3 gap-3 md:gap-4">
-          {/* Left side - Play controls */}
+          {/* Left side - Playback controls */}
           <div className="flex items-center gap-2 md:gap-4 order-2 md:order-1">
-            {/* Smart Play Button */}
+            {/* Smart Play/Pause Button */}
             <button
               className={`bg-white/40 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200 ${
                 window.innerWidth < 768 ? "w-12 h-12" : "w-[65px] h-[65px]"
               }`}
               onClick={handlePlaylistPlayPause}
               disabled={isLoading}
+              aria-label={
+                isPlaylistPlaying ? "Pause playlist" : "Play playlist"
+              }
             >
               {renderPlayButton()}
             </button>
 
-            {/* Shuffle Button */}
+            {/* Shuffle Toggle Button */}
             <button
               onClick={handleShuffle}
               className="cursor-pointer hover:scale-110 transition-all duration-200"
               disabled={isLoading}
+              aria-label={shuffle ? "Disable shuffle" : "Enable shuffle"}
             >
               <SwapOutlined
                 style={{
@@ -191,7 +319,7 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
             </button>
           </div>
 
-          {/* Right side - Search */}
+          {/* Right side - Search functionality */}
           <div className="relative order-1 md:order-2 w-full md:w-auto">
             <div className="relative flex items-center">
               <SearchOutlined
@@ -210,30 +338,32 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="
-    bg-white/8
-    md:bg-white/10 
-    md:backdrop-blur-md 
-    border 
-    border-white/20 
-    rounded-full 
-    px-8 md:px-10 
-    py-2 
-    text-white 
-    placeholder-white/40 
-    focus:outline-none 
-    focus:border-white/40 
-    focus:bg-white/12
-    md:focus:bg-white/15
-    transition-all 
-    duration-200
-    w-full md:w-[300px] 
-    text-sm md:text-base
-  "
+                  bg-white/8
+                  md:bg-white/10 
+                  md:backdrop-blur-md 
+                  border 
+                  border-white/20 
+                  rounded-full 
+                  px-8 md:px-10 
+                  py-2 
+                  text-white 
+                  placeholder-white/40 
+                  focus:outline-none 
+                  focus:border-white/40 
+                  focus:bg-white/12
+                  md:focus:bg-white/15
+                  transition-all 
+                  duration-200
+                  w-full md:w-[300px] 
+                  text-sm md:text-base
+                "
+                aria-label="Search tracks"
               />
               {searchQuery && (
                 <button
                   onClick={clearSearch}
                   className="absolute right-3 text-white/40 hover:text-white/60 transition-colors text-lg md:text-xl"
+                  aria-label="Clear search"
                 >
                   ×
                 </button>
@@ -249,11 +379,20 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
             <h1 className="text-white/50 text-xl">Title</h1>
             <h1 className="text-white/50 text-xl text-center">Album</h1>
             <h1 className="text-white/50 text-xl text-center">Date added</h1>
-            <div className="text-white/50 text-xl text-center"></div>
-            <div className="text-white/50 text-xl text-center">
+            <div
+              className="text-white/50 text-xl text-center"
+              aria-label="Like status"
+            ></div>
+            <div
+              className="text-white/50 text-xl text-center"
+              aria-label="Duration"
+            >
               <ClockCircleOutlined />
             </div>
-            <div className="text-white/50 text-xl text-center"></div>
+            <div
+              className="text-white/50 text-xl text-center"
+              aria-label="More options"
+            ></div>
           </div>
           <div className="h-[2px] w-full bg-white/20"></div>
         </div>
@@ -278,28 +417,7 @@ const MainMenu: FC<MainMenuProps> = ({ tracks, isLoading = false }) => {
               "rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)",
           }}
         >
-          {filteredTracks.length > 0 ? (
-            filteredTracks.map((track, index) => (
-              <TrackTemplate
-                key={track._id || index}
-                track={track}
-                index={index}
-                isLoading={isLoading}
-                allTracks={filteredTracks}
-              />
-            ))
-          ) : (
-            /* Empty State */
-            <div className="flex flex-col items-center justify-center h-40 text-white/60">
-              <SearchOutlined className="text-3xl md:text-4xl mb-2" />
-              <p className="text-base md:text-lg font-medium">
-                No tracks found
-              </p>
-              <p className="text-xs md:text-sm mt-1">
-                Try changing your search query
-              </p>
-            </div>
-          )}
+          {renderContent()}
         </div>
       </div>
     </div>

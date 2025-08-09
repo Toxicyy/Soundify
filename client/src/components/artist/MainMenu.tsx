@@ -79,7 +79,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
         <div className="flex items-center gap-4 order-2 sm:order-1">
           {/* Play all button */}
           {isLoading ? (
-            <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-white/15 via-white/25 to-white/10 backdrop-blur-md border border-white/25 relative overflow-hidden">
+            <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-white/15 via-white/25 to-white/10 border border-white/25 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
             </div>
           ) : (
@@ -98,7 +98,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
 
           {/* Shuffle button */}
           {isLoading ? (
-            <div className="w-[42px] h-[42px] bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden">
+            <div className="w-[42px] h-[42px] bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-lg relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
           ) : (
@@ -119,7 +119,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
 
           {/* Follow button */}
           {isLoading ? (
-            <div className="h-10 w-28 sm:w-32 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
+            <div className="h-10 w-28 sm:w-32 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-full relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
             </div>
           ) : (
@@ -142,7 +142,7 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
   );
 
   return (
-    <main className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl shadow-2xl w-full h-full flex flex-col">
+    <main className="bg-white/10 border border-white/20 rounded-3xl shadow-2xl w-full h-full flex flex-col">
       {renderControlPanel()}
 
       {/* Tracks section with constrained height */}

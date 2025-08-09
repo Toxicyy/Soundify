@@ -258,7 +258,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   );
 
   return (
-    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
+    <div className="bg-white/10 border border-white/20 rounded-2xl p-6">
       <h2 className="text-xl font-semibold text-white mb-6">
         {isEditing ? "Manage Tracks" : "Playlist Tracks"}
       </h2>

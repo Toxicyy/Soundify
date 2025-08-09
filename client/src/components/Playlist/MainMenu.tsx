@@ -210,7 +210,7 @@ const MainMenu: FC<MainMenuProps> = ({
     if (isEditable || !playlist) return null;
 
     return (
-      <div className="px-6 py-3 mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg backdrop-blur-sm">
+      <div className="px-6 py-3 mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-blue-400/20 rounded-full flex items-center justify-center">
             <svg

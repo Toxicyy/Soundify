@@ -19,7 +19,7 @@ const SingleHeader: FC<SingleHeaderProps> = ({ track, isLoading }) => {
   // Generate subtitle with artist and duration information
   const subtitle =
     !isLoading && track.artist ? (
-      <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-white text-base sm:text-lg">
           {typeof track.artist === "string" ? track.artist : track.artist.name}
         </span>

@@ -2,7 +2,6 @@ import SearchInput from "./components/SearchInput";
 import UserIcon from "./components/UserIcon";
 import SettingsMenu from "./components/SettingsMenu";
 import userAvatar from "../../../images/User/Anonym.jpg";
-import { MenuOutlined } from "@ant-design/icons";
 import PlaylistModule from "./components/PlaylistModule";
 import ArtistModule from "./components/ArtistModule";
 import chartImage from "../../../images/chart/global.jpg";
@@ -17,6 +16,7 @@ import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
 import type { Playlist } from "../../../types/Playlist";
 import ChartModule from "./components/ChartModule";
 import { skipToken } from "@reduxjs/toolkit/query/react";
+import AnimatedBurgerMenu from "./components/AnimatedBurgerMenu";
 
 export default function MainMenu() {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
@@ -71,12 +71,12 @@ export default function MainMenu() {
               {/* Settings button for mobile/tablet */}
               {user && (
                 <div className="relative">
-                  <MenuOutlined
-                    style={{ color: "white", fontSize: "24px" }}
-                    className={`cursor-pointer transition-all duration-300 hover:scale-110 ${
-                      isSettingsMenuOpen ? "scale-110 text-blue-400" : ""
-                    }`}
+                  <AnimatedBurgerMenu
+                    isOpen={isSettingsMenuOpen}
                     onClick={toggleSettingsMenu}
+                    size={30}
+                    color="white"
+                    className="transition-transform duration-300"
                   />
                   <SettingsMenu
                     isOpen={isSettingsMenuOpen}
@@ -139,6 +139,7 @@ export default function MainMenu() {
           >
             <PlaylistModule
               playlist={featuredPlaylist ? featuredPlaylist : ({} as Playlist)}
+              isLoading={isLoading}
             />
           </motion.div>
 
@@ -201,13 +202,13 @@ export default function MainMenu() {
             </h1>
 
             <div className="relative px-7">
-              <MenuOutlined
-                style={{ color: "white", fontSize: "28px" }}
-                className={`cursor-pointer transition-all duration-300 hover:scale-110 ${
-                  isSettingsMenuOpen ? "scale-110 text-blue-400" : ""
-                }`}
-                onClick={toggleSettingsMenu}
-              />
+              <AnimatedBurgerMenu
+                    isOpen={isSettingsMenuOpen}
+                    onClick={toggleSettingsMenu}
+                    size={40}
+                    color="white"
+                    className="transition-transform duration-300"
+                  />
               <SettingsMenu
                 isOpen={isSettingsMenuOpen}
                 onClose={closeSettingsMenu}

@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "echo 'Build completed'",
-    "start": "node app.js",
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && node server.js",
     "dev": "cd client && npm run dev"
   },
   "dependencies": {

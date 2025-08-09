@@ -80,8 +80,6 @@ export const SignUpModal: React.FC = () => {
   useEffect(() => {
     const errorCheck = SignUpValid(formData);
     setErrors(errorCheck);
-    // Очищаем API ошибку при изменении полей
-    if (apiError) setApiError("");
   }, [formData, apiError]);
 
   /**

@@ -40,19 +40,25 @@
   max-height: 87vh;
 }
 
+.queue-scroll-simplyfied {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #575757 #181818;
+}
+
 /* Для Chrome, Edge, Safari */
-.queue-scroll::-webkit-scrollbar {
+.queue-scroll::-webkit-scrollbar, .queue-scroll-simplyfied::-webkit-scrollbar {
   width: 10px;
   background: #181818;
   border-radius: 8px;
 }
 
-.queue-scroll::-webkit-scrollbar-thumb {
+.queue-scroll::-webkit-scrollbar-thumb, .queue-scroll-simplyfied::-webkit-scrollbar-thumb {
   background: #575757;
   border-radius: 8px;
 }
 
-.queue-scroll::-webkit-scrollbar-track {
+.queue-scroll::-webkit-scrollbar-track, .queue-scroll-simplyfied::-webkit-scrollbar-track {
   background: #181818;
   border-radius: 8px;
 }

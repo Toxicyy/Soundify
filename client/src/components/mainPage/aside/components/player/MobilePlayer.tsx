@@ -240,13 +240,6 @@ export const MobilePlayer = () => {
             }}
             transition={{ duration: 0.1 }}
           />
-          {/* Glowing dot at progress end */}
-          {progress > 0 && (
-            <motion.div
-              className="absolute top-1/2 w-2 h-2 -translate-y-1/2 bg-white rounded-full shadow-sm shadow-purple-500/40"
-              style={{ left: `${progress}%`, marginLeft: "-4px" }}
-            />
-          )}
         </div>
 
         {/* Main Player Bar */}
@@ -290,7 +283,7 @@ export const MobilePlayer = () => {
 
               <motion.button
                 onClick={handleTogglePlayPause}
-                className="p-2 rounded-full bg-gradient-to-br from-purple-500/90 to-pink-500/90 hover:from-purple-500 hover:to-pink-500 shadow-md backdrop-blur-sm transition-all duration-150"
+                className="p-2 px-3 rounded-full bg-gradient-to-br from-purple-500/90 to-pink-500/90 hover:from-purple-500 hover:to-pink-500 shadow-md backdrop-blur-sm transition-all duration-150"
                 whileTap={{ scale: 0.9 }}
                 whileHover={{ scale: 1.02 }}
               >
@@ -328,7 +321,7 @@ export const MobilePlayer = () => {
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            className="fixed inset-0 xl:hidden z-50 bg-gradient-to-br from-slate-900 via-purple-900/90 to-slate-900 overflow-hidden"
+            className="fixed inset-0 xl:hidden z-50 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

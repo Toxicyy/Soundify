@@ -269,21 +269,21 @@ const NotFound404 = () => {
                 <motion.button
                   onClick={() => navigate("/search")}
                   whileHover={{ scale: 1.02 }}
-                  className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
+                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
                 >
                   Discover Music
                 </motion.button>
                 <motion.button
                   onClick={() => navigate("/artists")}
                   whileHover={{ scale: 1.02 }}
-                  className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
+                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
                 >
                   Browse Artists
                 </motion.button>
                 <motion.button
                   onClick={() => navigate("/playlists")}
                   whileHover={{ scale: 1.02 }}
-                  className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
+                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
                 >
                   Playlists
                 </motion.button>
