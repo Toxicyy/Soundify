@@ -24,7 +24,7 @@ const Header: FC<HeaderProps> = ({ tracks }) => {
   return (
     <>
       {/* Desktop Layout (xl and above) */}
-      <div className="hidden xl:block w-full h-[30vh] mt-12 bg-white/10 p-10 rounded-3xl border border-white/20">
+      <div className="hidden xl:block w-full h-[32vh] mt-12 bg-white/10 p-10 rounded-3xl border border-white/20">
         <div className="flex gap-5 items-end">
           {/* Playlist Cover Image */}
           <img

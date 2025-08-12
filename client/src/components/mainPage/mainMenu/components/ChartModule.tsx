@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { TrophyOutlined, PlayCircleOutlined } from "@ant-design/icons";
@@ -7,10 +7,6 @@ export default function ChartModule({ chartImage }: { chartImage: string }) {
   const [hover, setHover] = useState(false);
   const chartName = "Global chart";
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log(hover)
-  }, [hover]);
 
   // Mobile/Tablet Layout (Spotify-style)
   const MobileTabletLayout = () => (

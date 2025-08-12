@@ -182,8 +182,6 @@ export default function TrackLayout({
     if (index >= menuActions.length) return;
 
     menuActions[index]();
-
-    console.log(`Clicked: ${menuActions[index]} for track: ${track?.name}`);
   };
 
   const handleCloseMenu = () => {

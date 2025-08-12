@@ -79,7 +79,6 @@ export const usePlaylistTrackManager = ({
 
         if (data.success) {
           onTrackAdded?.(track);
-          console.log(`✅ Track "${track.name}" added to playlist`);
         } else {
           throw new Error(data.message || "Failed to add track");
         }
@@ -119,7 +118,6 @@ export const usePlaylistTrackManager = ({
 
         if (data.success) {
           onTrackRemoved?.(trackId);
-          console.log(`✅ Track removed from playlist`);
         } else {
           throw new Error(data.message || "Failed to remove track");
         }
@@ -161,7 +159,6 @@ export const usePlaylistTrackManager = ({
         const data = await response.json();
 
         if (data.success) {
-          console.log(`✅ Track order updated`);
         } else {
           throw new Error(data.message || "Failed to update track order");
         }

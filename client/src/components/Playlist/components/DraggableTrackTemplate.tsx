@@ -15,6 +15,7 @@ import { useFormatTime } from "../../../hooks/useFormatTime";
 import { useLike } from "../../../hooks/useLike";
 import ContextMenu from "../../mainPage/mainMenu/components/ContextMenu";
 import { useNavigate } from "react-router-dom";
+import { useNotification } from "../../../hooks/useNotification";
 
 interface DraggableTrackTemplateProps {
   track: Track;
@@ -57,6 +58,7 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   const [isContextMenuHovered, setIsContextMenuHovered] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
   const ellipsisRef = useRef<HTMLDivElement>(null);
+  const { showSuccess, showError } = useNotification();
 
   // Computed values
   const isCurrentTrack = currentTrackState.currentTrack?._id === track._id;
@@ -208,12 +210,49 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   };
 
   const handleInfoClick = () => {
-    console.log("Info clicked");
+    if (!track) return;
+    navigate(`/track/${track._id}`);
   };
 
-  const handleShareClick = () => {
-    console.log("Share clicked");
-  };
+  const handleShareClick = useCallback(async () => {
+    try {
+      if (!track) return;
+      const url = `${window.location.origin}/track/${track._id}`;
+
+      // Проверяем поддержку Web Share API (для мобильных устройств)
+      if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+        const artistName =
+          typeof track.artist === "string" ? track.artist : track.artist?.name;
+
+        await navigator.share({
+          title: `${track.name} - ${artistName}`,
+          text: `Listen to "${track.name}" by ${artistName} on Soundify`,
+          url: url,
+        });
+
+        showSuccess("Track shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      }
+    } catch (error) {
+      // Обработка ошибок
+      if (error === "AbortError") {
+        return;
+      }
+
+      console.error("Share failed:", error);
+
+      try {
+        if (!track) return;
+        const url = `${window.location.origin}/track/${track._id}`;
+        await navigator.clipboard.writeText(url);
+        showSuccess("Track link copied to clipboard!");
+      } catch (clipboardError) {
+        showError("Failed to share track. Please copy the URL manually.");
+      }
+    }
+  }, [track, showSuccess, showError]);
   /**
    * Обработка действий контекстного меню
    */

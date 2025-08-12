@@ -86,7 +86,6 @@ export const useArtistTracks = (artistId: string): UseArtistTracksReturn => {
     } catch (error) {
       // Игнорируем AbortError
       if (error instanceof Error && error.name === "AbortError") {
-        console.log("Artist tracks request was cancelled");
         return;
       }
 

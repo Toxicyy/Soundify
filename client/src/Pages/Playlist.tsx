@@ -408,7 +408,6 @@ export default function Playlist() {
 
     if (!needsSync) return;
 
-    console.log("🔄 Syncing tracks with playlist state");
 
     isSyncingRef.current = true;
     lastSyncDataRef.current = currentDataHash;
@@ -465,7 +464,6 @@ export default function Playlist() {
     }
 
     try {
-      console.log("💾 Starting batch playlist save process");
 
       // Show loading notification
       const loadingToast = notification.showLoading(
@@ -485,21 +483,12 @@ export default function Playlist() {
         cover: selectedCoverFile, // Include cover file if selected
       };
 
-      console.log("💾 Saving playlist data:", {
-        hasName: !!updateData.name,
-        hasDescription: !!updateData.description,
-        hasPrivacy: !!updateData.privacy,
-        hasCover: !!selectedCoverFile,
-        coverFileName: selectedCoverFile?.name,
-      });
-
       // Save basic playlist data with cover
       await saveChanges(updateData);
 
       // Save track order if tracks exist
       if (tracksToSave && tracksToSave.length > 0) {
         const trackIds = tracksToSave.map((track) => track._id);
-        console.log("💾 Saving track order:", trackIds.length, "tracks");
 
         if (!id) return;
         const response = await api.playlist.updateTrackOrder(
@@ -512,7 +501,6 @@ export default function Playlist() {
           throw new Error(`Failed to save track order: ${response.status}`);
         }
 
-        console.log("✅ Track order saved successfully");
       }
 
       // Reset unsaved changes flag and cover file
@@ -526,9 +514,8 @@ export default function Playlist() {
       notification.dismiss(loadingToast);
       notification.showSuccess("Playlist saved successfully!");
 
-      console.log("✅ Playlist batch save completed successfully");
     } catch (error) {
-      console.error("❌ Error saving playlist:", error);
+      console.error("Error saving playlist:", error);
 
       const errorMessage =
         error instanceof Error ? error.message : "Failed to save playlist";
@@ -555,7 +542,6 @@ export default function Playlist() {
   const handleRefetch = useCallback(() => {
     if (!id) return;
 
-    console.log("🔄 Refetching playlist data");
     const loadingToast = notification.showLoading(
       "Refreshing playlist data..."
     );
@@ -568,12 +554,11 @@ export default function Playlist() {
 
         notification.dismiss(loadingToast);
         notification.showSuccess("Playlist data refreshed");
-        console.log("✅ Playlist data refreshed");
       })
       .catch((error) => {
         notification.dismiss(loadingToast);
         notification.showError("Failed to refresh playlist data");
-        console.error("❌ Failed to refresh playlist data:", error);
+        console.error("Failed to refresh playlist data:", error);
       });
   }, [id, fetchPlaylist, refetchTracks, notification]);
 
@@ -591,7 +576,6 @@ export default function Playlist() {
       setSelectedCoverFile(null); // Reset selected cover file
       handleRefetch();
       notification.showInfo("All changes have been discarded");
-      console.log("📝 Changes discarded - all unsaved changes reverted");
     }
   }, [hasUnsavedChanges, selectedCoverFile, handleRefetch, notification]);
 

@@ -809,7 +809,6 @@ export const validateBecomeArtist = [
       }
 
       // Проверка что у пользователя еще нет артиста
-      console.log(req.user.id);
       const user = await User.findById(req.user.id);
       if (user.artistProfile) {
         throw new Error("У вас уже есть профиль артиста");

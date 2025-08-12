@@ -135,7 +135,6 @@ const Header: FC<HeaderProps> = ({
       }
 
       setLocalChanges(finalChanges);
-      console.log("Saving changes:", finalChanges);
 
       setIsModalOpen(false);
       resetModal();

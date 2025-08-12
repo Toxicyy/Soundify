@@ -533,7 +533,7 @@ class ChartService {
    */
   async getTrendingTracks(country = "GLOBAL", limit = 50) {
     try {
-      console.log(`🎯 Getting trending tracks for ${country}, limit: ${limit}`);
+      console.log(`Getting trending tracks for ${country}, limit: ${limit}`);
 
       // Простой подход - используем тот же метод что и для global, но с shuffle
       const chart = await ChartCache.find({
@@ -548,7 +548,7 @@ class ChartService {
         .populate("trackSnapshot.artist", "name avatar")
         .lean();
 
-      console.log(`📊 Found ${chart.length} chart entries`);
+      console.log(`Found ${chart.length} chart entries`);
 
       if (chart.length === 0) {
         return [];
@@ -611,7 +611,7 @@ class ChartService {
         })
         .filter((item) => item !== null);
 
-      console.log(`✅ Created ${trending.length} trending tracks`);
+      console.log(`Created ${trending.length} trending tracks`);
 
       // Простая обработка signed URLs без отдельного метода
       const trendingWithUrls = await Promise.all(
@@ -679,7 +679,7 @@ class ChartService {
         })
       );
 
-      console.log(`🎵 Returning ${trendingWithUrls.length} trending tracks`);
+      console.log(`Returning ${trendingWithUrls.length} trending tracks`);
       return trendingWithUrls;
     } catch (error) {
       console.error("❌ Get trending tracks failed:", error);

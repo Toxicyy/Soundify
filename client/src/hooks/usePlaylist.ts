@@ -72,7 +72,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
 
   const updateLocal = useCallback((updates: Partial<Playlist>) => {
     setLocalChanges((prev) => ({ ...prev, ...updates }));
-    console.log("updateLocal called with:", updates);
     setHasUnsavedChanges(true);
   }, []);
 

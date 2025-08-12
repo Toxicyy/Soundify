@@ -128,19 +128,15 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     async (artistId: string, artistName: string) => {
       try {
         setIsSearching(true);
-        console.log("Loading tracks for artist:", artistName, artistId);
 
         const response = await api.artist.getTracks(artistId, { limit: 20 });
 
         if (!response.ok) throw new Error("Failed to fetch artist tracks");
 
         const data = await response.json();
-        console.log("Full API response:", data);
 
         // Попробуем разные пути к данным
         const tracks = data.data?.tracks || data.tracks || data.data || [];
-
-        console.log("Artist tracks loaded:", tracks.length, tracks);
 
         // Update search results to show only these tracks
         setSearchResults({

@@ -54,10 +54,8 @@ export const deleteFileFromB2 = async (fileId) => {
       fileName: fileInfo.data.fileName,
     });
 
-    console.log(`Successfully deleted file: ${fileInfo.data.fileName}`);
     return true;
   } catch (error) {
-    console.error(`Failed to delete file ${fileId}:`, error.message);
     throw new Error(`B2 file deletion failed: ${error.message}`);
   }
 };
@@ -100,7 +98,6 @@ export const deleteFilesFromB2 = async (fileIds, batchSize = 5) => {
               fileName: fileInfo.data.fileName,
             });
 
-            console.log(`Successfully deleted file: ${fileInfo.data.fileName}`);
             return { fileId, fileName: fileInfo.data.fileName };
           } catch (error) {
             console.warn(`Failed to delete file ${fileId}:`, error.message);
@@ -125,9 +122,6 @@ export const deleteFilesFromB2 = async (fileIds, batchSize = 5) => {
       }
     }
 
-    console.log(
-      `Batch deletion completed. Success: ${results.success.length}, Failed: ${results.failed.length}`
-    );
     return results;
   } catch (error) {
     console.error("Batch file deletion failed:", error.message);

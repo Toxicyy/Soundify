@@ -58,7 +58,7 @@ export default function MainMenu() {
             className="w-full flex items-center justify-between gap-3"
           >
             {/* Search Input */}
-            <div className="flex-1 max-w-md">
+            <div className="flex-1 mr-5 max-w-md">
               <SearchInput />
             </div>
 
@@ -94,7 +94,7 @@ export default function MainMenu() {
             initial={{ opacity: 0, y: -300 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
-            className="w-[70%] flex items-center justify-between"
+            className="w-[70%] flex items-center justify-between gap-6"
           >
             <SearchInput />
             {user && (
@@ -180,7 +180,7 @@ export default function MainMenu() {
         {/* User Greeting - Desktop only */}
         {!isFetching && user && (
           <motion.div
-            className="flex items-center justify-between mb-4 relative flex-shrink-0"
+            className="flex items-center justify-between mb-4 relative"
             initial={{ opacity: 1, height: 0, y: -400 }}
             animate={
               !queueOpen
@@ -203,12 +203,12 @@ export default function MainMenu() {
 
             <div className="relative px-7">
               <AnimatedBurgerMenu
-                    isOpen={isSettingsMenuOpen}
-                    onClick={toggleSettingsMenu}
-                    size={40}
-                    color="white"
-                    className="transition-transform duration-300"
-                  />
+                isOpen={isSettingsMenuOpen}
+                onClick={toggleSettingsMenu}
+                size={40}
+                color="white"
+                className="transition-transform duration-300"
+              />
               <SettingsMenu
                 isOpen={isSettingsMenuOpen}
                 onClose={closeSettingsMenu}
@@ -262,17 +262,23 @@ export default function MainMenu() {
         </AnimatePresence>
 
         {/* Queue - Desktop */}
-        <motion.div
-          key="queue"
-          layout
-          initial={{ opacity: 0, y: 1000 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 1000 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="transition-all flex-1 min-h-0"
+        <div
+          className={`transition-all duration-500 ${
+            queueOpen ? "flex-1 h-full" : "h-auto max-h-96"
+          }`}
         >
-          <Queue queueOpen={queueOpen} />
-        </motion.div>
+          <motion.div
+            key="queue"
+            layout
+            initial={{ opacity: 0, y: 1600 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 1600 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="h-full"
+          >
+            <Queue queueOpen={queueOpen} />
+          </motion.div>
+        </div>
       </div>
 
       {/* Mobile/Tablet Queue Overlay - Only render for non-desktop */}

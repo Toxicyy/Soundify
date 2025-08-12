@@ -77,7 +77,6 @@ export const useArtistData = (artistId: string): UseArtistDataReturn => {
     } catch (error) {
       // Игнорируем AbortError
       if (error instanceof Error && error.name === "AbortError") {
-        console.log("Artist request was cancelled");
         return;
       }
 

@@ -3,6 +3,7 @@ import { ApiResponse } from "../utils/responses.js";
 import { catchAsync } from "../utils/helpers.js";
 import { generateSignedUrl, extractFileName } from "../utils/b2SignedUrl.js";
 import Track from "../models/Track.model.js";
+import { config } from "../config/config.js";
 
 /**
  * Track controller handling HTTP requests for track operations
@@ -133,10 +134,8 @@ const handleSegmentRequest = async (req, res, track, segmentName) => {
 
   // Generate signed URL and proxy the content
   const signedUrl = await generateSignedUrl(extractFileName(segmentUrl), 7200);
-  console.log("🔍 SIGNED URL TO FETCH:", signedUrl);
 
   const response = await fetch(signedUrl);
-  console.log("🔍 FETCH RESPONSE STATUS:", response.status);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch segment: ${response.status}`);
@@ -201,8 +200,9 @@ const handlePlaylistRequest = async (req, res, track, trackId) => {
  */
 const updatePlaylistUrls = (playlist, req, trackId) => {
   const lines = playlist.split("\n");
-  const baseUrl = `https://${req.get("host")}/api/tracks/${trackId}`;
-
+  const baseUrl = `http${config.nodeEnv === "production" ? "s" : ""}://${req.get("host")}/api/tracks/${trackId}`;
+  console.log(baseUrl)
+  console.log(config.nodeEnv)
   return lines
     .map((line) => {
       if (line.endsWith(".ts")) {

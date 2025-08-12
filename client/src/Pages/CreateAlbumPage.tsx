@@ -372,7 +372,6 @@ const CreateAlbumPage: React.FC = () => {
         tracks={tracks}
         onSuccess={() => {
           setHasUnsavedChanges(false);
-          console.log("Navigate back to artist studio after success");
         }}
       />
     </div>

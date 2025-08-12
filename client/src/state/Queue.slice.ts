@@ -130,18 +130,8 @@ export const handleTrackEnd = createAsyncThunk(
     const state = getState() as { queue: QueueState };
     const { queue, repeat, currentTrack, history } = state.queue;
 
-    console.log(
-      "Track ended in Redux, repeat mode:",
-      repeat,
-      "Queue length:",
-      queue.length,
-      "History length:",
-      history.length
-    );
-
     // Repeat one track - don't add to history, just restart
     if (repeat === "one") {
-      console.log("Repeating current track with delay");
       dispatch(setIsPlaying(false));
 
       setTimeout(() => {
@@ -153,7 +143,6 @@ export const handleTrackEnd = createAsyncThunk(
 
     // If tracks in queue - move to next (for all repeat modes)
     if (queue.length > 0) {
-      console.log("Playing next track from queue");
       dispatch(playNextTrack());
       return "next_track";
     }
@@ -162,7 +151,6 @@ export const handleTrackEnd = createAsyncThunk(
     if (repeat === "all") {
       // Repeat all mode - restore queue from history
       if (history.length > 0) {
-        console.log("Repeat all: restoring queue from history");
 
         // Add current track to history before restoring
         if (currentTrack) {
@@ -191,7 +179,6 @@ export const handleTrackEnd = createAsyncThunk(
 
       // If no history but current track exists - repeat only current
       if (currentTrack) {
-        console.log("Repeat all: no history, restarting current track");
         dispatch(setIsPlaying(false));
         setTimeout(() => {
           dispatch(setIsPlaying(true));
@@ -201,7 +188,6 @@ export const handleTrackEnd = createAsyncThunk(
     }
 
     // Mode "off" or no tracks to play - stop
-    console.log("No more tracks to play, stopping playback");
     dispatch(setIsPlaying(false));
     return "stop";
   }
@@ -217,18 +203,11 @@ export const playNextTrack = createAsyncThunk(
   "queue/playNextTrack",
   async (_, { dispatch, getState }) => {
     const state = getState() as { queue: QueueState };
-    const { queue, shuffle, repeat, shuffledIndexes, currentTrack } =
+    const { queue, shuffle, shuffledIndexes, currentTrack } =
       state.queue;
-
-    console.log("playNextTrack called:", {
-      queueLength: queue.length,
-      currentTrack: currentTrack?.name,
-      repeat,
-    });
 
     if (queue.length === 0) {
       // No next tracks - delegate to handleTrackEnd
-      console.log("No tracks in queue, delegating to handleTrackEnd");
       dispatch(handleTrackEnd());
       return null;
     }
@@ -252,7 +231,6 @@ export const playNextTrack = createAsyncThunk(
 
     // IMPORTANT: Add current track to history BEFORE switching
     if (currentTrack) {
-      console.log("Adding to history:", currentTrack.name);
       dispatch(addToHistory(currentTrack));
     }
 
@@ -261,7 +239,6 @@ export const playNextTrack = createAsyncThunk(
     dispatch(setCurrentTrack(nextTrack));
     dispatch(setIsPlaying(true));
 
-    console.log("Switched to next track:", nextTrack.name);
     return nextTrack;
   }
 );
@@ -276,18 +253,11 @@ export const playPreviousTrack = createAsyncThunk(
   "queue/playPreviousTrack",
   async (_, { dispatch, getState }) => {
     const state = getState() as { queue: QueueState };
-    const { history, currentTrack, queue } = state.queue;
-
-    console.log("playPreviousTrack called:", {
-      historyLength: history.length,
-      currentTrack: currentTrack?.name,
-      queueLength: queue.length,
-    });
+    const { history, currentTrack } = state.queue;
 
     if (history.length === 0) {
       // No previous tracks - restart current track
       if (currentTrack) {
-        console.log("No history, restarting current track");
         dispatch(setCurrentTrack(currentTrack));
         dispatch(setIsPlaying(true));
       }
@@ -296,12 +266,10 @@ export const playPreviousTrack = createAsyncThunk(
 
     // Take last track from history
     const previousTrack = history[history.length - 1];
-    console.log("Going back to:", previousTrack.name);
 
     // IMPORTANT: Add current track to FRONT of queue (not to history!)
     // This works regardless of whether queue is empty or not
     if (currentTrack) {
-      console.log("Adding current track to front of queue:", currentTrack.name);
       dispatch(addToQueueFirst(currentTrack));
     }
 
@@ -313,7 +281,6 @@ export const playPreviousTrack = createAsyncThunk(
     dispatch(removeFromHistory());
     dispatch(setIsPlaying(true));
 
-    console.log("Successfully moved to previous track:", previousTrack.name);
     return previousTrack;
   }
 );
@@ -383,7 +350,6 @@ export const queueSlice = createSlice({
 
       // Check if track is currently playing
       if (state.currentTrack && state.currentTrack._id === trackToAdd._id) {
-        console.log("Track is currently playing, not adding to queue");
         return;
       }
 
@@ -398,7 +364,6 @@ export const queueSlice = createSlice({
 
       if (!exists && !inRecentHistory) {
         state.queue.unshift(trackToAdd);
-        console.log("Added track to front of queue:", trackToAdd.name);
 
         // Update shuffled indexes if needed
         if (state.shuffle) {
@@ -407,11 +372,6 @@ export const queueSlice = createSlice({
             0
           );
         }
-      } else {
-        console.log(
-          "Track already exists in queue or recent history, skipping:",
-          trackToAdd.name
-        );
       }
     },
 
@@ -424,7 +384,6 @@ export const queueSlice = createSlice({
 
       // Check if track is currently playing
       if (state.currentTrack && state.currentTrack._id === trackToAdd._id) {
-        console.log("Track is currently playing, not adding to queue");
         return;
       }
 
@@ -439,7 +398,6 @@ export const queueSlice = createSlice({
 
       if (!exists && !inRecentHistory) {
         state.queue.push(trackToAdd);
-        console.log("Added track to end of queue:", trackToAdd.name);
 
         // Update shuffled indexes if needed
         if (state.shuffle) {
@@ -448,11 +406,6 @@ export const queueSlice = createSlice({
             0
           );
         }
-      } else {
-        console.log(
-          "Track already exists in queue or recent history, skipping:",
-          trackToAdd.name
-        );
       }
     },
 
@@ -582,10 +535,6 @@ export const queueSlice = createSlice({
       } else {
         state.shuffledIndexes = [];
       }
-
-      console.log(
-        `Set queue with ${state.queue.length} tracks after duplicate filtering`
-      );
     },
 
     /**
@@ -606,12 +555,6 @@ export const queueSlice = createSlice({
       const lastTrack = state.history[state.history.length - 1];
       if (!lastTrack || lastTrack._id !== action.payload._id) {
         state.history.push(action.payload);
-        console.log(
-          "Added to history:",
-          action.payload.name,
-          "Total history:",
-          state.history.length
-        );
       }
 
       // Limit history to 50 tracks
@@ -624,13 +567,7 @@ export const queueSlice = createSlice({
      * Remove last track from history
      */
     removeFromHistory: (state) => {
-      const removed = state.history.pop();
-      console.log(
-        "Removed from history:",
-        removed?.name,
-        "Remaining:",
-        state.history.length
-      );
+      state.history.pop();
     },
 
     /**
@@ -638,7 +575,6 @@ export const queueSlice = createSlice({
      */
     clearHistory: (state) => {
       state.history = [];
-      console.log("History cleared");
     },
 
     /**
@@ -751,7 +687,6 @@ export const queueSlice = createSlice({
 
       // Check if track is currently playing
       if (state.currentTrack && state.currentTrack._id === trackToAdd._id) {
-        console.log("Track is currently playing, not adding to queue");
         return;
       }
 
@@ -766,7 +701,6 @@ export const queueSlice = createSlice({
 
       if (!exists && !inRecentHistory) {
         state.queue.unshift(trackToAdd);
-        console.log("Added track via playNext:", trackToAdd.name);
 
         if (state.shuffle) {
           state.shuffledIndexes = generateShuffledIndexes(
@@ -774,11 +708,6 @@ export const queueSlice = createSlice({
             0
           );
         }
-      } else {
-        console.log(
-          "Track already exists, skipping playNext:",
-          trackToAdd.name
-        );
       }
     },
   },
@@ -822,7 +751,6 @@ function filterDuplicateTracks(
     return true;
   });
 
-  console.log(`Filtered ${tracks.length - deduped.length} duplicate tracks`);
   return deduped;
 }
 

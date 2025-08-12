@@ -258,13 +258,8 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
       notification.showInfo(
         `Changes applied locally${hasFileChange}. Click 'Save Changes' to persist.`
       );
-
-      console.log("✅ Local changes applied:", changes);
-      if (selectedFile) {
-        console.log("✅ Cover file ready for batch save:", selectedFile.name);
-      }
     } catch (error) {
-      console.error("❌ Failed to apply local changes:", error);
+      console.error("Failed to apply local changes:", error);
       notification.showError("Failed to apply changes");
     }
   };

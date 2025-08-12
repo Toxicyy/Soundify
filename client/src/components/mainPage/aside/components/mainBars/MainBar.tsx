@@ -42,17 +42,21 @@ export const MainBar: FC<MainBarProps> = ({
         animate={{ marginRight: "0px" }}
         transition={{ duration: animationDuration, ease: "easeInOut" }}
         className={
-          "flex items-center gap-3 w-[13vw] h-[35px] rounded-lg pl-5 cursor-pointer duration-300 " +
-          (hover || pathname === path && !callback ? "bg-gray-100/70" : "glass")
+          "flex items-center gap-3 w-[13vw] h-[28px] lg:h-[35px] 2xl:h-[35px] rounded-lg pl-4 lg:pl-5 2xl:pl-5 cursor-pointer duration-300 " +
+          (hover || (pathname === path && !callback)
+            ? "bg-gray-100/70"
+            : "glass")
         }
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onClick={callback ? callback : () => {}}
       >
-        <div className="text-lg font-semibold">
+        <div className="text-base lg:text-lg 2xl:text-lg font-semibold">
           {icons[text as keyof typeof icons]}
         </div>
-        <h1 className="font-semibold tracking-wider truncate">{text}</h1>
+        <h1 className="text-sm lg:text-base 2xl:text-base font-semibold tracking-wider truncate">
+          {text}
+        </h1>
       </motion.div>
     </Link>
   );

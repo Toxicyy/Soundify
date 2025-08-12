@@ -125,8 +125,6 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     if (index >= menuActions.length) return;
 
     menuActions[index]();
-
-    console.log(`Clicked: ${menuActions[index]} for track: ${track?.name}`);
   };
 
   const handleCloseMenu = () => {

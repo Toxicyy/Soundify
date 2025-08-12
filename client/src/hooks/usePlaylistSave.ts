@@ -126,18 +126,7 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
       // Add cover file if provided
       if (changes.cover instanceof File) {
         formData.append("cover", changes.cover);
-        console.log("📸 Cover file added to FormData:", changes.cover.name);
       }
-
-      console.log("💾 Saving playlist changes:", {
-        playlistId,
-        hasName: !!changes.name,
-        hasDescription: !!changes.description,
-        hasPrivacy: !!changes.privacy,
-        hasCategory: !!changes.category,
-        hasTags: !!changes.tags,
-        hasCover: !!changes.cover,
-      });
 
       // Make the API request
       const response = await api.playlist.update(playlistId, formData);
@@ -179,7 +168,6 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
         throw new Error(data.message || "Failed to save playlist");
       }
 
-      console.log("✅ Playlist saved successfully");
       return data.data;
     } catch (error) {
       const errorMessage =

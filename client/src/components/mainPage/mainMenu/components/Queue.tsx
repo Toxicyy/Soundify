@@ -29,7 +29,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1280);
     };
-
     checkDesktop();
     window.addEventListener("resize", checkDesktop);
     return () => window.removeEventListener("resize", checkDesktop);
@@ -60,7 +59,53 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     };
   }, [queueOpen, isDesktop]);
 
-  // Desktop version (xl and up) - ORIGINAL CODE
+  useEffect(() => {
+    if (!isDesktop) return;
+
+    const updateQueueHeight = () => {
+      const queueElement = document.querySelector(".queue-main-container");
+      if (queueElement) {
+        const rect = queueElement.getBoundingClientRect();
+
+        // РЕАЛЬНАЯ высота всего сайта
+        const realSiteHeight = Math.max(
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight
+        );
+
+        // Позиция queue относительно начала документа
+        const queueTopFromDocument = rect.top + window.scrollY;
+
+        // ВСЕГДА тянем до низа сайта
+        const heightToBottom = realSiteHeight - queueTopFromDocument - 0; // 10px отступ
+
+        document.documentElement.style.setProperty(
+          "--queue-full-height",
+          `${heightToBottom}px`
+        );
+      }
+    };
+
+    updateQueueHeight();
+
+    window.addEventListener("resize", updateQueueHeight);
+    window.addEventListener("scroll", updateQueueHeight);
+
+    const observer = new MutationObserver(updateQueueHeight);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    return () => {
+      window.removeEventListener("resize", updateQueueHeight);
+      window.removeEventListener("scroll", updateQueueHeight);
+      observer.disconnect();
+    };
+  }, [isDesktop]);
+
+  // Desktop version
   if (isDesktop) {
     return (
       <div className="w-full h-full">
@@ -101,10 +146,11 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
         </div>
 
         <div
-          className="w-full bg-[#262534] pr-5 rounded-tl-[60px] overflow-hidden transition-all duration-500 ease-out"
+          className="queue-main-container w-full bg-[#262534] pr-5 rounded-tl-[60px] overflow-hidden transition-all duration-500 ease-out"
           style={{
-            height: queueOpen ? "85vh" : "42vh",
-            minHeight: "42vh",
+            // ВСЕГДА полная высота до низа страницы
+            height: "var(--queue-full-height, 85vh)",
+            minHeight: "400px",
           }}
         >
           {active === "Queue" ? (
@@ -133,7 +179,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               {/* Next Up Section */}
               {queue.length > 0 && (
                 <>
-                  <div className="flex items-center px-8 py-4 gap-3">
+                  <div className="flex items-center px-8 py-4 gap-3 flex-shrink-0">
                     <h1 className="text-white text-md font-medium tracking-widest">
                       Next Up
                     </h1>
@@ -149,17 +195,12 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                     </span>
                   </div>
 
+                  {/* Список треков - занимает ВСЕ оставшееся место */}
                   <div
-                    className="queue-scroll flex flex-col gap-2 overflow-auto px-1 flex-1"
+                    className="queue-scroll flex flex-col gap-2 overflow-auto px-1 flex-1 min-h-0"
                     style={{
-                      maxHeight: queueOpen
-                        ? currentTrack
-                          ? "70vh"
-                          : "86vh"
-                        : currentTrack
-                        ? "18vh"
-                        : "27.5vh",
-                      transition: "max-height 0.7s cubic-bezier(.4,0,.2,1)",
+                      maxHeight: queueOpen ? "none" : "600px",
+                      transition: "max-height 0.5s ease-out",
                     }}
                   >
                     {queue.map((track, index) => (
@@ -195,7 +236,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               )}
             </div>
           ) : (
-            /* Friend Activity Content - ENHANCED COMING SOON */
+            /* Friend Activity Content */
             <div className="flex flex-col items-center justify-center h-full text-center py-12 px-8">
               <motion.div
                 className="relative mb-6"

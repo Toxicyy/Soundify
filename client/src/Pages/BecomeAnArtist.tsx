@@ -145,7 +145,6 @@ export default function BecomeAnArtist() {
       const response = await api.artist.becomeAnArtist(artistData);
       const data = await response.json();
 
-      console.log("Saving artist data:", artistData);
       if (!data.success) {
         showError("Failed to create artist profile. Please try again.");
       } else {

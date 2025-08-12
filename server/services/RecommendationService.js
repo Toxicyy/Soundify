@@ -97,11 +97,6 @@ class RecommendationService {
       return !excludeIds.has(track._id.toString());
     });
 
-    console.log(
-      `Filtered ${
-        tracks.length - filtered.length
-      } tracks already in queue/history`
-    );
     return filtered;
   }
 

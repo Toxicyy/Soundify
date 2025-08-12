@@ -120,9 +120,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
         });
       }
 
-      console.log(
-        `🔄 Track moved from position ${fromIndex + 1} to ${toIndex + 1}`
-      );
     },
     [tracks, updateLocal, onReorderTracks, isEditable]
   );
@@ -146,7 +143,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
         });
       }
 
-      console.log(`🗑️ Track removed from playlist`);
     },
     [tracks, updateLocal, onRemoveTrack, isEditable]
   );

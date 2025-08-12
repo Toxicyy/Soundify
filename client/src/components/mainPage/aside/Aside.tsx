@@ -23,10 +23,11 @@ export default function Aside() {
 
   return (
     <>
-      {/* Desktop Aside - скрыт на мобильных */}
+      {/* Desktop Aside - адаптивная высота */}
       <div className="hidden xl:flex fixed h-screen flex-col w-[20vw] aside pl-10 pr-10">
         <div className="h-full flex flex-col justify-between">
-          <div className="flex flex-col gap-5 justify-center pt-[7.5vh] items-center">
+          {/* Навигация с адаптивными отступами */}
+          <div className="flex flex-col gap-[2vh] justify-center pt-[5vh] lg:pt-[5vh] 2xl:pt-[5vh] items-center">
             {navigationItems.map((item) => (
               <MainBar
                 key={item.text}
@@ -38,7 +39,7 @@ export default function Aside() {
             ))}
           </div>
 
-          <div className="pb-[2vh]">
+          <div className="pb-[1vh] lg:pb-[2vh] 2xl:pb-[2vh] pt-[2vh]">
             <Player />
           </div>
         </div>

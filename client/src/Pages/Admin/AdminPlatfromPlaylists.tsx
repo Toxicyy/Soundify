@@ -42,7 +42,6 @@ const AdminPlatformPlaylists = () => {
       }
 
       const data = await response.json();
-      console.log("Fetched playlists data:", data);
 
       // Измените эту строку:
       setPlaylists(data.data || []); // Вместо data.data.playlists

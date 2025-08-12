@@ -88,9 +88,8 @@ const MainMenu: FC<MainMenuProps> = ({
         // Show success notification
         notification.showSuccess(`"${track.name}" added to playlist`);
 
-        console.log(`✅ Track "${track.name}" added to playlist locally`);
       } catch (error) {
-        console.error("❌ Error adding track locally:", error);
+        console.error("Error adding track locally:", error);
         notification.showError("Failed to add track to playlist");
       }
     },
@@ -131,9 +130,8 @@ const MainMenu: FC<MainMenuProps> = ({
         const trackName = trackToRemove?.name || "Track";
         notification.showSuccess(`"${trackName}" removed from playlist`);
 
-        console.log(`✅ Track removed from playlist locally`);
       } catch (error) {
-        console.error("❌ Error removing track locally:", error);
+        console.error("Error removing track locally:", error);
         notification.showError("Failed to remove track from playlist");
       }
     },
@@ -170,9 +168,8 @@ const MainMenu: FC<MainMenuProps> = ({
         // Show subtle notification for reordering
         notification.showInfo("Track order updated");
 
-        console.log(`✅ Track order updated locally`);
       } catch (error) {
-        console.error("❌ Error reordering tracks locally:", error);
+        console.error("Error reordering tracks locally:", error);
         notification.showError("Failed to reorder tracks");
       }
     },

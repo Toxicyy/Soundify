@@ -2,7 +2,6 @@ import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
 import type { Track } from "../../../../types/TrackData";
 import type { Artist } from "../../../../types/ArtistData";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface ArtistModuleProps {
@@ -14,9 +13,6 @@ export default function ArtistModule({
   dailyTracks,
   isLoading = false,
 }: ArtistModuleProps) {
-  useEffect(() => {
-    console.log(dailyTracks);
-  }, []);
   const navigate = useNavigate();
 
   return (

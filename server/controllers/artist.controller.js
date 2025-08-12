@@ -118,7 +118,6 @@ export const getPopularArtists = catchAsync(async (req, res) => {
 
 export const becomeArtist = catchAsync(async (req, res) => {
   const userId = req.user.id;
-  console.log(userId)
 
   // Вызываем новый метод сервиса для создания артиста пользователю
   const artist = await ArtistService.createArtistForUser(

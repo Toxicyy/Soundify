@@ -214,13 +214,8 @@ const TrackSearchLocal: React.FC<TrackSearchLocalProps> = ({
       setAddingTrackIds((prev) => new Set(prev).add(track._id));
 
       try {
-        // Добавляем трек локально
         onAddTrackLocal(track);
 
-        // Показываем уведомление
-        console.log(`✅ Track "${track.name}" added to playlist locally`);
-
-        // Небольшая задержка для визуального feedback
         setTimeout(() => {
           setAddingTrackIds((prev) => {
             const newSet = new Set(prev);

@@ -98,10 +98,6 @@ export const LoginForm: React.FC = () => {
 
           // Переводим русские сообщения
           setApiError(getErrorMessage(errorMessage, response.status));
-
-          console.log("Login failed:", data);
-          console.log(data.message)
-          console.log(apiError)
         }
       } catch (error) {
         console.error("Login error:", error);

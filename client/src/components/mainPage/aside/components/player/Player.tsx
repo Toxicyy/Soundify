@@ -300,7 +300,6 @@ export const Player = () => {
         setSkipBlocked(false);
         setBlockMessage("");
         saveSkipData(0);
-        console.log("Skip counter reset for new hour");
       }
     };
 
@@ -403,12 +402,10 @@ export const Player = () => {
 
     // Original next track logic
     if (queue.length === 0 && audioRef.current) {
-      console.log("No queue, handling repeat mode:", repeat);
 
       if (repeat === "one" || repeat === "all") {
         audioRef.current.currentTime = 0;
         setCurrentTime(0);
-        console.log("Repeating current track");
         dispatch(setIsPlaying(true));
       } else {
         isStoppingAtEndRef.current = true;
@@ -424,7 +421,6 @@ export const Player = () => {
         }, 200);
       }
     } else {
-      console.log("Playing next track from queue, queue length:", queue.length);
       dispatch(playNextTrack());
     }
   }, [
@@ -485,7 +481,6 @@ export const Player = () => {
       audioRef.current.currentTime = 0;
       setCurrentTime(0);
     } else {
-      console.log("Attempting to play previous track");
       dispatch(playPreviousTrack());
     }
   }, [dispatch]);
@@ -524,34 +519,22 @@ export const Player = () => {
 
     const trackId = currentTrack.currentTrack._id;
 
-    console.log("initializeTrack called:", {
-      trackId,
-      loadedTrackId: loadedTrackIdRef.current,
-      isInitializing: isInitializingRef.current,
-      isPlaying: currentTrack.isPlaying,
-    });
-
     // Prevent multiple simultaneous initializations
     if (isInitializingRef.current) {
-      console.log("Already initializing, skipping");
       return;
     }
 
     // Skip if same track is already loaded
     if (loadedTrackIdRef.current === trackId) {
-      console.log("Track already loaded, managing playback state");
       // Just update play state if needed
       if (currentTrack.isPlaying && audio.paused) {
-        console.log("Resuming playback for already loaded track");
         audio.play().catch(() => dispatch(setIsPlaying(false)));
       } else if (!currentTrack.isPlaying && !audio.paused) {
-        console.log("Pausing already loaded track");
         audio.pause();
       }
       return;
     }
 
-    console.log("Initializing new track:", trackId);
     isInitializingRef.current = true;
     setIsLoading(true);
     setCurrentTime(0);
@@ -583,13 +566,11 @@ export const Player = () => {
           });
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.log("HLS manifest parsed, track ready");
             setIsLoading(false);
             loadedTrackIdRef.current = trackId;
 
             // Auto-play if needed
             if (currentTrack.isPlaying) {
-              console.log("Auto-playing HLS track");
               audio.play().catch(() => dispatch(setIsPlaying(false)));
             }
           });
@@ -631,12 +612,10 @@ export const Player = () => {
           audio.src = streamUrl.url;
 
           const handleCanPlay = () => {
-            console.log("Safari HLS track ready");
             setIsLoading(false);
             loadedTrackIdRef.current = trackId;
 
             if (currentTrack.isPlaying) {
-              console.log("Auto-playing Safari HLS track");
               audio.play().catch(() => dispatch(setIsPlaying(false)));
             }
           };
@@ -650,12 +629,10 @@ export const Player = () => {
         audio.src = streamUrl.url;
 
         const handleCanPlay = () => {
-          console.log("Regular audio track ready");
           setIsLoading(false);
           loadedTrackIdRef.current = trackId;
 
           if (currentTrack.isPlaying) {
-            console.log("Auto-playing regular track");
             audio.play().catch(() => dispatch(setIsPlaying(false)));
           }
         };
@@ -684,10 +661,6 @@ export const Player = () => {
       currentTrack.currentTrack &&
       currentTrack.currentTrack !== queueState.currentTrack
     ) {
-      console.log(
-        "Syncing currentTrack to queue:",
-        currentTrack.currentTrack.name
-      );
       dispatch(setCurrentTrackInQueue(currentTrack.currentTrack));
     }
   }, [currentTrack.currentTrack, queueState.currentTrack, dispatch]);
@@ -695,24 +668,20 @@ export const Player = () => {
   // Main effect for track changes
   useEffect(() => {
     if (!currentTrack.currentTrack || !streamUrl) {
-      console.log("Track change effect - no track or URL");
       return;
     }
 
     // Skip initialization if we're just stopping at the end
     if (isStoppingAtEndRef.current) {
-      console.log("Skipping track init - stopping at end");
       return;
     }
 
     // Check if this is actually a new track
     const trackId = currentTrack.currentTrack._id;
     if (loadedTrackIdRef.current === trackId && !currentTrack.isPlaying) {
-      console.log("Same track, not playing - skipping init");
       return;
     }
 
-    console.log("Track change detected:", currentTrack.currentTrack.name);
     initializeTrack();
 
     // Cleanup on unmount or track change
@@ -728,32 +697,19 @@ export const Player = () => {
 
     // Skip if we're in the middle of loading
     if (isLoading || isInitializingRef.current) {
-      console.log("Skipping play/pause - loading in progress");
       return;
     }
 
     const currentTrackId = currentTrack.currentTrack?._id;
     const isTrackLoaded = loadedTrackIdRef.current === currentTrackId;
 
-    console.log("Play/pause effect:", {
-      isPlaying: currentTrack.isPlaying,
-      trackLoaded: isTrackLoaded,
-      currentTrackId,
-      loadedTrackId: loadedTrackIdRef.current,
-      isLoading,
-      audioPaused: audio.paused,
-    });
-
     // Only handle play/pause for already loaded tracks
     if (isTrackLoaded && currentTrackId) {
       if (currentTrack.isPlaying && audio.paused) {
-        console.log("Starting playback");
-        audio.play().catch((err) => {
-          console.error("Play error:", err);
+        audio.play().catch((_err) => {
           dispatch(setIsPlaying(false));
         });
       } else if (!currentTrack.isPlaying && !audio.paused) {
-        console.log("Pausing playback");
         audio.pause();
       }
     }
@@ -793,7 +749,6 @@ export const Player = () => {
     if (!audio) return;
 
     const handleEnded = () => {
-      console.log("Track ended, current repeat mode:", repeat);
 
       // Important: Reset time immediately in UI
       setCurrentTime(0);
@@ -820,16 +775,7 @@ export const Player = () => {
     };
 
     const handleLoadStart = () => {
-      console.log("Load start");
       setIsLoading(true);
-    };
-
-    const handleLoadedData = () => {
-      console.log("Loaded data");
-    };
-
-    const handleCanPlay = () => {
-      console.log("Can play");
     };
 
     const handleTimeUpdate = () => {
@@ -839,11 +785,6 @@ export const Player = () => {
     };
 
     const handleWaiting = () => {
-      console.log("Waiting for data - checking state:", {
-        isPlaying: currentTrack.isPlaying,
-        isStoppingAtEnd: isStoppingAtEndRef.current,
-        currentTime: audio.currentTime,
-      });
 
       // Не показываем загрузку если мы остановились в конце
       if (!isStoppingAtEndRef.current && currentTrack.isPlaying) {
@@ -852,7 +793,6 @@ export const Player = () => {
     };
 
     const handlePlaying = () => {
-      console.log("Playing event fired");
       setIsLoading(false);
     };
 
@@ -860,8 +800,6 @@ export const Player = () => {
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
     audio.addEventListener("loadstart", handleLoadStart);
-    audio.addEventListener("loadeddata", handleLoadedData);
-    audio.addEventListener("canplay", handleCanPlay);
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("waiting", handleWaiting);
     audio.addEventListener("playing", handlePlaying);
@@ -871,8 +809,6 @@ export const Player = () => {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
       audio.removeEventListener("loadstart", handleLoadStart);
-      audio.removeEventListener("loadeddata", handleLoadedData);
-      audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("waiting", handleWaiting);
       audio.removeEventListener("playing", handlePlaying);
@@ -1073,7 +1009,7 @@ export const Player = () => {
         initial={{ opacity: 0, marginRight: "1000px" }}
         animate={{ opacity: 1, marginRight: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="w-[13vw] h-[13vw] mb-7 self-center relative"
+        className="w-[13vw] h-[13vw] mb-4 self-center relative"
       >
         <img
           src={currentTrackData.coverUrl}
@@ -1142,7 +1078,7 @@ export const Player = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="w-full max-w-xs mx-auto rounded-xl flex flex-col items-stretch"
       >
-        <div className="flex flex-col w-full mb-2 relative">
+        <div className="flex flex-col w-full relative">
           {/* Background track */}
           <div className="absolute left-0 top-[2px] -translate-y-1/2 w-full h-[3px] rounded-lg bg-white/40 pointer-events-none" />
 

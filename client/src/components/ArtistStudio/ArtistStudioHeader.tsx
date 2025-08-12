@@ -218,8 +218,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
    */
   const handleMobileAction = useCallback(
     (action: string) => {
-      console.log("Mobile action triggered:", action); // Для отладки
-
       switch (action) {
         case "edit":
           toggleModal("edit", true);
@@ -230,8 +228,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
         case "album":
           handleNavigation("/artist-studio/create-album");
           break;
-        default:
-          console.log("Unknown action:", action);
       }
     },
     [toggleModal, handleNavigation]
@@ -397,7 +393,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
               icon={<EllipsisOutlined />}
               text="More"
               onClick={() => {
-                console.log("More button clicked"); // Для отладки
                 toggleModal("mobileMenu");
               }}
               variant="secondary"
@@ -409,7 +404,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
             <MobileActionsMenu
               isOpen={modals.mobileMenu}
               onClose={() => {
-                console.log("Closing mobile menu");
                 toggleModal("mobileMenu", false);
               }}
               onAction={handleMobileAction}

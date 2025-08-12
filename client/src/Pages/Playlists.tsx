@@ -1268,9 +1268,6 @@ export default function Playlists() {
             className="text-center mt-12"
           >
             <button
-              onClick={() => {
-                console.log("Load more playlists");
-              }}
               className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors backdrop-blur-lg border border-white/20"
             >
               Load More Playlists

@@ -38,14 +38,8 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
   const { showError } = useNotification();
 
   useEffect(() => {
-    console.log("Cover effect:", {
-      initialCoverUrl,
-      coverFile,
-      coverPreview,
-    });
 
     if (initialCoverUrl && !coverFile) {
-      console.log("Setting cover preview to:", initialCoverUrl);
       setCoverPreview(initialCoverUrl);
     }
   }, [initialCoverUrl, coverFile]);

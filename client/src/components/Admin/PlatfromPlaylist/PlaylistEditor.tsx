@@ -53,7 +53,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
         } else if (playlist.tracks.length > 0) {
           try {
             const trackIds = playlist.tracks as string[];
-            console.log("Loading tracks by IDs:", trackIds);
             const trackPromises = trackIds.map(async (trackId) => {
               const response = await api.track.getById(trackId);
               if (response.ok) {
@@ -68,7 +67,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
               (track: any) => track !== null
             );
 
-            console.log("Loaded tracks:", validTracks);
             setTracks(validTracks);
           } catch (error) {
             console.error("Error loading tracks:", error);
@@ -123,7 +121,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
           requestData.publish = true;
         }
 
-        console.log("Отправляемые данные:", requestData);
 
         let response;
 

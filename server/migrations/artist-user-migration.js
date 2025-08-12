@@ -15,9 +15,6 @@ const MONGODB_URI =
   config.mongoUri ||
   process.env.MONGO_URI
 
-console.log("Using MongoDB URI:", MONGODB_URI); // Debug line
-console.log(config)
-
 async function runMigration() {
   try {
     console.log("Connecting to MongoDB...");
