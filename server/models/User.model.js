@@ -1,35 +1,41 @@
 import mongoose from "mongoose";
 
+/**
+ * User Model
+ * Manages user accounts with authentication, profile data, and music preferences
+ * Supports user, premium, and admin status levels
+ * Tracks liked content and artist profiles
+ */
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Имя обязательно"],
+      required: [true, "Name is required"],
       trim: true,
-      maxlength: [50, "Имя не может быть длиннее 50 символов"],
+      maxlength: [50, "Name cannot be longer than 50 characters"],
     },
     username: {
       type: String,
-      required: [true, "Username обязателен"],
+      required: [true, "Username is required"],
       unique: true,
       trim: true,
       lowercase: true,
-      maxlength: [30, "Username не может быть длиннее 30 символов"],
+      maxlength: [30, "Username cannot be longer than 30 characters"],
     },
     email: {
       type: String,
-      required: [true, "Email обязателен"],
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        "Введите корректный email",
+        "Please enter a valid email",
       ],
     },
     password: {
       type: String,
-      required: [true, "Пароль обязателен"],
-      minlength: [6, "Пароль должен быть минимум 6 символов"],
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters"],
     },
     avatar: {
       type: String,
@@ -40,7 +46,7 @@ const userSchema = new mongoose.Schema(
       enum: ["USER", "PREMIUM", "ADMIN"],
       default: "USER",
     },
-    // NEW: Artist profile reference
+    // Artist profile reference
     artistProfile: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Artist",

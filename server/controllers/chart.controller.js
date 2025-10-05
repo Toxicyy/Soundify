@@ -99,19 +99,12 @@ export const getTrendingTracks = catchAsync(async (req, res) => {
   const parsedLimit = Math.min(parseInt(limit) || 20);
   const upperCountry = country.toUpperCase();
 
-  console.log(
-    `Trending request: country=${upperCountry}, limit=${parsedLimit}`
-  );
-
   try {
     const trending = await ChartService.getTrendingTracks(
       upperCountry,
       parsedLimit
     );
 
-    console.log(`Trending response: found ${trending.length} tracks`);
-
-    // Если нет трендинговых треков, вернем информативный ответ
     if (trending.length === 0) {
       return res.json(
         ApiResponse.success("No trending tracks available yet", {
@@ -596,15 +589,12 @@ export const createTestData = catchAsync(async (req, res) => {
   }
 
   try {
-    console.log("Creating test data for charts...");
 
-    // 1. Убедимся что у треков есть chartEligible: true
     const tracksUpdated = await Track.updateMany(
       { chartEligible: { $ne: false } },
       { $set: { chartEligible: true } }
     );
 
-    // 2. Получим ВСЕ треки (50 штук)
     const tracks = await Track.find({ chartEligible: true }).limit(50);
 
     if (tracks.length === 0) {
@@ -613,10 +603,8 @@ export const createTestData = catchAsync(async (req, res) => {
         .json(ApiResponse.error("No tracks found. Add some tracks first."));
     }
 
-    // 3. Очистим старые тестовые данные
     await ListenEvent.deleteMany({ userAgent: "Test Browser" });
 
-    // 4. Создадим события прослушивания за последние 5 дней
     const listenEvents = [];
     const countries = ["US", "GB", "DE", "FR", "CA", "AU", "GLOBAL"];
 
@@ -625,7 +613,6 @@ export const createTestData = catchAsync(async (req, res) => {
       date.setDate(date.getDate() - day);
 
       tracks.forEach((track, trackIndex) => {
-        // Создаем более реалистичное распределение для 50 треков
         const baseListens = Math.max(1, 200 - trackIndex * 3 - day * 8);
 
         countries.forEach((country) => {
@@ -655,7 +642,6 @@ export const createTestData = catchAsync(async (req, res) => {
       });
     }
 
-    // 5. Сохраним события
     if (listenEvents.length > 0) {
       await ListenEvent.insertMany(listenEvents);
     }
@@ -666,8 +652,6 @@ export const createTestData = catchAsync(async (req, res) => {
       chartEligibleTracks: tracks.length,
       message: "Test data created. Now generate charts!",
     };
-
-    console.log("Test data created:", result);
 
     res.json(ApiResponse.success("Test data created successfully", result));
   } catch (error) {

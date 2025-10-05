@@ -3,27 +3,36 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import { config } from "../config/config.js";
 
+/**
+ * Service for authentication and user account management
+ * Handles user registration, login, password management, and JWT token generation
+ */
 class AuthService {
+  /**
+   * Register new user
+   * @param {Object} userData - User registration data
+   * @returns {Promise<Object>} Created user without password
+   */
   async registerUser({ email, password, name, username }) {
-    // Проверяем, существует ли пользователь
+    // Check if user exists
     const existingUser = await User.findOne({
       $or: [{ email }, { username }],
     });
 
     if (existingUser) {
       if (existingUser.email === email) {
-        throw new Error("Пользователь с таким email уже существует");
+        throw new Error("User with this email already exists");
       }
       if (existingUser.username === username) {
-        throw new Error("Пользователь с таким username уже существует");
+        throw new Error("User with this username already exists");
       }
     }
 
-    // Хешируем пароль
+    // Hash password
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Создаем пользователя
+    // Create user
     const user = new User({
       name: name.trim(),
       username: username.toLowerCase().trim(),
@@ -33,39 +42,45 @@ class AuthService {
 
     await user.save();
 
-    // Возвращаем пользователя без пароля
+    // Return user without password
     const { password: _, ...userWithoutPassword } = user.toObject();
     return userWithoutPassword;
   }
 
+  /**
+   * Login user
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Promise<Object>} JWT token, expiration time, and user data
+   */
   async loginUser(email, password) {
-    // Находим пользователя
+    // Find user
     const user = await User.findOne({
       email: email.toLowerCase().trim(),
     });
 
     if (!user) {
-      throw new Error("Неверный email или пароль");
+      throw new Error("Invalid email or password");
     }
 
-    // Проверяем пароль
+    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new Error("Неверный email или пароль");
+      throw new Error("Invalid email or password");
     }
 
-    // Создаем JWT токен
+    // Create JWT token
     const token = jwt.sign(
       { id: user._id, email: user.email },
       config.jwtSecret,
       { expiresIn: config.jwtExpire }
     );
 
-    // Вычисляем время истечения токена
+    // Calculate token expiration time
     const expiresIn = config.jwtExpire;
     const expirationTime = new Date();
 
-    // Парсим время истечения (например, '7d' -> 7 дней)
+    // Parse expiration time (e.g. '7d' -> 7 days)
     if (expiresIn.endsWith("d")) {
       const days = parseInt(expiresIn.slice(0, -1));
       expirationTime.setDate(expirationTime.getDate() + days);
@@ -74,7 +89,7 @@ class AuthService {
       expirationTime.setHours(expirationTime.getHours() + hours);
     }
 
-    // Возвращаем данные без пароля
+    // Return data without password
     const { password: _, ...userWithoutPassword } = user.toObject();
 
     return {

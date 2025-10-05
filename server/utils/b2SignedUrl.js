@@ -1,7 +1,6 @@
 import B2 from "backblaze-b2";
 import { config } from "../config/config.js";
 
-// Инициализация B2 клиента
 const b2 = new B2({
   applicationKeyId: config.b2.accountId,
   applicationKey: config.b2.secretKey,
@@ -10,7 +9,6 @@ const b2 = new B2({
 let authData = null;
 let authExpiry = null;
 
-// Функция для авторизации (с кешированием)
 const ensureAuthorized = async () => {
   if (!authData || (authExpiry && Date.now() > authExpiry)) {
     try {
@@ -25,7 +23,6 @@ const ensureAuthorized = async () => {
   return authData;
 };
 
-// Генерация подписанного URL для скачивания
 export const generateSignedUrl = async (fileName, durationInSeconds = 3600) => {
   try {
     await ensureAuthorized();
@@ -49,7 +46,6 @@ export const generateSignedUrl = async (fileName, durationInSeconds = 3600) => {
   }
 };
 
-// Альтернативный способ через getFileInfo + подписанный URL
 export const generateSignedUrlV2 = async (
   fileName,
   durationInSeconds = 3600
@@ -57,12 +53,6 @@ export const generateSignedUrlV2 = async (
   try {
     await ensureAuthorized();
 
-    // Получаем информацию о файле
-    const fileInfo = await b2.getFileInfo({
-      fileId: fileName, // Если у вас есть fileId
-    });
-
-    // Создаем подписанный URL
     const authToken = await b2.getDownloadAuthorization({
       bucketId: config.b2.bucketId,
       fileNamePrefix: fileName,
@@ -78,12 +68,9 @@ export const generateSignedUrlV2 = async (
   }
 };
 
-// Извлекает имя файла из полного URL
 export const extractFileName = (fullUrl) => {
   if (!fullUrl) return null;
 
-  // Из https://f003.backblazeb2.com/file/SoundifyPet/artistAvatars/filename.jpg
-  // Получаем artistAvatars/filename.jpg
   const parts = fullUrl.split("/file/SoundifyPet/");
   return parts.length > 1 ? parts[1] : null;
 };

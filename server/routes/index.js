@@ -18,17 +18,17 @@ import recomendationRoutes from "./recommendation.routes.js";
 const router = express.Router();
 
 // Feature-specific route modules
-router.use("/auth", authRoutes);                   // Authentication & user management
-router.use("/tracks", trackRoutes);                // Track management & streaming
-router.use("/playlists", playlistRoutes);          // Playlist operations
-router.use("/artists", artistRoutes);              // Artist management & discovery
-router.use("/users", userRoutes);
-router.use("/albums" , albumRoutes);
-router.use("/search", globalSearchRoutes);
-router.use('/charts', chartRoutes);
-router.use("/albums/batch", batchRoutes);
-router.use("/analytics", analyticsRoutes);
-router.use("/recommendations", recomendationRoutes);
+router.use("/auth", authRoutes);                      // Authentication & user management
+router.use("/tracks", trackRoutes);                   // Track management & streaming
+router.use("/playlists", playlistRoutes);             // Playlist operations
+router.use("/artists", artistRoutes);                 // Artist management & discovery
+router.use("/users", userRoutes);                     // User management
+router.use("/albums" , albumRoutes);                  // Album management
+router.use("/search", globalSearchRoutes);            // Global search
+router.use('/charts', chartRoutes);                   // Chart endpoints
+router.use("/albums/batch", batchRoutes);             // Batch album creation
+router.use("/analytics", analyticsRoutes);            // Analytics
+router.use("/recommendations", recomendationRoutes);  // Recommendations
 
 // API health check endpoint
 router.get("/", (req, res) => {

@@ -26,7 +26,7 @@ class TrackService {
   async verifySystemRequirements() {
     try {
       await checkFFmpegAvailability();
-      const b2Available = await checkB2Connection();
+      await checkB2Connection();
       return true; // FFmpeg is primary requirement
     } catch (error) {
       console.error("System requirements check failed:", error.message);
@@ -628,7 +628,6 @@ class TrackService {
         throw new Error("Track not found");
       }
 
-      // Handle album field - если это ObjectId, populate данные альбома
       let trackObj = track.toObject();
 
       if (trackObj.album && mongoose.Types.ObjectId.isValid(trackObj.album)) {
@@ -639,7 +638,6 @@ class TrackService {
           trackObj.album = albumData;
         }
       }
-      // Если album = "single", оставляем как есть
 
       // Add signed URLs
       const trackWithSignedUrls = await this.addSignedUrlsToTracks(trackObj);

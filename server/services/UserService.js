@@ -1,6 +1,5 @@
 import User from "../models/User.model.js";
 import Artist from "../models/Artist.model.js";
-import Playlist from "../models/Playlist.model.js";
 import Album from "../models/Album.model.js";
 import TrackService from "./TrackService.js";
 import ArtistService from "./ArtistService.js";
@@ -219,27 +218,22 @@ class UserService {
         },
       });
 
-      // Найти все валидные album ID
       const validAlbumIds = user.likedSongs
         .map((track) => track.album)
         .filter((album) => mongoose.Types.ObjectId.isValid(album));
 
-      // Получить данные альбомов одним запросом
       const albums = await Album.find({ _id: { $in: validAlbumIds } }).select(
         "_id name coverUrl"
       );
 
-      // Создать Map для быстрого поиска
       const albumsMap = new Map(
         albums.map((album) => [album._id.toString(), album])
       );
 
-      // Заполнить данные альбомов
       user.likedSongs.forEach((track) => {
         if (mongoose.Types.ObjectId.isValid(track.album)) {
           track.album = albumsMap.get(track.album.toString()) || track.album;
         }
-        // Если album = "single", он остается строкой
       });
 
       if (!user) {
@@ -418,9 +412,9 @@ class UserService {
         const uploadResult = await uploadToB2(avatarFile, "userAvatars");
 
         if (typeof uploadResult === "string") {
-          updateData.avatar = uploadResult; // старый формат
+          updateData.avatar = uploadResult;
         } else {
-          updateData.avatar = uploadResult.url; // новый формат
+          updateData.avatar = uploadResult.url;
           updateData.avatarFileId = uploadResult.fileId;
         }
       }

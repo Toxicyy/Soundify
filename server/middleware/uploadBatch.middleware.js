@@ -1,12 +1,14 @@
 import multer from "multer";
 import { UPLOAD_LIMITS } from "../config/constants.js";
 
+/**
+ * Batch Upload Middleware
+ * Handles multiple file uploads for batch album creation
+ * Supports up to 50 tracks with audio and cover files plus album cover
+ */
+
 const storage = multer.memoryStorage();
 
-/**
- * Multer configuration for batch album uploads
- * Handles up to 50 tracks with audio and cover files plus album cover
- */
 const batchUpload = multer({
   storage: storage,
   limits: {
@@ -24,7 +26,7 @@ const batchUpload = multer({
       if (UPLOAD_LIMITS.imageFormats.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(new Error("Неподдерживаемый формат обложки альбома"), false);
+        cb(new Error("Unsupported album cover format"), false);
       }
       return;
     }
@@ -34,10 +36,7 @@ const batchUpload = multer({
       if (UPLOAD_LIMITS.audioFormats.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(
-          new Error(`Неподдерживаемый формат аудио файла: ${fieldName}`),
-          false
-        );
+        cb(new Error(`Unsupported audio file format: ${fieldName}`), false);
       }
       return;
     }
@@ -47,15 +46,12 @@ const batchUpload = multer({
       if (UPLOAD_LIMITS.imageFormats.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(
-          new Error(`Неподдерживаемый формат обложки трека: ${fieldName}`),
-          false
-        );
+        cb(new Error(`Unsupported track cover format: ${fieldName}`), false);
       }
       return;
     }
 
-    cb(new Error(`Неизвестное поле файла: ${fieldName}`), false);
+    cb(new Error(`Unknown file field: ${fieldName}`), false);
   },
 });
 
@@ -83,33 +79,33 @@ export const uploadBatchAlbum = (req, res, next) => {
           case "LIMIT_FILE_SIZE":
             return res.status(400).json({
               success: false,
-              error: "Размер файла превышает лимит",
-              details: `Максимальный размер файла: ${
+              error: "File size exceeds limit",
+              details: `Maximum file size: ${
                 UPLOAD_LIMITS.fileSize / (1024 * 1024)
               }MB`,
             });
           case "LIMIT_FILE_COUNT":
             return res.status(400).json({
               success: false,
-              error: "Превышено количество файлов",
+              error: "File count exceeded",
               details:
-                "Максимум 101 файл (1 обложка альбома + 50 треков * 2 файла)",
+                "Maximum 101 files (1 album cover + 50 tracks * 2 files)",
             });
           case "LIMIT_FIELD_COUNT":
             return res.status(400).json({
               success: false,
-              error: "Превышено количество полей",
+              error: "Field count exceeded",
             });
           case "LIMIT_UNEXPECTED_FILE":
             return res.status(400).json({
               success: false,
-              error: "Неожиданный файл",
+              error: "Unexpected file",
               details: err.field,
             });
           default:
             return res.status(400).json({
               success: false,
-              error: "Ошибка загрузки файлов",
+              error: "File upload error",
               details: err.message,
             });
         }
@@ -128,8 +124,8 @@ export const uploadBatchAlbum = (req, res, next) => {
     if (totalSize > maxTotalSize) {
       return res.status(400).json({
         success: false,
-        error: "Общий размер запроса превышает лимит",
-        details: `Максимальный размер: 500MB, получено: ${Math.round(
+        error: "Total request size exceeds limit",
+        details: `Maximum size: 500MB, received: ${Math.round(
           totalSize / (1024 * 1024)
         )}MB`,
       });
@@ -141,6 +137,8 @@ export const uploadBatchAlbum = (req, res, next) => {
 
 /**
  * Calculate total request size including files and body
+ * @param {Object} req - Express request object
+ * @returns {number} Total size in bytes
  */
 const calculateTotalRequestSize = (req) => {
   let totalSize = 0;
@@ -167,12 +165,13 @@ const calculateTotalRequestSize = (req) => {
 
 /**
  * Validate uploaded file structure and create track indices
+ * Ensures all required files are present for each track
  */
 export const validateBatchUploadStructure = (req, res, next) => {
   if (!req.files) {
     return res.status(400).json({
       success: false,
-      error: "Файлы не найдены",
+      error: "No files found",
     });
   }
 
@@ -181,7 +180,7 @@ export const validateBatchUploadStructure = (req, res, next) => {
 
   // Validate album cover
   if (!files.albumCover || !files.albumCover[0]) {
-    errors.push("Обложка альбома обязательна");
+    errors.push("Album cover is required");
   }
 
   // Count tracks and validate structure
@@ -196,11 +195,11 @@ export const validateBatchUploadStructure = (req, res, next) => {
   const trackCount = trackIndices.size;
 
   if (trackCount === 0) {
-    errors.push("Необходимо загрузить хотя бы один трек");
+    errors.push("At least one track must be uploaded");
   }
 
   if (trackCount > 50) {
-    errors.push("Максимальное количество треков: 50");
+    errors.push("Maximum number of tracks: 50");
   }
 
   // Validate each track has both audio and cover
@@ -209,18 +208,18 @@ export const validateBatchUploadStructure = (req, res, next) => {
     const coverField = `tracks[${index}][cover]`;
 
     if (!files[audioField] || !files[audioField][0]) {
-      errors.push(`Аудио файл для трека ${index + 1} отсутствует`);
+      errors.push(`Audio file for track ${index + 1} is missing`);
     }
 
     if (!files[coverField] || !files[coverField][0]) {
-      errors.push(`Обложка для трека ${index + 1} отсутствует`);
+      errors.push(`Cover for track ${index + 1} is missing`);
     }
   });
 
   if (errors.length > 0) {
     return res.status(400).json({
       success: false,
-      error: "Ошибки структуры файлов",
+      error: "File structure errors",
       details: errors,
     });
   }

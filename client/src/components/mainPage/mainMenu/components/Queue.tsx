@@ -24,7 +24,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     (state: AppState) => state.currentTrack
   );
 
-  // Check if desktop
   useEffect(() => {
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1280);
@@ -34,19 +33,16 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
 
-  // Close queue function
   const closeQueue = () => {
     dispatch(setQueueOpen(false));
   };
 
-  // Handle swipe to close (mobile)
   const handleDragEnd = (_event: any, info: PanInfo) => {
     if (info.offset.x > 100 || info.velocity.x > 500) {
       closeQueue();
     }
   };
 
-  // Prevent body scroll when queue is open on mobile
   useEffect(() => {
     if (queueOpen && !isDesktop) {
       document.body.style.overflow = "hidden";
@@ -67,17 +63,14 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
       if (queueElement) {
         const rect = queueElement.getBoundingClientRect();
 
-        // РЕАЛЬНАЯ высота всего сайта
         const realSiteHeight = Math.max(
           document.body.scrollHeight,
           document.documentElement.scrollHeight
         );
 
-        // Позиция queue относительно начала документа
         const queueTopFromDocument = rect.top + window.scrollY;
 
-        // ВСЕГДА тянем до низа сайта
-        const heightToBottom = realSiteHeight - queueTopFromDocument - 0; // 10px отступ
+        const heightToBottom = realSiteHeight - queueTopFromDocument;
 
         document.documentElement.style.setProperty(
           "--queue-full-height",
@@ -105,7 +98,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     };
   }, [isDesktop]);
 
-  // Desktop version
   if (isDesktop) {
     return (
       <div className="w-full h-full">
@@ -146,16 +138,14 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
         </div>
 
         <div
-          className="queue-main-container w-full bg-[#262534] pr-5 rounded-tl-[60px] overflow-hidden transition-all duration-500 ease-out"
+          className="queue-main-container w-full bg-[#262534] pr-5 rounded-tl-[60px] overflow-hidden"
           style={{
-            // ВСЕГДА полная высота до низа страницы
             height: "var(--queue-full-height, 85vh)",
             minHeight: "400px",
           }}
         >
           {active === "Queue" ? (
             <div className="h-full flex flex-col">
-              {/* Playing Now Section */}
               {currentTrack && (
                 <div className="flex-shrink-0">
                   <div className="flex items-center px-8 py-6 gap-3">
@@ -176,7 +166,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                 </div>
               )}
 
-              {/* Next Up Section */}
               {queue.length > 0 && (
                 <>
                   <div className="flex items-center px-8 py-4 gap-3 flex-shrink-0">
@@ -195,14 +184,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                     </span>
                   </div>
 
-                  {/* Список треков - занимает ВСЕ оставшееся место */}
-                  <div
-                    className="queue-scroll flex flex-col gap-2 overflow-auto px-1 flex-1 min-h-0"
-                    style={{
-                      maxHeight: queueOpen ? "none" : "600px",
-                      transition: "max-height 0.5s ease-out",
-                    }}
-                  >
+                  <div className="queue-scroll flex flex-col gap-2 overflow-auto px-1 flex-1 min-h-0">
                     {queue.map((track, index) => (
                       <QueueTemplate
                         key={`${track._id}-${index}`}
@@ -216,7 +198,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                 </>
               )}
 
-              {/* Empty State */}
               {!currentTrack && queue.length === 0 && (
                 <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
                   <CustomerServiceOutlined
@@ -236,7 +217,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               )}
             </div>
           ) : (
-            /* Friend Activity Content */
             <div className="flex flex-col items-center justify-center h-full text-center py-12 px-8">
               <motion.div
                 className="relative mb-6"
@@ -275,7 +255,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               </h2>
               <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl p-4 mb-4 border border-purple-500/30">
                 <p className="text-purple-200 text-sm font-medium mb-1">
-                  🎵 Coming Soon!
+                  Coming Soon!
                 </p>
                 <p className="text-white/60 text-xs">
                   Connect with friends and discover music together
@@ -283,9 +263,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               </div>
 
               <div className="space-y-2 text-white/50 text-xs">
-                <p>• See what your friends are listening to</p>
-                <p>• Share your favorite tracks</p>
-                <p>• Discover new music together</p>
+                <p>See what your friends are listening to</p>
+                <p>Share your favorite tracks</p>
+                <p>Discover new music together</p>
               </div>
             </div>
           )}
@@ -294,12 +274,10 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     );
   }
 
-  // Mobile/Tablet overlay version (under xl) - FIXED VERSION
   return (
     <AnimatePresence>
       {queueOpen && (
         <>
-          {/* Backdrop for tablet only */}
           {!isDesktop && window.innerWidth >= 768 && (
             <motion.div
               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
@@ -310,12 +288,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             />
           )}
 
-          {/* Mobile/Tablet Queue Panel */}
           <motion.div
             className={`fixed z-50 flex flex-col ${
-              window.innerWidth < 768
-                ? "inset-0" // Mobile: full screen
-                : "inset-y-0 right-0 w-[60%]" // Tablet: 40% width
+              window.innerWidth < 768 ? "inset-0" : "inset-y-0 right-0 w-[60%]"
             }`}
             initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -331,15 +306,12 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
           >
-            {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/90 to-[#0f0f23]/95 backdrop-blur-xl" />
 
-            {/* Drag indicator for mobile */}
             {window.innerWidth < 768 && (
               <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-12 h-1 bg-white/30 rounded-full" />
             )}
 
-            {/* Header */}
             <div className="relative flex items-center justify-between p-4 md:p-6 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <motion.div
@@ -378,7 +350,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               </motion.button>
             </div>
 
-            {/* Tab selector */}
             <div className="relative flex bg-white/5 m-4 rounded-2xl p-1">
               <motion.div
                 className="absolute top-1 bottom-1 bg-[#5cec8c]/20 rounded-xl border border-[#5cec8c]/30"
@@ -414,11 +385,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               </button>
             </div>
 
-            {/* Content */}
             <div className="relative flex-1">
               {active === "Queue" ? (
                 <div className="p-4">
-                  {/* Playing Now Section */}
                   {currentTrack && (
                     <div className="flex-shrink-0 mb-4">
                       <div className="flex items-center py-3 gap-3 border-b border-white/10">
@@ -435,7 +404,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                     </div>
                   )}
 
-                  {/* Next Up Section */}
                   {queue.length > 0 ? (
                     <div className="flex-1 flex flex-col">
                       <div className="flex items-center py-3 gap-3 border-b border-white/10">
@@ -470,7 +438,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                       </div>
                     </div>
                   ) : (
-                    /* Empty Queue State */
                     !currentTrack && (
                       <div className="flex flex-col items-center justify-center flex-1 text-center">
                         <motion.div
@@ -496,14 +463,13 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                         </p>
                         <div className="bg-[#5cec8c]/10 rounded-lg p-3 border border-[#5cec8c]/20">
                           <p className="text-[#5cec8c] text-xs">
-                            💡 Tip: Tracks you play will appear here in order
+                            Tip: Tracks you play will appear here in order
                           </p>
                         </div>
                       </div>
                     )
                   )}
 
-                  {/* Only current track, no queue */}
                   {currentTrack && queue.length === 0 && (
                     <div className="flex flex-col items-center justify-center flex-1 text-center mt-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-yellow-500/20 flex items-center justify-center mb-3">
@@ -521,7 +487,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                   )}
                 </div>
               ) : (
-                /* Friend Activity Content */
                 <div className="h-full p-4 flex flex-col items-center justify-center text-center">
                   <motion.div
                     className="relative mb-6"
@@ -540,7 +505,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                       />
                     </div>
 
-                    {/* Floating notification badge */}
                     <motion.div
                       className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center"
                       animate={{
@@ -553,10 +517,9 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                         ease: "easeInOut",
                       }}
                     >
-                      <span className="text-black text-xs font-bold">🎵</span>
+                      <span className="text-black text-xs font-bold">!</span>
                     </motion.div>
 
-                    {/* Floating hearts */}
                     {[...Array(3)].map((_, i) => (
                       <motion.div
                         key={i}
@@ -602,7 +565,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                     }}
                   >
                     <p className="text-purple-200 text-sm font-bold mb-1">
-                      🚀 Coming Soon!
+                      Coming Soon!
                     </p>
                     <p className="text-white/70 text-xs">
                       Connect with friends and discover music together
@@ -610,12 +573,11 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
                   </motion.div>
 
                   <div className="space-y-2 text-white/60 text-xs">
-                    <p>🎧 See what your friends are listening to</p>
-                    <p>📱 Share your favorite tracks instantly</p>
-                    <p>🎵 Discover new music together</p>
+                    <p>See what your friends are listening to</p>
+                    <p>Share your favorite tracks instantly</p>
+                    <p>Discover new music together</p>
                   </div>
 
-                  {/* Progress indicator */}
                   <div className="mt-6 w-full max-w-[200px]">
                     <div className="bg-white/10 rounded-full h-2 overflow-hidden">
                       <motion.div

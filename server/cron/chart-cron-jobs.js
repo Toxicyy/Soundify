@@ -178,7 +178,7 @@ class ChartCronJobs {
     const startTime = Date.now();
 
     try {
-      console.log("🏆 [CRON] Starting chart update...");
+      console.log("[CRON] Starting chart update...");
 
       const updateResult = await ChartService.updateAllCharts();
 
@@ -272,7 +272,7 @@ class ChartCronJobs {
       const duration = Date.now() - startTime;
       console.log(`[CRON] Data cleanup completed in ${duration}ms`);
       console.log(
-        `🗑️  [CRON] Cleaned: ${results.oldListenEvents} events, ${results.oldChartCache} cache entries, ${results.orphanedStats} orphaned stats`
+        `[CRON] Cleaned: ${results.oldListenEvents} events, ${results.oldChartCache} cache entries, ${results.orphanedStats} orphaned stats`
       );
     } catch (error) {
       console.error("[CRON] Data cleanup failed:", error);
@@ -356,7 +356,7 @@ class ChartCronJobs {
         });
 
         console.log(
-          `🧹 Cleaned up ${deleteResult.deletedCount} orphaned chart entries`
+          `Cleaned up ${deleteResult.deletedCount} orphaned chart entries`
         );
         return deleteResult.deletedCount;
       }

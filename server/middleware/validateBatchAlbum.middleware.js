@@ -4,6 +4,12 @@ import Artist from "../models/Artist.model.js";
 import Album from "../models/Album.model.js";
 
 /**
+ * Batch Album Validation Middleware
+ * Validates album creation with multiple tracks
+ * Ensures data integrity and artist ownership
+ */
+
+/**
  * Parse JSON objects from FormData
  * Converts tracks array to individual form fields
  */
@@ -78,15 +84,15 @@ export const validateBatchAlbumCreation = [
   body("albumName")
     .trim()
     .notEmpty()
-    .withMessage("Название альбома обязательно")
+    .withMessage("Album name is required")
     .isLength({ min: 1, max: 100 })
-    .withMessage("Название альбома должно быть от 1 до 100 символов"),
+    .withMessage("Album name must be between 1 and 100 characters"),
 
   body("albumDescription")
     .optional()
     .trim()
     .isLength({ max: 1000 })
-    .withMessage("Описание альбома не может быть длиннее 1000 символов"),
+    .withMessage("Album description cannot be longer than 1000 characters"),
 
   body("albumGenre")
     .optional()
@@ -94,7 +100,7 @@ export const validateBatchAlbumCreation = [
       if (value) {
         const genres = Array.isArray(value) ? value : [value];
         if (genres.length > 10) {
-          throw new Error("Максимум 10 жанров для альбома");
+          throw new Error("Maximum 10 genres for album");
         }
         if (
           genres.some(
@@ -104,7 +110,7 @@ export const validateBatchAlbumCreation = [
               genre.trim().length > 30
           )
         ) {
-          throw new Error("Каждый жанр должен быть от 2 до 30 символов");
+          throw new Error("Each genre must be between 2 and 30 characters");
         }
       }
       return true;
@@ -113,12 +119,12 @@ export const validateBatchAlbumCreation = [
   body("albumType")
     .optional()
     .isIn(["album", "ep", "single"])
-    .withMessage("Тип альбома должен быть: album, ep или single"),
+    .withMessage("Album type must be: album, ep, or single"),
 
   body("releaseDate")
     .optional()
     .isISO8601()
-    .withMessage("Неверный формат даты релиза"),
+    .withMessage("Invalid release date format"),
 
   // Track validation using indices from uploadBatch middleware
   (req, res, next) => {
@@ -127,7 +133,7 @@ export const validateBatchAlbumCreation = [
         .status(500)
         .json(
           ApiResponse.error(
-            "Информация о треках не найдена. Проверьте порядок middleware."
+            "Track information not found. Check middleware order."
           )
         );
     }
@@ -152,16 +158,16 @@ export const validateBatchAlbumCreation = [
         trackName.trim().length === 0
       ) {
         errors.push(
-          `Название трека ${arrayIndex + 1} (index ${index}) обязательно`
+          `Track name is required for track ${arrayIndex + 1} (index ${index})`
         );
       } else if (trackName.trim().length > 100) {
         errors.push(
-          `Название трека ${arrayIndex + 1} не может быть длиннее 100 символов`
+          `Track name ${arrayIndex + 1} cannot be longer than 100 characters`
         );
       } else {
         const trimmedName = trackName.trim().toLowerCase();
         if (trackNames.has(trimmedName)) {
-          errors.push(`Дублирующееся название трека: "${trackName.trim()}"`);
+          errors.push(`Duplicate track name: "${trackName.trim()}"`);
         } else {
           trackNames.add(trimmedName);
         }
@@ -173,29 +179,27 @@ export const validateBatchAlbumCreation = [
         (typeof trackGenre !== "string" || trackGenre.trim().length > 50)
       ) {
         errors.push(
-          `Жанр трека ${arrayIndex + 1} не может быть длиннее 50 символов`
+          `Track ${arrayIndex + 1} genre cannot be longer than 50 characters`
         );
       }
 
       // Validate tags (optional)
       if (trackTags) {
         if (!Array.isArray(trackTags)) {
-          errors.push(`Теги трека ${arrayIndex + 1} должны быть массивом`);
+          errors.push(`Track ${arrayIndex + 1} tags must be an array`);
         } else if (trackTags.length > 20) {
-          errors.push(`Максимум 20 тегов для трека ${arrayIndex + 1}`);
+          errors.push(`Maximum 20 tags for track ${arrayIndex + 1}`);
         } else {
           trackTags.forEach((tag, tagIndex) => {
             if (typeof tag !== "string" || tag.trim().length === 0) {
               errors.push(
-                `Тег ${tagIndex + 1} трека ${
-                  arrayIndex + 1
-                } не может быть пустым`
+                `Tag ${tagIndex + 1} of track ${arrayIndex + 1} cannot be empty`
               );
             } else if (tag.trim().length > 50) {
               errors.push(
-                `Тег ${tagIndex + 1} трека ${
+                `Tag ${tagIndex + 1} of track ${
                   arrayIndex + 1
-                } не может быть длиннее 50 символов`
+                } cannot be longer than 50 characters`
               );
             }
           });
@@ -206,7 +210,7 @@ export const validateBatchAlbumCreation = [
     if (errors.length > 0) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации треков", errors));
+        .json(ApiResponse.error("Track validation errors", errors));
     }
 
     next();
@@ -218,7 +222,7 @@ export const validateBatchAlbumCreation = [
       if (!req.user || !req.user.id) {
         return res
           .status(401)
-          .json(ApiResponse.error("Пользователь не авторизован"));
+          .json(ApiResponse.error("User not authenticated"));
       }
 
       // Find artist by owner field
@@ -229,7 +233,7 @@ export const validateBatchAlbumCreation = [
           .status(400)
           .json(
             ApiResponse.error(
-              "У пользователя нет профиля артиста. Создайте профиль артиста перед загрузкой альбомов."
+              "User does not have an artist profile. Create an artist profile before uploading albums."
             )
           );
       }
@@ -246,7 +250,7 @@ export const validateBatchAlbumCreation = [
           .status(400)
           .json(
             ApiResponse.error(
-              "Альбом с таким названием уже существует у данного артиста"
+              "An album with this name already exists for this artist"
             )
           );
       }
@@ -259,7 +263,7 @@ export const validateBatchAlbumCreation = [
 
       next();
     } catch (error) {
-      return res.status(500).json(ApiResponse.error("Ошибка проверки данных"));
+      return res.status(500).json(ApiResponse.error("Data validation error"));
     }
   },
 
@@ -269,7 +273,7 @@ export const validateBatchAlbumCreation = [
     if (!errors.isEmpty()) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации", errors.array()));
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },
@@ -282,7 +286,7 @@ export const checkSystemLimits = (req, res, next) => {
   if (!req.batchInfo || typeof req.batchInfo.trackCount === "undefined") {
     return res
       .status(500)
-      .json(ApiResponse.error("Информация о количестве треков не найдена"));
+      .json(ApiResponse.error("Track count information not found"));
   }
 
   const { trackCount } = req.batchInfo;
@@ -290,15 +294,13 @@ export const checkSystemLimits = (req, res, next) => {
   if (trackCount > 50) {
     return res
       .status(400)
-      .json(
-        ApiResponse.error("Максимальное количество треков в одном запросе: 50")
-      );
+      .json(ApiResponse.error("Maximum number of tracks in one request: 50"));
   }
 
   if (trackCount < 2) {
     return res
       .status(400)
-      .json(ApiResponse.error("Минимальное количество треков для альбома: 2"));
+      .json(ApiResponse.error("Minimum number of tracks for album: 2"));
   }
 
   // Check estimated processing time
@@ -306,9 +308,7 @@ export const checkSystemLimits = (req, res, next) => {
   if (estimatedProcessingTime > 100) {
     return res
       .status(400)
-      .json(
-        ApiResponse.error("Слишком много треков для одновременной обработки")
-      );
+      .json(ApiResponse.error("Too many tracks for simultaneous processing"));
   }
 
   next();

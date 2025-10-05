@@ -1,6 +1,6 @@
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "@ffmpeg-installer/ffmpeg";
-import ffprobePath from "@ffprobe-installer/ffprobe"; // Добавляем ffprobe
+import ffprobePath from "@ffprobe-installer/ffprobe";
 import path from "path";
 import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
@@ -11,7 +11,7 @@ let ffmpegConfigured = false;
 const initializeFFmpeg = () => {
   try {
     ffmpeg.setFfmpegPath(ffmpegPath.path);
-    ffmpeg.setFfprobePath(ffprobePath.path); // Устанавливаем путь к ffprobe
+    ffmpeg.setFfprobePath(ffprobePath.path);
     ffmpegConfigured = true;
     console.log("FFmpeg configured successfully:");
     console.log("FFmpeg path:", ffmpegPath.path);
@@ -27,7 +27,7 @@ const initializeFFmpeg = () => {
 initializeFFmpeg();
 
 // Convert audio file to HLS streaming format with 2-second segments
-export const processAudioToHLS = async (audioBuffer, originalName) => {
+export const processAudioToHLS = async (audioBuffer) => {
   if (!ffmpegConfigured) {
     throw new Error("FFmpeg is not properly configured");
   }
@@ -63,10 +63,6 @@ const validateAudioFile = (filePath) => {
         console.error("FFprobe error:", err);
         reject(new Error(`Invalid audio file: ${err.message}`));
       } else {
-        console.log(
-          "Audio validation successful, duration:",
-          metadata.format.duration
-        );
         resolve(metadata);
       }
     });
@@ -131,8 +127,6 @@ const collectHLSFiles = async (outputDir) => {
   const files = await fs.readdir(outputDir);
   const segments = files.filter((file) => file.endsWith(".ts"));
 
-  console.log("Generated segments:", segments);
-
   if (segments.length === 0) {
     throw new Error("No HLS segments were generated");
   }
@@ -169,16 +163,11 @@ export const checkFFmpegAvailability = () => {
       return;
     }
 
-    ffmpeg.getAvailableFormats((err, formats) => {
+    ffmpeg.getAvailableFormats((err) => {
       if (err) {
         console.error("FFmpeg formats check failed:", err);
         reject(new Error(`FFmpeg unavailable: ${err.message}`));
       } else {
-        console.log(
-          "FFmpeg is available with",
-          Object.keys(formats).length,
-          "formats"
-        );
         resolve(true);
       }
     });

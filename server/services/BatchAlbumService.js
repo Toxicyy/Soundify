@@ -10,6 +10,7 @@ import fs from "fs/promises";
 /**
  * Service for batch album creation with progress tracking
  * Handles creating albums with multiple tracks and real-time progress updates
+ * Implements rollback mechanisms for failed operations
  */
 class BatchAlbumService {
   constructor() {
@@ -23,6 +24,13 @@ class BatchAlbumService {
 
   /**
    * Create album with multiple tracks in batch
+   * @param {Object} albumData - Album metadata
+   * @param {Object} files - Files object containing album cover and track files
+   * @param {Array} trackData - Array of track metadata objects
+   * @param {string} sessionId - Session ID for progress tracking
+   * @param {string} userId - User ID
+   * @param {string} artistId - Artist ID
+   * @returns {Promise<Object>} Created album with tracks
    */
   async createBatchAlbum(
     albumData,
@@ -63,7 +71,7 @@ class BatchAlbumService {
       // Step 1: Create album
       this.updateProgress(sessionId, {
         phase: "album",
-        message: "Создание альбома...",
+        message: "Creating album...",
         overallProgress: 5,
       });
 
@@ -76,7 +84,7 @@ class BatchAlbumService {
 
       this.updateProgress(sessionId, {
         phase: "tracks",
-        message: "Альбом создан, начинаем обработку треков...",
+        message: "Album created, starting track processing...",
         overallProgress: 10,
       });
 
@@ -88,7 +96,7 @@ class BatchAlbumService {
         try {
           this.updateProgress(sessionId, {
             currentTrack: i + 1,
-            message: `Обработка трека ${i + 1}: ${trackInfo.name}`,
+            message: `Processing track ${i + 1}: ${trackInfo.name}`,
             overallProgress: 10 + (i / validatedTrackData.length) * 80,
             currentTrackProgress: 0,
           });
@@ -97,7 +105,7 @@ class BatchAlbumService {
             sessionId,
             i,
             "processing",
-            "Начинаем обработку..."
+            "Starting processing..."
           );
 
           const audioFile = files[`tracks[${trackIndex}][audio]`][0];
@@ -125,13 +133,13 @@ class BatchAlbumService {
           if (track.hlsSegmentFileIds)
             uploadedFiles.push(...track.hlsSegmentFileIds);
 
-          this.updateTrackStatus(sessionId, i, "completed", "Трек готов");
+          this.updateTrackStatus(sessionId, i, "completed", "Track ready");
         } catch (trackError) {
           this.updateTrackStatus(
             sessionId,
             i,
             "failed",
-            `Ошибка: ${this.getUserFriendlyError(trackError)}`
+            `Error: ${this.getUserFriendlyError(trackError)}`
           );
           throw trackError;
         }
@@ -140,7 +148,7 @@ class BatchAlbumService {
       // Step 3: Finalize album
       this.updateProgress(sessionId, {
         phase: "completed",
-        message: "Финализация альбома...",
+        message: "Finalizing album...",
         overallProgress: 95,
       });
 
@@ -158,7 +166,7 @@ class BatchAlbumService {
       this.updateProgress(sessionId, {
         phase: "completed",
         status: "completed",
-        message: `Альбом "${albumData.name}" успешно создан!`,
+        message: `Album "${albumData.name}" created successfully!`,
         overallProgress: 100,
       });
 
@@ -187,6 +195,12 @@ class BatchAlbumService {
 
   /**
    * Create track with detailed progress updates
+   * @param {Object} trackData - Track metadata
+   * @param {Object} files - Audio and cover files
+   * @param {string} userId - User ID
+   * @param {string} sessionId - Session ID for progress tracking
+   * @param {number} trackIndex - Track index in batch
+   * @returns {Promise<Object>} Created track
    */
   async createTrackWithDetailedProgress(
     trackData,
@@ -218,7 +232,7 @@ class BatchAlbumService {
         sessionId,
         trackIndex,
         "processing",
-        "Конвертация аудио в HLS..."
+        "Converting audio to HLS..."
       );
 
       const hlsData = await processAudioToHLS(
@@ -233,7 +247,7 @@ class BatchAlbumService {
         sessionId,
         trackIndex,
         "processing",
-        "Загрузка обложки..."
+        "Uploading cover..."
       );
 
       const coverUpload = await uploadToB2(files.cover[0], "images");
@@ -244,7 +258,7 @@ class BatchAlbumService {
         sessionId,
         trackIndex,
         "processing",
-        "Загрузка плейлиста..."
+        "Uploading playlist..."
       );
 
       const hlsFolder = `hls/${Date.now()}-${safeName}`;
@@ -263,7 +277,7 @@ class BatchAlbumService {
         sessionId,
         trackIndex,
         "processing",
-        "Загрузка сегментов..."
+        "Uploading segments..."
       );
 
       const segmentFiles = hlsData.segments.map((segment) => ({
@@ -283,7 +297,7 @@ class BatchAlbumService {
         sessionId,
         trackIndex,
         "processing",
-        "Сохранение в базу данных..."
+        "Saving to database..."
       );
 
       const duration = this.calculatePlaylistDuration(hlsData.playlist);
@@ -325,6 +339,9 @@ class BatchAlbumService {
 
   /**
    * Upload HLS segments in batches
+   * @param {Array} segmentFiles - Segment files to upload
+   * @param {string} folder - Target folder
+   * @returns {Promise<Array>} Upload results
    */
   async uploadHLSSegments(segmentFiles, folder) {
     const batchSize = 3;
@@ -357,6 +374,10 @@ class BatchAlbumService {
 
   /**
    * Create album with cover image
+   * @param {Object} albumData - Album metadata
+   * @param {Object} coverFile - Cover image file
+   * @param {string} artistId - Artist ID
+   * @returns {Promise<Object>} Created album
    */
   async createAlbumWithCover(albumData, coverFile, artistId) {
     try {
@@ -394,10 +415,14 @@ class BatchAlbumService {
 
   /**
    * Perform rollback cleanup on failure
+   * @param {Object} createdAlbum - Album to delete
+   * @param {Array} createdTracks - Tracks to delete
+   * @param {Array} uploadedFiles - File IDs to delete
+   * @param {string} sessionId - Session ID for progress updates
    */
   async performRollback(createdAlbum, createdTracks, uploadedFiles, sessionId) {
     try {
-      this.updateProgress(sessionId, { message: "Отмена изменений..." });
+      this.updateProgress(sessionId, { message: "Rolling back changes..." });
 
       // Delete tracks from database
       if (createdTracks.length > 0) {
@@ -431,13 +456,16 @@ class BatchAlbumService {
 
   /**
    * Initialize progress tracking
+   * @param {string} sessionId - Session ID
+   * @param {string} albumName - Album name
+   * @param {Array} trackData - Track data array
    */
   initializeProgress(sessionId, albumName, trackData) {
     const progressData = {
       sessionId,
       status: "processing",
       phase: "album",
-      message: "Начинаем создание альбома...",
+      message: "Starting album creation...",
       albumName,
       totalTracks: trackData.length,
       currentTrack: 0,
@@ -457,6 +485,8 @@ class BatchAlbumService {
 
   /**
    * Update progress with new data
+   * @param {string} sessionId - Session ID
+   * @param {Object} updates - Progress updates
    */
   updateProgress(sessionId, updates) {
     const data = this.progressData.get(sessionId);
@@ -469,6 +499,10 @@ class BatchAlbumService {
 
   /**
    * Update individual track status
+   * @param {string} sessionId - Session ID
+   * @param {number} trackIndex - Track index
+   * @param {string} status - Status (pending/processing/completed/failed)
+   * @param {string} message - Status message
    */
   updateTrackStatus(sessionId, trackIndex, status, message = "") {
     const data = this.progressData.get(sessionId);
@@ -484,6 +518,8 @@ class BatchAlbumService {
 
   /**
    * Get progress data for session
+   * @param {string} sessionId - Session ID
+   * @returns {Object|null} Progress data
    */
   getProgress(sessionId) {
     return this.progressData.get(sessionId) || null;
@@ -491,27 +527,29 @@ class BatchAlbumService {
 
   /**
    * Convert technical errors to user-friendly messages
+   * @param {Error} error - Error object
+   * @returns {string} User-friendly error message
    */
   getUserFriendlyError(error) {
     const message = error.message.toLowerCase();
 
     if (message.includes("ffmpeg")) {
-      return "Ошибка обработки аудио файла. Проверьте формат файла.";
+      return "Audio file processing error. Please check the file format.";
     }
     if (message.includes("upload") || message.includes("b2")) {
-      return "Ошибка загрузки файла. Проверьте интернет соединение.";
+      return "File upload error. Please check your internet connection.";
     }
     if (message.includes("validation")) {
-      return "Ошибка в данных трека. Проверьте название и другие поля.";
+      return "Track data error. Please check the name and other fields.";
     }
     if (message.includes("space") || message.includes("limit")) {
-      return "Недостаточно места на сервере или превышен лимит размера файла.";
+      return "Insufficient space on server or file size limit exceeded.";
     }
     if (message.includes("missing name") || message.includes("track name")) {
-      return "Название трека обязательно для заполнения.";
+      return "Track name is required.";
     }
 
-    return "Произошла непредвиденная ошибка. Попробуйте позже.";
+    return "An unexpected error occurred. Please try again later.";
   }
 
   /**
@@ -527,8 +565,11 @@ class BatchAlbumService {
     }
   }
 
-  // Utility methods
-
+  /**
+   * Sanitize filename for safe usage
+   * @param {string} filename - Original filename
+   * @returns {string} Sanitized filename
+   */
   sanitizeFileName(filename) {
     if (!filename || typeof filename !== "string") {
       return "unknown-track";
@@ -536,6 +577,11 @@ class BatchAlbumService {
     return filename.replace(/[^a-zA-Z0-9\-_]/g, "-");
   }
 
+  /**
+   * Calculate playlist duration from M3U8 content
+   * @param {string} playlist - M3U8 playlist content
+   * @returns {number} Total duration in seconds
+   */
   calculatePlaylistDuration(playlist) {
     const lines = playlist.split("\n");
     let totalDuration = 0;
@@ -552,6 +598,10 @@ class BatchAlbumService {
     return totalDuration;
   }
 
+  /**
+   * Cleanup temporary directory
+   * @param {string} dirPath - Directory path
+   */
   async cleanupTempDirectory(dirPath) {
     try {
       await fs.rm(dirPath, { recursive: true, force: true });

@@ -4,26 +4,89 @@ import Artist from "../models/Artist.model.js";
 import Album from "../models/Album.model.js";
 import User from "../models/User.model.js";
 
+/**
+ * Validation Middleware
+ * Provides comprehensive validation for all entities (tracks, artists, albums, playlists, users)
+ * Includes custom validators for business logic and data integrity
+ */
+
+/**
+ * Parse JSON objects from FormData
+ * Handles conversion of stringified JSON in multipart/form-data requests
+ */
+const parseFormDataJSON = (req, res, next) => {
+  // Parse genres if it's a string
+  if (req.body.genres && typeof req.body.genres === "string") {
+    try {
+      req.body.genres = JSON.parse(req.body.genres);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invalid format for genres data"));
+    }
+  }
+
+  // Parse socialLinks if it's a string
+  if (req.body.socialLinks && typeof req.body.socialLinks === "string") {
+    try {
+      req.body.socialLinks = JSON.parse(req.body.socialLinks);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invalid format for social links data"));
+    }
+  }
+
+  // Parse tags if it's a string
+  if (req.body.tags && typeof req.body.tags === "string") {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invalid format for tags data"));
+    }
+  }
+
+  // Parse tracks if it's a string
+  if (req.body.tracks && typeof req.body.tracks === "string") {
+    try {
+      req.body.tracks = JSON.parse(req.body.tracks);
+    } catch (e) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invalid format for tracks data"));
+    }
+  }
+
+  // Parse publish boolean
+  if (req.body.publish && typeof req.body.publish === "string") {
+    req.body.publish = req.body.publish === "true";
+  }
+
+  next();
+};
+
 export const validateTrackCreation = [
   body("name")
     .trim()
     .notEmpty()
-    .withMessage("Название трека обязательно")
+    .withMessage("Track name is required")
     .isLength({ max: 100 })
-    .withMessage("Название не может быть длиннее 100 символов"),
+    .withMessage("Name cannot be longer than 100 characters"),
 
-  body("artist").trim().notEmpty().withMessage("Имя артиста обязательно"),
+  body("artist").trim().notEmpty().withMessage("Artist name is required"),
 
   (req, res, next) => {
     if (!req.files || !req.files.audio || !req.files.audio[0]) {
-      return res.status(400).json(ApiResponse.error("Аудио файл обязателен"));
+      return res.status(400).json(ApiResponse.error("Audio file is required"));
     }
 
     if (!req.files.cover || !req.files.cover[0]) {
-      return res.status(400).json(ApiResponse.error("Обложка обязательна"));
+      return res.status(400).json(ApiResponse.error("Cover is required"));
     }
 
-    // Проверка типа аудио файла
+    // Check audio file type
     const audioFile = req.files.audio[0];
     const allowedAudioTypes = [
       "audio/mpeg",
@@ -34,10 +97,10 @@ export const validateTrackCreation = [
     if (!allowedAudioTypes.includes(audioFile.mimetype)) {
       return res
         .status(400)
-        .json(ApiResponse.error("Неподдерживаемый формат аудио файла"));
+        .json(ApiResponse.error("Unsupported audio file format"));
     }
 
-    // Проверка типа изображения
+    // Check image type
     const coverFile = req.files.cover[0];
     const allowedImageTypes = [
       "image/jpeg",
@@ -48,7 +111,7 @@ export const validateTrackCreation = [
     if (!allowedImageTypes.includes(coverFile.mimetype)) {
       return res
         .status(400)
-        .json(ApiResponse.error("Неподдерживаемый формат изображения"));
+        .json(ApiResponse.error("Unsupported image format"));
     }
 
     next();
@@ -59,100 +122,52 @@ export const validateTrackCreation = [
     if (!errors.isEmpty()) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации", errors.array()));
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },
 ];
 
-const parseFormDataJSON = (req, res, next) => {
-  // Парсим genres если это строка
-  if (req.body.genres && typeof req.body.genres === "string") {
-    try {
-      req.body.genres = JSON.parse(req.body.genres);
-    } catch (e) {
-      return res
-        .status(400)
-        .json(ApiResponse.error("Неверный формат данных для жанров"));
-    }
-  }
-
-  // Парсим socialLinks если это строка
-  if (req.body.socialLinks && typeof req.body.socialLinks === "string") {
-    try {
-      req.body.socialLinks = JSON.parse(req.body.socialLinks);
-    } catch (e) {
-      return res
-        .status(400)
-        .json(
-          ApiResponse.error("Неверный формат данных для социальных ссылок")
-        );
-    }
-  }
-
-  if (req.body.tags && typeof req.body.tags === "string") {
-    try {
-      req.body.tags = JSON.parse(req.body.tags);
-    } catch (e) {
-      return res
-        .status(400)
-        .json(ApiResponse.error("Неверный формат данных для тегов"));
-    }
-  }
-
-  if (req.body.tracks && typeof req.body.tracks === "string") {
-    try {
-      req.body.tracks = JSON.parse(req.body.tracks);
-    } catch (e) {
-      return res
-        .status(400)
-        .json(ApiResponse.error("Неверный формат данных для треков"));
-    }
-  }
-
-  if (req.body.publish && typeof req.body.publish === "string") {
-    req.body.publish = req.body.publish === "true";
-  }
-
-  next();
-};
-
+/**
+ * Validation rules for artist creation
+ * All fields are required except social links
+ */
 export const validateArtistCreation = [
   parseFormDataJSON,
 
-  // Валидация имени
+  // Name validation
   body("name")
     .trim()
     .notEmpty()
-    .withMessage("Имя артиста обязательно")
+    .withMessage("Artist name is required")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Имя должно быть от 2 до 100 символов")
+    .withMessage("Name must be between 2 and 100 characters")
     .custom(async (value) => {
-      // Проверка на уникальность имени
+      // Check for duplicate name
       const existingArtist = await Artist.findOne({
         name: new RegExp(`^${value}$`, "i"),
       });
       if (existingArtist) {
-        throw new Error("Артист с таким именем уже существует");
+        throw new Error("Artist with this name already exists");
       }
       return true;
     }),
 
-  // Валидация биографии
+  // Bio validation
   body("bio")
     .trim()
     .notEmpty()
-    .withMessage("Биография обязательна")
+    .withMessage("Biography is required")
     .isLength({ max: 1000 })
-    .withMessage("Биография не может быть длиннее 1000 символов"),
+    .withMessage("Biography cannot exceed 1000 characters"),
 
-  // Валидация жанров - теперь работает с массивом
+  // Genres validation - works with array
   body("genres")
     .isArray({ min: 1 })
-    .withMessage("Необходимо выбрать хотя бы один жанр")
+    .withMessage("At least one genre must be selected")
     .custom((value) => {
       if (value && value.length > 10) {
-        throw new Error("Максимум 10 жанров");
+        throw new Error("Maximum of 10 genres allowed");
       }
       return true;
     }),
@@ -160,37 +175,37 @@ export const validateArtistCreation = [
   body("genres.*")
     .trim()
     .isLength({ min: 2, max: 30 })
-    .withMessage("Каждый жанр должен быть от 2 до 30 символов"),
+    .withMessage("Each genre must be between 2 and 30 characters"),
 
-  // Валидация социальных ссылок - теперь работает с объектом
+  // Social links validation - works with object
   body("socialLinks")
     .optional()
     .isObject()
-    .withMessage("Социальные ссылки должны быть объектом"),
+    .withMessage("Social links must be an object"),
 
   body("socialLinks.spotify")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(open\.)?spotify\.com\/(artist|user)\/[a-zA-Z0-9]+/)
-    .withMessage("Неверный формат ссылки Spotify"),
+    .withMessage("Invalid Spotify link format"),
 
   body("socialLinks.instagram")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+/)
-    .withMessage("Неверный формат ссылки Instagram"),
+    .withMessage("Invalid Instagram link format"),
 
   body("socialLinks.twitter")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(www\.)?(twitter|x)\.com\/[a-zA-Z0-9_]+/)
-    .withMessage("Неверный формат ссылки Twitter/X"),
+    .withMessage("Invalid Twitter/X link format"),
 
-  // Middleware для проверки файла аватара
+  // Avatar file validation middleware
   (req, res, next) => {
-    // Аватар обязателен при создании
+    // Avatar is required on creation
     if (!req.file) {
-      return res.status(400).json(ApiResponse.error("Аватар обязателен"));
+      return res.status(400).json(ApiResponse.error("Avatar is required"));
     }
 
     const allowedImageTypes = [
@@ -203,52 +218,54 @@ export const validateArtistCreation = [
     if (!allowedImageTypes.includes(req.file.mimetype)) {
       return res
         .status(400)
-        .json(ApiResponse.error("Неподдерживаемый формат изображения"));
+        .json(ApiResponse.error("Unsupported image format"));
     }
 
-    // Проверка размера файла (макс 5MB)
+    // Check file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (req.file.size > maxSize) {
       return res
         .status(400)
-        .json(ApiResponse.error("Размер изображения не должен превышать 5MB"));
+        .json(ApiResponse.error("Image size must not exceed 5MB"));
     }
     next();
   },
 
-  // Финальная проверка ошибок
+  // Final validation check
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации", errors.array()));
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },
 ];
 
-// Валидация для обновления артиста
+/**
+ * Validation rules for artist updates
+ * Same rules as creation, but all fields are optional
+ */
 export const validateArtistUpdate = [
-  // Добавляем парсинг JSON
   parseFormDataJSON,
 
-  // Те же правила, но все поля опциональны
+  // Name validation (optional)
   body("name")
     .optional()
     .trim()
     .notEmpty()
-    .withMessage("Имя не может быть пустым")
+    .withMessage("Name cannot be empty")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Имя должно быть от 2 до 100 символов")
+    .withMessage("Name must be between 2 and 100 characters")
     .custom(async (value, { req }) => {
-      // Проверка уникальности, исключая текущего артиста
+      // Check uniqueness, excluding current artist
       const existingArtist = await Artist.findOne({
         name: new RegExp(`^${value}$`, "i"),
         _id: { $ne: req.params.id },
       });
       if (existingArtist) {
-        throw new Error("Артист с таким именем уже существует");
+        throw new Error("Artist with this name already exists");
       }
       return true;
     }),
@@ -257,15 +274,15 @@ export const validateArtistUpdate = [
     .optional()
     .trim()
     .isLength({ max: 1000 })
-    .withMessage("Биография не может быть длиннее 1000 символов"),
+    .withMessage("Biography cannot exceed 1000 characters"),
 
   body("genres")
     .optional()
     .isArray()
-    .withMessage("Жанры должны быть массивом")
+    .withMessage("Genres must be an array")
     .custom((value) => {
       if (value && value.length > 10) {
-        throw new Error("Максимум 10 жанров");
+        throw new Error("Maximum of 10 genres allowed");
       }
       return true;
     }),
@@ -274,12 +291,12 @@ export const validateArtistUpdate = [
     .optional()
     .trim()
     .isLength({ min: 2, max: 30 })
-    .withMessage("Каждый жанр должен быть от 2 до 30 символов"),
+    .withMessage("Each genre must be between 2 and 30 characters"),
 
   body("socialLinks")
     .optional()
     .isObject()
-    .withMessage("Социальные ссылки должны быть объектом"),
+    .withMessage("Social links must be an object"),
 
   body("socialLinks.spotify")
     .optional({ checkFalsy: true })
@@ -289,7 +306,7 @@ export const validateArtistUpdate = [
       const spotifyRegex =
         /^https?:\/\/(open\.)?spotify\.com\/(artist|user)\/[a-zA-Z0-9]+/;
       if (!spotifyRegex.test(value)) {
-        throw new Error("Неверный формат ссылки Spotify");
+        throw new Error("Invalid Spotify link format");
       }
       return true;
     }),
@@ -302,7 +319,7 @@ export const validateArtistUpdate = [
       const instagramRegex =
         /^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+/;
       if (!instagramRegex.test(value)) {
-        throw new Error("Неверный формат ссылки Instagram");
+        throw new Error("Invalid Instagram link format");
       }
       return true;
     }),
@@ -315,12 +332,12 @@ export const validateArtistUpdate = [
       const twitterRegex =
         /^https?:\/\/(www\.)?(twitter|x)\.com\/[a-zA-Z0-9_]+/;
       if (!twitterRegex.test(value)) {
-        throw new Error("Неверный формат ссылки Twitter/X");
+        throw new Error("Invalid Twitter/X link format");
       }
       return true;
     }),
 
-  // Middleware для проверки файла аватара при обновлении
+  // Avatar file validation middleware for updates
   (req, res, next) => {
     if (req.file) {
       const allowedImageTypes = [
@@ -333,35 +350,32 @@ export const validateArtistUpdate = [
       if (!allowedImageTypes.includes(req.file.mimetype)) {
         return res
           .status(400)
-          .json(ApiResponse.error("Неподдерживаемый формат изображения"));
+          .json(ApiResponse.error("Unsupported image format"));
       }
 
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (req.file.size > maxSize) {
         return res
           .status(400)
-          .json(
-            ApiResponse.error("Размер изображения не должен превышать 5MB")
-          );
+          .json(ApiResponse.error("Image size must not exceed 5MB"));
       }
     }
     next();
   },
 
-  // Финальная проверка ошибок
+  // Final validation check
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации", errors.array()));
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },
 ];
 
 export const validateAlbumCreation = [
-  // Add JSON parsing at the beginning of middleware chain
   parseFormDataJSON,
 
   // Album name validation
@@ -483,7 +497,6 @@ export const validateAlbumCreation = [
 
 // Album update validation
 export const validateAlbumUpdate = [
-  // Add JSON parsing
   parseFormDataJSON,
 
   // All fields are optional for updates
@@ -591,14 +604,11 @@ export const validateAlbumUpdate = [
   },
 ];
 
-// Добавить эти функции в validation.middleware.js
-
 /**
  * Playlist creation validation middleware
  * Validates playlist name, description, tags, category, and cover file
  */
 export const validatePlaylistCreation = [
-  // Add JSON parsing at the beginning
   parseFormDataJSON,
 
   // Playlist name validation
@@ -693,12 +703,7 @@ export const validatePlaylistCreation = [
   },
 ];
 
-/**
- * Playlist update validation middleware
- * All fields are optional for updates
- */
 export const validatePlaylistUpdate = [
-  // Add JSON parsing
   parseFormDataJSON,
 
   // All fields are optional for updates
@@ -789,49 +794,48 @@ export const validatePlaylistUpdate = [
 ];
 
 export const validateBecomeArtist = [
-  // Добавляем парсинг JSON в начало цепочки middleware
   parseFormDataJSON,
 
-  // Валидация имени
+  // Name validation
   body("name")
     .trim()
     .notEmpty()
-    .withMessage("Имя артиста обязательно")
+    .withMessage("Artist name is required")
     .isLength({ min: 2, max: 100 })
-    .withMessage("Имя должно быть от 2 до 100 символов")
+    .withMessage("Name must be between 2 and 100 characters")
     .custom(async (value, { req }) => {
-      // Проверка на уникальность имени
+      // Check name uniqueness
       const existingArtist = await Artist.findOne({
         name: new RegExp(`^${value}$`, "i"),
       });
       if (existingArtist) {
-        throw new Error("Артист с таким именем уже существует");
+        throw new Error("Artist with this name already exists");
       }
 
-      // Проверка что у пользователя еще нет артиста
+      // Check that user doesn't already have an artist profile
       const user = await User.findById(req.user.id);
       if (user.artistProfile) {
-        throw new Error("У вас уже есть профиль артиста");
+        throw new Error("You already have an artist profile");
       }
 
       return true;
     }),
 
-  // Валидация биографии - ОПЦИОНАЛЬНА для become artist (в отличие от admin создания)
+  // Bio validation - OPTIONAL for become artist (unlike admin creation)
   body("bio")
     .optional()
     .trim()
     .isLength({ max: 1000 })
-    .withMessage("Биография не может быть длиннее 1000 символов"),
+    .withMessage("Biography cannot be longer than 1000 characters"),
 
-  // Валидация жанров - опциональна
+  // Genres validation - optional
   body("genres")
     .optional()
     .isArray()
-    .withMessage("Жанры должны быть массивом")
+    .withMessage("Genres must be an array")
     .custom((value) => {
       if (value && value.length > 10) {
-        throw new Error("Максимум 10 жанров");
+        throw new Error("Maximum 10 genres");
       }
       return true;
     }),
@@ -840,33 +844,33 @@ export const validateBecomeArtist = [
     .optional()
     .trim()
     .isLength({ min: 2, max: 30 })
-    .withMessage("Каждый жанр должен быть от 2 до 30 символов"),
+    .withMessage("Each genre must be between 2 and 30 characters"),
 
-  // Валидация социальных ссылок - опциональна
+  // Social links validation - optional
   body("socialLinks")
     .optional()
     .isObject()
-    .withMessage("Социальные ссылки должны быть объектом"),
+    .withMessage("Social links must be an object"),
 
   body("socialLinks.spotify")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(open\.)?spotify\.com\/(artist|user)\/[a-zA-Z0-9]+/)
-    .withMessage("Неверный формат ссылки Spotify"),
+    .withMessage("Invalid Spotify link format"),
 
   body("socialLinks.instagram")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(www\.)?instagram\.com\/[a-zA-Z0-9_.]+/)
-    .withMessage("Неверный формат ссылки Instagram"),
+    .withMessage("Invalid Instagram link format"),
 
   body("socialLinks.twitter")
     .optional({ checkFalsy: true })
     .trim()
     .matches(/^https?:\/\/(www\.)?(twitter|x)\.com\/[a-zA-Z0-9_]+/)
-    .withMessage("Неверный формат ссылки Twitter/X"),
+    .withMessage("Invalid Twitter/X link format"),
 
-  // Middleware для проверки файла аватара - ОПЦИОНАЛЕН для become artist
+  // Avatar file validation middleware - OPTIONAL for become artist
   (req, res, next) => {
     if (req.file) {
       const allowedImageTypes = [
@@ -879,29 +883,27 @@ export const validateBecomeArtist = [
       if (!allowedImageTypes.includes(req.file.mimetype)) {
         return res
           .status(400)
-          .json(ApiResponse.error("Неподдерживаемый формат изображения"));
+          .json(ApiResponse.error("Unsupported image format"));
       }
 
-      // Проверка размера файла (макс 5MB)
+      // Check file size (max 5MB)
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (req.file.size > maxSize) {
         return res
           .status(400)
-          .json(
-            ApiResponse.error("Размер изображения не должен превышать 5MB")
-          );
+          .json(ApiResponse.error("Image size must not exceed 5MB"));
       }
     }
     next();
   },
 
-  // Финальная проверка ошибок
+  // Final error checking
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res
         .status(400)
-        .json(ApiResponse.error("Ошибки валидации", errors.array()));
+        .json(ApiResponse.error("Validation errors", errors.array()));
     }
     next();
   },

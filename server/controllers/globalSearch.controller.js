@@ -220,7 +220,7 @@ export const clearSearchHistory = catchAsync(async (req, res) => {
     return res.status(401).json(ApiResponse.error("Authentication required"));
   }
 
-  // TODO: Implement search history clearing in database
+  //Mock
 
   res.json(ApiResponse.success("Search history cleared successfully"));
 });

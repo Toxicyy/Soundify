@@ -17,7 +17,6 @@ class ChartService {
    */
   async aggregateListenEvents() {
     try {
-      console.log("Starting listen events aggregation...");
 
       const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
       const startOfDay = new Date(today + "T00:00:00.000Z");
@@ -63,9 +62,6 @@ class ChartService {
       ];
 
       const aggregatedData = await ListenEvent.aggregate(pipeline);
-      console.log(
-        `Found ${aggregatedData.length} track-country combinations to update`
-      );
 
       // Update daily statistics for each track-country combination
       for (const data of aggregatedData) {
@@ -119,9 +115,6 @@ class ChartService {
         timestamp: { $lt: oneHourAgo },
       });
 
-      console.log(
-        `Aggregation complete. Deleted ${deletedCount.deletedCount} old listen events`
-      );
       return aggregatedData.length;
     } catch (error) {
       console.error("Listen events aggregation failed:", error);
@@ -135,7 +128,6 @@ class ChartService {
    */
   async calculateChartScores(country = "GLOBAL", daysBack = 5) {
     try {
-      console.log(`Calculating chart scores for ${country}...`);
 
       // Generate date range (today back to daysBack)
       const dates = [];
@@ -225,7 +217,6 @@ class ChartService {
       ];
 
       const chartData = await DailyTrackStats.aggregate(pipeline);
-      console.log(`Calculated scores for ${chartData.length} tracks`);
 
       return chartData;
     } catch (error) {
@@ -240,9 +231,6 @@ class ChartService {
    */
   async updateChartCache(chartType = "global", country = null, limit = 50) {
     try {
-      console.log(
-        `Updating ${chartType} chart cache for ${country || "GLOBAL"}...`
-      );
 
       const targetCountry = country || "GLOBAL";
       const today = new Date().toISOString().split("T")[0];
@@ -354,10 +342,6 @@ class ChartService {
 
         await Track.findByIdAndUpdate(entry.trackId, updateData);
       }
-
-      console.log(
-        `Updated ${chartType} chart cache with ${newChartEntries.length} entries`
-      );
       return newChartEntries.length;
     } catch (error) {
       console.error("Chart cache update failed:", error);
@@ -533,9 +517,6 @@ class ChartService {
    */
   async getTrendingTracks(country = "GLOBAL", limit = 50) {
     try {
-      console.log(`Getting trending tracks for ${country}, limit: ${limit}`);
-
-      // Простой подход - используем тот же метод что и для global, но с shuffle
       const chart = await ChartCache.find({
         country: country,
       })
@@ -548,27 +529,22 @@ class ChartService {
         .populate("trackSnapshot.artist", "name avatar")
         .lean();
 
-      console.log(`Found ${chart.length} chart entries`);
 
       if (chart.length === 0) {
         return [];
       }
 
-      // Простое преобразование в trending формат
       const trending = chart
         .map((entry, index) => {
-          // Проверки на существование данных
           if (!entry.trackId || !entry.trackSnapshot) {
             console.warn(`Invalid chart entry at index ${index}`);
             return null;
           }
 
-          // Безопасное получение данных
           const trackData = entry.trackId;
           const trackSnapshot = entry.trackSnapshot;
           const artistData = trackSnapshot.artist || null;
 
-          // Создаем простые тренды
           let trend = "stable";
           let rankChange = 0;
 
@@ -611,9 +587,6 @@ class ChartService {
         })
         .filter((item) => item !== null);
 
-      console.log(`Created ${trending.length} trending tracks`);
-
-      // Простая обработка signed URLs без отдельного метода
       const trendingWithUrls = await Promise.all(
         trending.map(async (entry) => {
           try {
@@ -674,12 +647,11 @@ class ChartService {
             return entry;
           } catch (error) {
             console.warn("Error processing trending entry:", error.message);
-            return entry; // Возвращаем как есть
+            return entry;
           }
         })
       );
 
-      console.log(`Returning ${trendingWithUrls.length} trending tracks`);
       return trendingWithUrls;
     } catch (error) {
       console.error("❌ Get trending tracks failed:", error);
@@ -802,7 +774,6 @@ class ChartService {
    */
   async updateAllCharts() {
     try {
-      console.log("Starting full chart update...");
 
       let totalUpdated = 0;
 
@@ -851,9 +822,6 @@ class ChartService {
         },
       ]);
 
-      console.log(
-        `Found ${activeCountries.length} active countries for charts`
-      );
 
       // Update country charts
       for (const countryData of activeCountries) {
@@ -863,9 +831,6 @@ class ChartService {
             countryData.country
           );
           totalUpdated += countryUpdated;
-          console.log(
-            `Updated ${countryData.country} chart: ${countryUpdated} tracks`
-          );
         } catch (error) {
           console.error(
             `Failed to update ${countryData.country} chart:`,
@@ -874,9 +839,6 @@ class ChartService {
         }
       }
 
-      console.log(
-        `Chart update complete! Total entries updated: ${totalUpdated}`
-      );
       return {
         totalUpdated,
         globalUpdated,

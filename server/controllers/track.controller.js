@@ -201,8 +201,6 @@ const handlePlaylistRequest = async (req, res, track, trackId) => {
 const updatePlaylistUrls = (playlist, req, trackId) => {
   const lines = playlist.split("\n");
   const baseUrl = `http${config.nodeEnv === "production" ? "s" : ""}://${req.get("host")}/api/tracks/${trackId}`;
-  console.log(baseUrl)
-  console.log(config.nodeEnv)
   return lines
     .map((line) => {
       if (line.endsWith(".ts")) {

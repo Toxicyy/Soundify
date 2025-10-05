@@ -3,9 +3,17 @@ import Artist from "../models/Artist.model.js";
 import Playlist from "../models/Playlist.model.js";
 import Track from "../models/Track.model.js";
 
+/**
+ * Service for analytics and statistics
+ * Provides dashboard metrics, user statistics, and streaming analytics
+ */
 class AnalyticsService {
+  /**
+   * Get dashboard statistics
+   * @returns {Promise<Object>} Dashboard statistics including users, artists, playlists, and streams
+   */
   async getDashboardStats() {
-    // Параллельные запросы для оптимизации
+    // Parallel requests for optimization
     const [totalUsers, activeArtists, platformPlaylists, monthlyStreams] =
       await Promise.all([
         User.countDocuments(),
@@ -26,12 +34,16 @@ class AnalyticsService {
     };
   }
 
+  /**
+   * Get monthly streams count
+   * @returns {Promise<number>} Total streams for current month
+   */
   async getMonthlyStreamsCount() {
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // Агрегация для подсчета прослушиваний за месяц
+    // Aggregation to count streams for the month
     const result = await Track.aggregate([
       {
         $match: {
@@ -49,6 +61,11 @@ class AnalyticsService {
     return result[0]?.totalStreams || 0;
   }
 
+  /**
+   * Get user statistics with date filtering
+   * @param {Object} options - Date range options
+   * @returns {Promise<Object>} User statistics including growth trends
+   */
   async getUsersStats({ startDate, endDate }) {
     const query = {};
 
@@ -58,7 +75,7 @@ class AnalyticsService {
       if (endDate) query.createdAt.$lte = new Date(endDate);
     }
 
-    // Группировка по дням для графика
+    // Group by day for chart
     const stats = await User.aggregate([
       { $match: query },
       {
@@ -79,6 +96,11 @@ class AnalyticsService {
     };
   }
 
+  /**
+   * Calculate growth percentage based on week-over-week comparison
+   * @param {Array} stats - Daily statistics array
+   * @returns {number} Growth percentage
+   */
   calculateGrowth(stats) {
     if (stats.length < 2) return 0;
 
@@ -91,6 +113,11 @@ class AnalyticsService {
     return Math.round(((lastWeek - previousWeek) / previousWeek) * 100);
   }
 
+  /**
+   * Get streaming statistics for specified period
+   * @param {string} period - Time period (day, week, month, year)
+   * @returns {Promise<Object>} Streaming statistics with aggregated data
+   */
   async getStreamsStats(period = "month") {
     const dateRange = this.getDateRange(period);
 
@@ -129,6 +156,11 @@ class AnalyticsService {
     };
   }
 
+  /**
+   * Get date range based on period
+   * @param {string} period - Time period
+   * @returns {Object} Start and end dates
+   */
   getDateRange(period) {
     const end = new Date();
     const start = new Date();

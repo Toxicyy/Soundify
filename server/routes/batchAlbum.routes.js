@@ -28,13 +28,13 @@ const router = express.Router();
 // Main batch creation endpoint - middleware order is critical
 router.post(
   "/",
-  authenticate, // User authentication
-  uploadBatchAlbum, // File processing and trackIndices extraction
-  validateBatchUploadStructure, // File structure validation
-  validateBatchAlbumCreation, // Data validation using trackIndices
-  checkSystemLimits, // System resource verification
-  generateSessionId, // Progress tracking session creation
-  createBatchAlbum // Album creation process initiation
+  authenticate,
+  uploadBatchAlbum,
+  validateBatchUploadStructure,
+  validateBatchAlbumCreation,
+  checkSystemLimits,
+  generateSessionId,
+  createBatchAlbum
 );
 
 // Progress tracking endpoints

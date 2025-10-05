@@ -33,18 +33,18 @@ router.get("/:id/tracks", getAlbumTracks); // GET /api/albums/:id/tracks
 // Protected routes with file upload and validation
 router.post(
   "/",
-  authenticate, // Verify user authentication
-  uploadCover, // Handle cover file upload (multer)
-  validateAlbumCreation, // Validate album creation data
-  createAlbum // Create new album
+  authenticate,
+  uploadCover,
+  validateAlbumCreation,
+  createAlbum
 );
 
 router.put(
   "/:id",
-  authenticate, // Verify user authentication
-  uploadCover, // Handle cover file upload (optional)
-  validateAlbumUpdate, // Validate album update data
-  updateAlbum // Update existing album
+  authenticate,
+  uploadCover,
+  validateAlbumUpdate,
+  updateAlbum
 );
 
 router.delete("/:id", authenticate, deleteAlbum); // DELETE /api/albums/:id

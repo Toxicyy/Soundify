@@ -4,26 +4,27 @@ import AlbumService from "./AlbumService.js";
 import PlaylistService from "./PlaylistService.js";
 
 /**
- * Глобальный сервис поиска для объединения результатов из всех сущностей
- * Реализует поиск по трекам, артистам, альбомам и плейлистам
+ * Global search service for combining results from all entities
+ * Implements search across tracks, artists, albums, and playlists
+ * Provides unified search results with relevance scoring
  */
 class GlobalSearchService {
   /**
-   * Выполняет глобальный поиск по всем сущностям
-   * @param {string} query - Поисковый запрос
-   * @param {Object} options - Опции поиска
-   * @returns {Promise<Object>} Объединенные результаты поиска
+   * Perform global search across all entities
+   * @param {string} query - Search query
+   * @param {Object} options - Search options
+   * @returns {Promise<Object>} Combined search results
    */
   async globalSearch(query, options = {}) {
     const {
       limit = 10,
       categories = ["tracks", "artists", "albums", "playlists"],
-      userId = null, // Для доступа к приватным плейлистам
-      includePrivate = false, // Включать ли приватные плейлисты пользователя
+      userId = null, // For access to private playlists
+      includePrivate = false, // Include user's private playlists
     } = options;
 
     if (!query || query.trim().length === 0) {
-      throw new Error("Поисковый запрос не может быть пустым");
+      throw new Error("Search query cannot be empty");
     }
 
     const trimmedQuery = query.trim();
@@ -38,7 +39,7 @@ class GlobalSearchService {
     };
 
     try {
-      // Выполняем поиск параллельно по всем категориям
+      // Perform parallel search across all categories
       const searchPromises = [];
 
       if (categories.includes("tracks")) {
@@ -59,10 +60,10 @@ class GlobalSearchService {
         );
       }
 
-      // Ждем все результаты
+      // Wait for all results
       const searchResults = await Promise.allSettled(searchPromises);
 
-      // Обрабатываем результаты
+      // Process results
       let resultIndex = 0;
 
       if (categories.includes("tracks")) {
@@ -100,15 +101,15 @@ class GlobalSearchService {
       results.searchTime = Date.now() - results.searchTime;
       return results;
     } catch (error) {
-      throw new Error(`Ошибка глобального поиска: ${error.message}`);
+      throw new Error(`Global search failed: ${error.message}`);
     }
   }
 
   /**
-   * Поиск треков с обработкой ошибок
-   * @param {string} query - Поисковый запрос
-   * @param {number} limit - Лимит результатов
-   * @returns {Promise<Array>} Найденные треки
+   * Search tracks with error handling
+   * @param {string} query - Search query
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Found tracks
    */
   async searchTracks(query, limit) {
     try {
@@ -123,16 +124,16 @@ class GlobalSearchService {
         relevanceScore: this.calculateRelevance(query, track.name, track.genre),
       }));
     } catch (error) {
-      console.error("Ошибка поиска треков:", error.message);
+      console.error("Track search error:", error.message);
       return [];
     }
   }
 
   /**
-   * Поиск артистов с обработкой ошибок
-   * @param {string} query - Поисковый запрос
-   * @param {number} limit - Лимит результатов
-   * @returns {Promise<Array>} Найденные артисты
+   * Search artists with error handling
+   * @param {string} query - Search query
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Found artists
    */
   async searchArtists(query, limit) {
     try {
@@ -148,16 +149,16 @@ class GlobalSearchService {
         ),
       }));
     } catch (error) {
-      console.error("Ошибка поиска артистов:", error.message);
+      console.error("Artist search error:", error.message);
       return [];
     }
   }
 
   /**
-   * Поиск альбомов с обработкой ошибок
-   * @param {string} query - Поисковый запрос
-   * @param {number} limit - Лимит результатов
-   * @returns {Promise<Array>} Найденные альбомы
+   * Search albums with error handling
+   * @param {string} query - Search query
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Found albums
    */
   async searchAlbums(query, limit) {
     try {
@@ -173,18 +174,18 @@ class GlobalSearchService {
         ),
       }));
     } catch (error) {
-      console.error("Ошибка поиска альбомов:", error.message);
+      console.error("Album search error:", error.message);
       return [];
     }
   }
 
   /**
-   * Поиск плейлистов с обработкой ошибок
-   * @param {string} query - Поисковый запрос
-   * @param {number} limit - Лимит результатов
-   * @param {string} userId - ID пользователя
-   * @param {boolean} includePrivate - Включать приватные плейлисты
-   * @returns {Promise<Array>} Найденные плейлисты
+   * Search playlists with error handling
+   * @param {string} query - Search query
+   * @param {number} limit - Result limit
+   * @param {string} userId - User ID
+   * @param {boolean} includePrivate - Include private playlists
+   * @returns {Promise<Array>} Found playlists
    */
   async searchPlaylists(query, limit, userId, includePrivate) {
     try {
@@ -193,7 +194,7 @@ class GlobalSearchService {
       });
       let playlists = playlistResults.playlists;
 
-      // Если нужно включить приватные плейлисты пользователя
+      // Include user's private playlists if requested
       if (includePrivate && userId) {
         try {
           const userPlaylists = await PlaylistService.getUserPlaylists(userId, {
@@ -202,7 +203,7 @@ class GlobalSearchService {
             privacy: "private",
           });
 
-          // Фильтруем приватные плейлисты по запросу
+          // Filter private playlists by query
           const filteredPrivatePlaylists = userPlaylists.playlists.filter(
             (playlist) =>
               playlist.name.toLowerCase().includes(query.toLowerCase())
@@ -210,7 +211,7 @@ class GlobalSearchService {
 
           playlists = [...playlists, ...filteredPrivatePlaylists];
         } catch (error) {
-          console.warn("Ошибка получения приватных плейлистов:", error.message);
+          console.warn("Error fetching private playlists:", error.message);
         }
       }
 
@@ -224,17 +225,17 @@ class GlobalSearchService {
         ),
       }));
     } catch (error) {
-      console.error("Ошибка поиска плейлистов:", error.message);
+      console.error("Playlist search error:", error.message);
       return [];
     }
   }
 
   /**
-   * Поиск с приоритетом по типу контента
-   * @param {string} query - Поисковый запрос
-   * @param {string} primaryType - Приоритетный тип для поиска
-   * @param {Object} options - Опции поиска
-   * @returns {Promise<Object>} Результаты с приоритетом
+   * Search with priority by content type
+   * @param {string} query - Search query
+   * @param {string} primaryType - Priority type for search
+   * @param {Object} options - Search options
+   * @returns {Promise<Object>} Results with priority
    */
   async searchWithPriority(query, primaryType, options = {}) {
     const { limit = 10, secondaryLimit = 5 } = options;
@@ -244,7 +245,7 @@ class GlobalSearchService {
       limit: primaryType === "tracks" ? limit : secondaryLimit,
     });
 
-    // Если есть приоритетный тип, делаем дополнительный поиск
+    // If there's a priority type, do additional search
     if (primaryType && results[primaryType]) {
       const primaryResults = await this.globalSearch(query, {
         ...options,
@@ -259,9 +260,9 @@ class GlobalSearchService {
   }
 
   /**
-   * Получение популярных результатов для пустого поиска
-   * @param {Object} options - Опции
-   * @returns {Promise<Object>} Популярные результаты
+   * Get popular content for empty search
+   * @param {Object} options - Options
+   * @returns {Promise<Object>} Popular results
    */
   async getPopularContent(options = {}) {
     const { limit = 10 } = options;
@@ -275,7 +276,7 @@ class GlobalSearchService {
         type: "popular",
       };
 
-      // Параллельно получаем популярный контент
+      // Get popular content in parallel
       const [tracksResult, artistsResult, albumsResult, playlistsResult] =
         await Promise.allSettled([
           TrackService.getAllTracks({ page: 1, limit, sortBy: "listenCount" }),
@@ -315,17 +316,17 @@ class GlobalSearchService {
       return results;
     } catch (error) {
       throw new Error(
-        `Ошибка получения популярного контента: ${error.message}`
+        `Failed to get popular content: ${error.message}`
       );
     }
   }
 
   /**
-   * Расчет релевантности результата поиска
-   * @param {string} query - Поисковый запрос
-   * @param {string} title - Название элемента
-   * @param {string} metadata - Дополнительные метаданные
-   * @returns {number} Оценка релевантности (0-100)
+   * Calculate search result relevance
+   * @param {string} query - Search query
+   * @param {string} title - Item title
+   * @param {string} metadata - Additional metadata
+   * @returns {number} Relevance score (0-100)
    */
   calculateRelevance(query, title, metadata = "") {
     const queryLower = query.toLowerCase();
@@ -334,21 +335,21 @@ class GlobalSearchService {
 
     let score = 0;
 
-    // Точное совпадение в начале названия - максимальный приоритет
+    // Exact match at start of title - highest priority
     if (titleLower.startsWith(queryLower)) {
       score += 50;
     }
-    // Содержит запрос в названии
+    // Contains query in title
     else if (titleLower.includes(queryLower)) {
       score += 30;
     }
 
-    // Содержит запрос в метаданных
+    // Contains query in metadata
     if (metadataLower.includes(queryLower)) {
       score += 20;
     }
 
-    // Бонус за длину совпадения
+    // Bonus for match length
     const matchLength = query.length / title.length;
     score += Math.floor(matchLength * 10);
 
@@ -356,18 +357,18 @@ class GlobalSearchService {
   }
 
   /**
-   * Сортировка результатов по релевантности
-   * @param {Array} results - Результаты для сортировки
-   * @returns {Array} Отсортированные результаты
+   * Sort results by relevance
+   * @param {Array} results - Results to sort
+   * @returns {Array} Sorted results
    */
   sortByRelevance(results) {
     return results.sort((a, b) => {
-      // Сначала по релевантности
+      // First by relevance
       if (b.relevanceScore !== a.relevanceScore) {
         return b.relevanceScore - a.relevanceScore;
       }
 
-      // Затем по популярности (если есть)
+      // Then by popularity (if exists)
       if (a.listenCount && b.listenCount) {
         return b.listenCount - a.listenCount;
       }
@@ -380,16 +381,16 @@ class GlobalSearchService {
         return b.likeCount - a.likeCount;
       }
 
-      // По дате создания
+      // By creation date
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
   }
 
   /**
-   * Получение предложений для автодополнения
-   * @param {string} query - Частичный запрос
-   * @param {number} limit - Лимит предложений
-   * @returns {Promise<Array>} Предложения для автодополнения
+   * Get search suggestions for autocomplete
+   * @param {string} query - Partial query
+   * @param {number} limit - Suggestion limit
+   * @returns {Promise<Array>} Autocomplete suggestions
    */
   async getSearchSuggestions(query, limit = 5) {
     if (!query || query.trim().length < 2) {
@@ -400,7 +401,7 @@ class GlobalSearchService {
       const results = await this.globalSearch(query, { limit: 3 });
       const suggestions = [];
 
-      // Добавляем предложения из всех категорий
+      // Add suggestions from all categories
       results.tracks.forEach((track) => {
         suggestions.push({
           text: track.name,
@@ -414,7 +415,7 @@ class GlobalSearchService {
         suggestions.push({
           text: artist.name,
           type: "artist",
-          secondary: `${artist.followerCount || 0} подписчиков`,
+          secondary: `${artist.followerCount || 0} followers`,
           id: artist._id,
         });
       });
@@ -439,7 +440,7 @@ class GlobalSearchService {
 
       return suggestions.slice(0, limit);
     } catch (error) {
-      console.error("Ошибка получения предложений:", error.message);
+      console.error("Error getting suggestions:", error.message);
       return [];
     }
   }

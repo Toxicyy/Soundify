@@ -37,7 +37,6 @@ const artistSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Middleware для создания slug
 artistSchema.pre("save", function (next) {
   if (this.isModified("name")) {
     this.slug = this.name

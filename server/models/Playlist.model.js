@@ -1,17 +1,22 @@
 import mongoose from "mongoose";
 
+/**
+ * Playlist Model
+ * Manages user-created and platform playlists with tracks, metadata, and privacy settings
+ * Supports draft functionality and automatic statistics calculation
+ */
 const playlistSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Название плейлиста обязательно"],
+      required: [true, "Playlist name is required"],
       trim: true,
-      maxlength: [100, "Название не может быть длиннее 100 символов"],
+      maxlength: [100, "Name cannot be longer than 100 characters"],
     },
     description: {
       type: String,
       trim: true,
-      maxlength: [500, "Описание не может быть длиннее 500 символов"],
+      maxlength: [500, "Description cannot be longer than 500 characters"],
     },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
@@ -28,7 +33,7 @@ const playlistSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // Добавляем поле для хранения fileId обложки
+    // Field for storing cover file ID
     coverFileId: {
       type: String,
       default: null,
@@ -47,23 +52,23 @@ const playlistSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    // Добавляем поле для общей продолжительности
+    // Field for total duration
     totalDuration: {
       type: Number,
       default: 0,
     },
-    // Добавляем поле для количества треков (для быстрого доступа)
+    // Field for track count (for quick access)
     trackCount: {
       type: Number,
       default: 0,
     },
-    // Добавляем поле для категории плейлиста
+    // Field for playlist category
     category: {
       type: String,
       enum: ["user", "featured", "genre", "mood", "activity"],
       default: "user",
     },
-    // Поле для настроек конфиденциальности (заменяет isPublic)
+    // Privacy settings field (replaces isPublic)
     privacy: {
       type: String,
       enum: ["public", "private", "unlisted"],
@@ -72,7 +77,7 @@ const playlistSchema = new mongoose.Schema(
     isDraft: {
       type: Boolean,
       default: false,
-      index: true, // Для быстрых запросов
+      index: true, // For fast queries
     },
 
     lastModified: {
@@ -80,13 +85,13 @@ const playlistSchema = new mongoose.Schema(
       default: Date.now,
     },
 
-    // Для отслеживания неактивных черновиков
+    // For tracking inactive drafts
     lastActivity: {
       type: Date,
       default: Date.now,
     },
 
-    // Версионирование для optimistic updates
+    // Versioning for optimistic updates
     version: {
       type: Number,
       default: 1,
@@ -97,14 +102,14 @@ const playlistSchema = new mongoose.Schema(
   }
 );
 
-// Индексы для быстрого поиска
+// Indexes for fast search
 playlistSchema.index({ name: "text", description: "text" });
 playlistSchema.index({ owner: 1 });
 playlistSchema.index({ createdAt: -1 });
 playlistSchema.index({ privacy: 1 });
 playlistSchema.index({ category: 1 });
 
-// Виртуальное поле для подсчета треков
+// Virtual field for counting tracks
 playlistSchema.virtual("tracksCount").get(function () {
   return this.tracks.length;
 });
@@ -116,12 +121,12 @@ playlistSchema.pre("save", function (next) {
   next();
 });
 
-// Middleware для обновления счетчиков при изменении
+// Middleware for updating counters on change
 playlistSchema.pre("save", async function (next) {
   if (this.isModified("tracks")) {
     this.trackCount = this.tracks.length;
 
-    // Пересчитываем общую продолжительность
+    // Recalculate total duration
     if (this.tracks.length > 0) {
       const Track = mongoose.model("Track");
       const tracks = await Track.find({ _id: { $in: this.tracks } }).select(
@@ -138,6 +143,11 @@ playlistSchema.pre("save", async function (next) {
   next();
 });
 
+/**
+ * Static method to cleanup old drafts
+ * @param {number} daysOld - Age threshold in days
+ * @returns {Promise} Deletion result
+ */
 playlistSchema.statics.cleanupOldDrafts = async function (daysOld = 7) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
@@ -145,7 +155,7 @@ playlistSchema.statics.cleanupOldDrafts = async function (daysOld = 7) {
   return await this.deleteMany({
     isDraft: true,
     lastActivity: { $lt: cutoffDate },
-    tracks: { $size: 0 }, // Только пустые плейлисты
+    tracks: { $size: 0 }, // Only empty playlists
   });
 };
 

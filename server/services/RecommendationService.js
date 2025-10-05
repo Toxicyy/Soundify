@@ -2,6 +2,11 @@ import Track from "../models/Track.model.js";
 import User from "../models/User.model.js";
 import TrackService from "./TrackService.js";
 
+/**
+ * Service for generating personalized music recommendations
+ * Provides recommendation algorithms based on user listening history, liked artists, and preferences
+ * Implements filtering to avoid duplicate recommendations in queue
+ */
 class RecommendationService {
   /**
    * Main method for getting recommendations
@@ -145,7 +150,12 @@ class RecommendationService {
     }
   }
 
-  // Personal recommendations
+  /**
+   * Get personal recommendations
+   * @param {Object} user - User object
+   * @param {number} limit - Recommendation limit
+   * @returns {Promise<Array>} Personal recommendations
+   */
   async getPersonalRecommendations(user, limit) {
     const [fromArtists, fromGenres, fromPlaylists] = await Promise.all([
       this.getRecommendationsFromLikedArtists(user, Math.ceil(limit * 0.5)),
@@ -162,6 +172,10 @@ class RecommendationService {
 
   /**
    * Personal recommendations with custom exclusions
+   * @param {Object} user - User object
+   * @param {number} limit - Recommendation limit
+   * @param {Array} excludeIds - IDs to exclude
+   * @returns {Promise<Array>} Filtered recommendations
    */
   async getPersonalRecommendationsWithExclusions(user, limit, excludeIds) {
     const [fromArtists, fromGenres, fromPlaylists] = await Promise.all([
@@ -189,7 +203,12 @@ class RecommendationService {
     ]);
   }
 
-  // Based on liked artists
+  /**
+   * Get recommendations based on liked artists
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Recommended tracks
+   */
   async getRecommendationsFromLikedArtists(user, limit) {
     if (!user.likedArtists?.length) return [];
 
@@ -210,7 +229,11 @@ class RecommendationService {
   }
 
   /**
-   * Based on liked artists with custom exclusions
+   * Get recommendations based on liked artists with custom exclusions
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @param {Array} excludeIds - IDs to exclude
+   * @returns {Promise<Array>} Recommended tracks
    */
   async getRecommendationsFromLikedArtistsExcluding(user, limit, excludeIds) {
     if (!user.likedArtists?.length) return [];
@@ -231,7 +254,12 @@ class RecommendationService {
     return tracksWithSignedUrls;
   }
 
-  // Based on genres of liked tracks
+  /**
+   * Get recommendations based on genres of liked tracks
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Recommended tracks
+   */
   async getRecommendationsFromGenres(user, limit) {
     if (!user.likedSongs?.length) return [];
 
@@ -261,7 +289,11 @@ class RecommendationService {
   }
 
   /**
-   * Based on genres with custom exclusions
+   * Get recommendations based on genres with custom exclusions
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @param {Array} excludeIds - IDs to exclude
+   * @returns {Promise<Array>} Recommended tracks
    */
   async getRecommendationsFromGenresExcluding(user, limit, excludeIds) {
     if (!user.likedSongs?.length) return [];
@@ -291,7 +323,12 @@ class RecommendationService {
     return tracksWithSignedUrls;
   }
 
-  // Based on user playlists
+  /**
+   * Get recommendations based on user playlists
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Recommended tracks
+   */
   async getRecommendationsFromPlaylists(user, limit) {
     if (!user.likedPlaylists?.length) return [];
 
@@ -332,7 +369,11 @@ class RecommendationService {
   }
 
   /**
-   * Based on playlists with custom exclusions
+   * Get recommendations based on playlists with custom exclusions
+   * @param {Object} user - User object
+   * @param {number} limit - Result limit
+   * @param {Array} excludeIds - IDs to exclude
+   * @returns {Promise<Array>} Recommended tracks
    */
   async getRecommendationsFromPlaylistsExcluding(user, limit, excludeIds) {
     if (!user.likedPlaylists?.length) return [];
@@ -373,7 +414,11 @@ class RecommendationService {
     return tracksWithSignedUrls;
   }
 
-  // Popular tracks
+  /**
+   * Get popular tracks
+   * @param {number} limit - Result limit
+   * @returns {Promise<Array>} Popular tracks
+   */
   async getPopularTracks(limit) {
     const tracks = await Track.find({ isPublic: true })
       .sort({ validListenCount: -1, likeCount: -1 })
@@ -388,7 +433,10 @@ class RecommendationService {
   }
 
   /**
-   * Popular tracks with exclusions
+   * Get popular tracks with exclusions
+   * @param {number} limit - Result limit
+   * @param {Array} excludeIds - IDs to exclude
+   * @returns {Promise<Array>} Popular tracks
    */
   async getPopularTracksExcluding(limit, excludeIds = []) {
     const tracks = await Track.find({
@@ -406,7 +454,12 @@ class RecommendationService {
     return tracksWithSignedUrls;
   }
 
-  // Filter already known tracks
+  /**
+   * Filter already known tracks
+   * @param {Object} user - User object
+   * @param {Array} tracks - Tracks to filter
+   * @returns {Array} Filtered tracks
+   */
   filterExistingTracks(user, tracks) {
     if (!tracks.length) return [];
 
@@ -416,7 +469,11 @@ class RecommendationService {
     );
   }
 
-  // Remove duplicates
+  /**
+   * Remove duplicate tracks
+   * @param {Array} tracks - Tracks array
+   * @returns {Array} Deduplicated tracks
+   */
   removeDuplicates(tracks) {
     const seen = new Set();
     return tracks.filter((track) => {
