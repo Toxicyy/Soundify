@@ -9,7 +9,9 @@
     "dev": "cd client && npm run dev"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "backblaze-b2": "^1.7.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
