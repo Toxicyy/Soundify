@@ -1,27 +1,26 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SearchOutlined, CaretRightOutlined, PauseOutlined, HeartOutlined, HeartFilled, UserOutlined, VerifiedOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useGetUserQuery } from '../state/UserApi.slice';
-import { useDispatch, useSelector } from 'react-redux';
-import { setCurrentTrack, setIsPlaying } from '../state/CurrentTrack.slice';
-import { playTrackAndQueue } from '../state/Queue.slice';
-import { api } from '../shared/api';
-import type { AppDispatch } from '../store';
-import type { Track } from '../types/TrackData';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  SearchOutlined,
+  CaretRightOutlined,
+  PauseOutlined,
+  HeartOutlined,
+  HeartFilled,
+  UserOutlined,
+  VerifiedOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useGetUserQuery } from "../state/UserApi.slice";
+import { useDispatch, useSelector } from "react-redux";
+import { setCurrentTrack, setIsPlaying } from "../state/CurrentTrack.slice";
+import { playTrackAndQueue } from "../state/Queue.slice";
+import { api } from "../shared/api";
+import type { AppDispatch } from "../store";
+import type { Track } from "../types/TrackData";
 
 /**
  * Artists Discovery Page
- * 
- * Features:
- * - Real-time search with debounce
- * - Popular artists showcase
- * - Artist cards with tracks preview
- * - Like/unlike functionality
- * - Responsive grid layout
- * - Skeleton loading states
- * - Error handling with retry
- * - Track play functionality with recommendations
+ * Complex parts: Real-time search, track playback with recommendations, like functionality
  */
 
 interface Artist {
@@ -78,7 +77,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
   onUnlike,
   isLiked,
   tracks,
-  isLoadingTracks
+  isLoadingTracks,
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -94,7 +93,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleLikeClick = (e: React.MouseEvent) => {
@@ -115,7 +114,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
    */
   const handleTrackPlay = async (track: SimpleTrack, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!track || !user) return;
 
     const isCurrentTrack = currentTrack.currentTrack?._id === track._id;
@@ -130,11 +129,11 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
       // Get recommendations for the user
       const response = await api.recommendations.getForUser(user._id);
       const data = await response.json();
-      
+
       if (data.success) {
         const recommendations: Track[] = data.data || [];
         // Convert SimpleTrack to Track for Redux
-        const fullTrack: Track = track as any; // Type assertion since we're missing some fields
+        const fullTrack: Track = track as any;
         const playQueue = [fullTrack, ...recommendations];
 
         await dispatch(
@@ -156,8 +155,8 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
         }, 50);
       }
     } catch (error) {
-      console.error('Error getting recommendations:', error);
-      
+      console.error("Error getting recommendations:", error);
+
       // Fallback: play just the track
       dispatch(setCurrentTrack(track as any));
       setTimeout(() => {
@@ -187,16 +186,18 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+                  target.style.display = "none";
                 }}
               />
             ) : (
-              <UserOutlined style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '24px' }} />
+              <UserOutlined
+                style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "24px" }}
+              />
             )}
           </div>
           {artist.isVerified && (
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-              <VerifiedOutlined style={{ color: 'white', fontSize: '12px' }} />
+              <VerifiedOutlined style={{ color: "white", fontSize: "12px" }} />
             </div>
           )}
         </div>
@@ -209,12 +210,17 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
             <button
               onClick={handleLikeClick}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              aria-label={isLiked ? 'Unlike artist' : 'Like artist'}
+              aria-label={isLiked ? "Unlike artist" : "Like artist"}
             >
               {isLiked ? (
-                <HeartFilled style={{ color: '#ef4444', fontSize: '18px' }} />
+                <HeartFilled style={{ color: "#ef4444", fontSize: "18px" }} />
               ) : (
-                <HeartOutlined style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '18px' }} />
+                <HeartOutlined
+                  style={{
+                    color: "rgba(255, 255, 255, 0.7)",
+                    fontSize: "18px",
+                  }}
+                />
               )}
             </button>
           </div>
@@ -227,7 +233,7 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
               <>
                 <span className="text-white/30">•</span>
                 <span className="text-purple-300 text-sm">
-                  {artist.genres.slice(0, 2).join(', ')}
+                  {artist.genres.slice(0, 2).join(", ")}
                 </span>
               </>
             )}
@@ -237,15 +243,15 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
 
       {/* Bio */}
       {artist.bio && (
-        <p className="text-white/70 text-sm mb-4 line-clamp-2">
-          {artist.bio}
-        </p>
+        <p className="text-white/70 text-sm mb-4 line-clamp-2">{artist.bio}</p>
       )}
 
       {/* Popular Tracks */}
       <div className="space-y-2">
-        <h4 className="text-white/80 text-sm font-medium mb-2">Popular Tracks</h4>
-        
+        <h4 className="text-white/80 text-sm font-medium mb-2">
+          Popular Tracks
+        </h4>
+
         {isLoadingTracks ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
@@ -261,9 +267,11 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
         ) : tracks.length > 0 ? (
           <div className="space-y-1">
             {tracks.slice(0, 3).map((track, index) => {
-              const isCurrentTrack = currentTrack.currentTrack?._id === track._id;
-              const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
-              
+              const isCurrentTrack =
+                currentTrack.currentTrack?._id === track._id;
+              const isThisTrackPlaying =
+                isCurrentTrack && currentTrack.isPlaying;
+
               return (
                 <motion.div
                   key={track._id}
@@ -281,22 +289,37 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <CaretRightOutlined style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '14px' }} />
+                      <CaretRightOutlined
+                        style={{
+                          color: "rgba(255, 255, 255, 0.5)",
+                          fontSize: "14px",
+                        }}
+                      />
                     )}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/track:opacity-100 transition-opacity flex items-center justify-center">
                       {isThisTrackPlaying ? (
-                        <PauseOutlined style={{ color: 'white', fontSize: '14px' }} />
+                        <PauseOutlined
+                          style={{ color: "white", fontSize: "14px" }}
+                        />
                       ) : (
-                        <CaretRightOutlined style={{ color: 'white', fontSize: '14px' }} />
+                        <CaretRightOutlined
+                          style={{ color: "white", fontSize: "14px" }}
+                        />
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm truncate ${isCurrentTrack ? 'text-green-400' : 'text-white'}`}>
+                    <p
+                      className={`text-sm truncate ${
+                        isCurrentTrack ? "text-green-400" : "text-white"
+                      }`}
+                    >
                       {track.name}
                     </p>
-                    <p className="text-white/50 text-xs">{formatDuration(track.duration)}</p>
+                    <p className="text-white/50 text-xs">
+                      {formatDuration(track.duration)}
+                    </p>
                   </div>
                 </motion.div>
               );
@@ -329,19 +352,20 @@ export default function Artists() {
   const { data: user } = useGetUserQuery();
 
   // State management
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [popularArtists, setPopularArtists] = useState<Artist[]>([]);
-  const [artistTracks, setArtistTracks] = useState<{ [key: string]: SimpleTrack[] }>({});
+  const [artistTracks, setArtistTracks] = useState<{
+    [key: string]: SimpleTrack[];
+  }>({});
   const [likedArtists, setLikedArtists] = useState<Set<string>>(new Set());
-  
+
   // Loading states
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPopular, setIsLoadingPopular] = useState(true);
   const [loadingTracks, setLoadingTracks] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
-  
   const [hasMore, _setHasMore] = useState(true);
 
   /**
@@ -350,8 +374,8 @@ export default function Artists() {
   useEffect(() => {
     if (user?.likedArtists) {
       const likedIds = new Set(
-        user.likedArtists.map((artist: any) => 
-          typeof artist === 'string' ? artist : artist._id
+        user.likedArtists.map((artist: any) =>
+          typeof artist === "string" ? artist : artist._id
         )
       );
       setLikedArtists(likedIds);
@@ -372,11 +396,11 @@ export default function Artists() {
       if (data.success) {
         setPopularArtists(data.data.artists);
       } else {
-        throw new Error('Failed to fetch popular artists');
+        throw new Error("Failed to fetch popular artists");
       }
     } catch (error) {
-      console.error('Error fetching popular artists:', error);
-      setError('Failed to load artists. Please try again.');
+      console.error("Error fetching popular artists:", error);
+      setError("Failed to load artists. Please try again.");
     } finally {
       setIsLoadingPopular(false);
     }
@@ -385,43 +409,46 @@ export default function Artists() {
   /**
    * Fetch artist tracks with caching
    */
-  const fetchArtistTracks = useCallback(async (artistId: string) => {
-    if (artistTracks[artistId] || loadingTracks.has(artistId)) {
-      return; // Already loaded or loading
-    }
-
-    try {
-      setLoadingTracks(prev => new Set(prev).add(artistId));
-
-      const response = await api.artist.getTracks(artistId, { limit: 3 });
-      const data = await response.json();
-
-      if (data.success) {
-        setArtistTracks(prev => ({
-          ...prev,
-          [artistId]: data.data.tracks || data.data
-        }));
+  const fetchArtistTracks = useCallback(
+    async (artistId: string) => {
+      if (artistTracks[artistId] || loadingTracks.has(artistId)) {
+        return; // Already loaded or loading
       }
-    } catch (error) {
-      console.error('Error fetching artist tracks:', error);
-    } finally {
-      setLoadingTracks(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(artistId);
-        return newSet;
-      });
-    }
-  }, [artistTracks, loadingTracks]);
+
+      try {
+        setLoadingTracks((prev) => new Set(prev).add(artistId));
+
+        const response = await api.artist.getTracks(artistId, { limit: 3 });
+        const data = await response.json();
+
+        if (data.success) {
+          setArtistTracks((prev) => ({
+            ...prev,
+            [artistId]: data.data.tracks || data.data,
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching artist tracks:", error);
+      } finally {
+        setLoadingTracks((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(artistId);
+          return newSet;
+        });
+      }
+    },
+    [artistTracks, loadingTracks]
+  );
 
   /**
    * Debounced search function
    */
   const debouncedSearch = useMemo(() => {
     let timeoutId: number;
-    
+
     return (query: string) => {
       clearTimeout(timeoutId);
-      
+
       if (!query.trim()) {
         setSearchResults(null);
         return;
@@ -438,11 +465,11 @@ export default function Artists() {
           if (data.success) {
             setSearchResults(data.data);
           } else {
-            throw new Error('Search failed');
+            throw new Error("Search failed");
           }
         } catch (error) {
-          console.error('Search error:', error);
-          setError('Search failed. Please try again.');
+          console.error("Search error:", error);
+          setError("Search failed. Please try again.");
         } finally {
           setIsSearching(false);
         }
@@ -462,36 +489,39 @@ export default function Artists() {
   /**
    * Handle artist like/unlike
    */
-  const handleLikeArtist = useCallback(async (artistId: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const response = await api.artist.like(artistId);
-      
-      if (response.ok) {
-        setLikedArtists(prev => new Set(prev).add(artistId));
+  const handleLikeArtist = useCallback(
+    async (artistId: string) => {
+      if (!user) {
+        navigate("/login");
+        return;
       }
-    } catch (error) {
-      console.error('Error liking artist:', error);
-    }
-  }, [user, navigate]);
+
+      try {
+        const response = await api.artist.like(artistId);
+
+        if (response.ok) {
+          setLikedArtists((prev) => new Set(prev).add(artistId));
+        }
+      } catch (error) {
+        console.error("Error liking artist:", error);
+      }
+    },
+    [user, navigate]
+  );
 
   const handleUnlikeArtist = useCallback(async (artistId: string) => {
     try {
       const response = await api.artist.unlike(artistId);
 
       if (response.ok) {
-        setLikedArtists(prev => {
+        setLikedArtists((prev) => {
           const newSet = new Set(prev);
           newSet.delete(artistId);
           return newSet;
         });
       }
     } catch (error) {
-      console.error('Error unliking artist:', error);
+      console.error("Error unliking artist:", error);
     }
   }, []);
 
@@ -500,7 +530,7 @@ export default function Artists() {
    */
   useEffect(() => {
     const artistsToLoad = searchResults?.artists || popularArtists;
-    artistsToLoad.forEach(artist => {
+    artistsToLoad.forEach((artist) => {
       fetchArtistTracks(artist._id);
     });
   }, [searchResults, popularArtists, fetchArtistTracks]);
@@ -532,7 +562,8 @@ export default function Artists() {
             Discover Artists
           </h1>
           <p className="text-white/70 text-lg max-w-2xl">
-            Explore talented artists and their music. Find your next favorite track.
+            Explore talented artists and their music. Find your next favorite
+            track.
           </p>
         </motion.div>
 
@@ -544,8 +575,8 @@ export default function Artists() {
           className="mb-8"
         >
           <div className="relative max-w-2xl">
-            <SearchOutlined 
-              style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '20px' }}
+            <SearchOutlined
+              style={{ color: "rgba(255, 255, 255, 0.5)", fontSize: "20px" }}
               className="absolute left-4 top-1/2 transform -translate-y-1/2"
             />
             <input
@@ -598,7 +629,7 @@ export default function Artists() {
                 )}
               </>
             ) : (
-              'Popular Artists'
+              "Popular Artists"
             )}
           </h2>
         </motion.div>
@@ -661,7 +692,12 @@ export default function Artists() {
               className="text-center py-16"
             >
               <div className="w-24 h-24 mx-auto mb-6 bg-white/10 rounded-full flex items-center justify-center">
-                <SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '48px' }} />
+                <SearchOutlined
+                  style={{
+                    color: "rgba(255, 255, 255, 0.5)",
+                    fontSize: "48px",
+                  }}
+                />
               </div>
               <h3 className="text-white text-xl font-semibold mb-2">
                 No artists found
@@ -680,10 +716,7 @@ export default function Artists() {
             animate={{ opacity: 1 }}
             className="text-center mt-12"
           >
-            <button
-              
-              className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors backdrop-blur-lg border border-white/20"
-            >
+            <button className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors backdrop-blur-lg border border-white/20">
               Load More Artists
             </button>
           </motion.div>

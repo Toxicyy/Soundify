@@ -4,13 +4,13 @@ const trackSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Название трека обязательно"],
+      required: [true, "Track name is required"],
       trim: true,
-      maxlength: [100, "Название не может быть длиннее 100 символов"],
+      maxlength: [100, "Name cannot be longer than 100 characters"],
     },
     artist: {
       type: mongoose.Schema.Types.ObjectId,
-      required: [true, "Артист обязателен"],
+      required: [true, "Artist is required"],
       ref: "Artist",
       trim: true,
     },
@@ -21,21 +21,17 @@ const trackSchema = new mongoose.Schema(
     },
     audioUrl: {
       type: String,
-      required: [true, "URL аудио файла обязателен"],
+      required: [true, "URL audio required"],
     },
     audioFileId: {
       type: String,
-      // Not required for backward compatibility
-      // Will be populated by migration script
     },
     coverUrl: {
       type: String,
-      required: [true, "URL обложки обязателен"],
+      required: [true, "URL cover required"],
     },
     coverFileId: {
       type: String,
-      // Not required for backward compatibility
-      // Will be populated by migration script
     },
     duration: {
       type: Number,
@@ -55,7 +51,7 @@ const trackSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    // NEW: Valid listen count for charts (listens >= 30 seconds or 25% of track)
+    //Valid listen count for charts (listens >= 30 seconds or 25% of track)
     validListenCount: {
       type: Number,
       default: 0,
@@ -78,7 +74,7 @@ const trackSchema = new mongoose.Schema(
     },
     hlsSegments: [
       {
-        type: String, // URLs сегментов
+        type: String,
       },
     ],
     hlsSegmentFileIds: [
@@ -91,7 +87,6 @@ const trackSchema = new mongoose.Schema(
       enum: ["128k", "320k"],
       default: "128k",
     },
-    // NEW: Chart-related fields
     chartEligible: {
       type: Boolean,
       default: function () {
@@ -104,7 +99,6 @@ const trackSchema = new mongoose.Schema(
     },
     currentChartPosition: {
       global: { type: Number, default: null },
-      // Country positions will be stored in ChartCache collection
     },
     peakChartPosition: {
       global: { type: Number, default: null },
@@ -123,7 +117,7 @@ trackSchema.index({ album: 1 });
 trackSchema.index({ createdAt: -1 });
 trackSchema.index({ listenCount: -1 });
 
-// NEW: Chart performance indexes
+// Chart performance indexes
 trackSchema.index({ validListenCount: -1, chartEligible: 1 });
 trackSchema.index({ genre: 1, validListenCount: -1 });
 trackSchema.index({ lastChartUpdate: 1 });

@@ -15,20 +15,18 @@ const albumSchema = new mongoose.Schema({
   genre: [String],
   type: { type: String, enum: ["album", "ep", "single"], default: "album" },
 
-  // NEW: Album status for batch processing
   status: {
     type: String,
     enum: ["processing", "published", "failed"],
     default: "processing",
-    index: true, // Index for efficient queries
+    index: true,
   },
 
-  // NEW: Processing metadata (optional, for debugging)
   processingInfo: {
-    sessionId: String, // Batch session ID
-    totalTracks: Number, // Expected number of tracks
-    processedTracks: Number, // Successfully processed tracks
-    failedAt: String, // Step where processing failed (if failed)
+    sessionId: String,
+    totalTracks: Number,
+    processedTracks: Number,
+    failedAt: String,
     processingStarted: Date,
     processingCompleted: Date,
   },
@@ -37,10 +35,9 @@ const albumSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// Indexes for efficient querying
-albumSchema.index({ artist: 1, status: 1 }); // Artist's albums by status
-albumSchema.index({ status: 1, createdAt: -1 }); // Processing queue
-albumSchema.index({ "processingInfo.sessionId": 1 }); // Batch session lookup
+albumSchema.index({ artist: 1, status: 1 });
+albumSchema.index({ status: 1, createdAt: -1 });
+albumSchema.index({ "processingInfo.sessionId": 1 });
 
 // Virtual for checking if album is ready for public display
 albumSchema.virtual("isPublished").get(function () {

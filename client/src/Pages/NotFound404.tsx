@@ -4,31 +4,6 @@ import { motion } from "framer-motion";
 
 /**
  * 404 Not Found Page - Purple gradient with glass morphism effects
- *
- * DESIGN FEATURES:
- * - Purple gradient background (slate-900 → purple-900 → slate-900)
- * - Glass morphism cards with backdrop blur
- * - Animated floating elements and particles
- * - Interactive hover effects and micro-animations
- * - Responsive design with mobile-first approach
- *
- * RESPONSIVE DESIGN:
- * - Adaptive typography scaling (text-6xl → text-9xl)
- * - Flexible layout adjustments for all screen sizes
- * - Touch-optimized buttons and interactive elements
- * - Proper spacing and padding for mobile devices
- *
- * ANIMATIONS:
- * - Floating background elements with random movement
- * - Smooth page transitions with stagger effects
- * - Interactive button hover states
- * - Particle system with CSS animations
- *
- * ACCESSIBILITY:
- * - High contrast text for readability
- * - Keyboard navigation support
- * - Screen reader friendly content structure
- * - Focus management for interactive elements
  */
 
 interface FloatingElement {
@@ -309,7 +284,7 @@ const NotFound404 = () => {
                   ],
                 }}
                 transition={{
-                  duration: 6,
+                  duration: 8,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
@@ -318,15 +293,6 @@ const NotFound404 = () => {
           </div>
         </div>
       </div>
-
-      {/* Gradient Overlay for Depth */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at center, transparent 0%, rgba(15, 23, 42, 0.3) 100%)",
-        }}
-      />
     </div>
   );
 };

@@ -1,13 +1,7 @@
-// /src/shared/components/StyledComponents.tsx
 import { Input, Select } from "antd";
 import styled from "styled-components";
 import { motion } from "framer-motion";
 import TextArea from "antd/es/input/TextArea";
-
-/**
- * Общие styled-components для переиспользования в модалках и формах
- * Унифицированный дизайн с поддержкой темной темы и glassmorphism эффектов
- */
 
 // === INPUT COMPONENTS ===
 export const StyledInput = styled(Input)`

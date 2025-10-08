@@ -23,8 +23,10 @@ import {
 import { api } from "../shared/api";
 
 /**
- * Represents a track in the charts with additional chart-specific metadata
+ * Charts page with authentication requirement
+ * Complex parts: Authentication flow, chart data fetching, track playback
  */
+
 interface ChartTrack {
   rank: number;
   track: {
@@ -49,9 +51,6 @@ interface ChartTrack {
   lastUpdated: string;
 }
 
-/**
- * Chart tab configuration
- */
 interface ChartTab {
   id: "global" | "trending";
   label: string;
@@ -59,9 +58,6 @@ interface ChartTab {
   description: string;
 }
 
-/**
- * Animation configuration constants
- */
 const ANIMATION_CONFIG = {
   pageTransition: { duration: 0.4 },
   itemStagger: 0.05,
@@ -69,17 +65,11 @@ const ANIMATION_CONFIG = {
   buttonTap: { scale: 0.95 },
 } as const;
 
-/**
- * Chart configuration constants
- */
 const CHART_CONFIG = {
-  global: { limit: 50, refreshInterval: 300000 }, // 5 minutes
+  global: { limit: 50, refreshInterval: 300000 },
   trending: { limit: 30, refreshInterval: 300000 },
 } as const;
 
-/**
- * Charts component with authentication state handling
- */
 const Charts: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -723,7 +713,7 @@ const Charts: React.FC = () => {
 
         {/* Auth Required Content */}
         <motion.section
-          className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
+          className="bg-white/8 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}

@@ -18,7 +18,7 @@ import { useLikedTracksLoader } from "../hooks/useLikedTracksLoader";
 
 /**
  * Authentication required state component
- * Displays a beautiful animated interface encouraging users to sign in
+ * Displays animated interface encouraging users to sign in
  */
 const AuthRequiredState: React.FC = () => {
   const navigate = useNavigate();
@@ -311,38 +311,20 @@ const LoadingComponent: React.FC = () => (
 );
 
 /**
- * Liked Songs page with responsive design and beautiful handling for unauthorized users
- * Supports desktop, tablet, and mobile layouts
- *
- * Features:
- * - Authentication state management
- * - Infinite request prevention using useRef
- * - Responsive design across all breakpoints
- * - Beautiful loading and empty states
- * - Optimized user experience flow
- *
- * @returns JSX.Element - Page with liked tracks list or authentication screen
+ * Liked Songs page with responsive design and authentication handling
  */
 export default function LikedSongs() {
   const navigate = useNavigate();
   const { data: user, isFetching: userLoading } = useGetUserQuery();
   const { isLoading, likedTracks, loadLikedTracks } = useLikedTracksLoader();
-
-  // Use useRef to track already loaded userId to prevent infinite requests
   const loadedUserIdRef = useRef<string | null>(null);
 
-  /**
-   * Effect to load liked tracks when user data changes
-   * Only triggers for authenticated users and prevents duplicate requests
-   */
   useEffect(() => {
-    // Check if user exists, is not loading, and we haven't loaded tracks for this user yet
     if (user?._id && !userLoading && loadedUserIdRef.current !== user._id) {
       loadedUserIdRef.current = user._id;
       loadLikedTracks(user._id);
     }
 
-    // Reset ref if user logs out
     if (!user) {
       loadedUserIdRef.current = null;
     }

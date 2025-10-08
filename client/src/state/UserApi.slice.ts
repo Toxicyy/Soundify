@@ -12,7 +12,6 @@ const baseQuery = fetchBaseQuery({
   prepareHeaders(headers) {
     const token = localStorage.getItem("token");
     if (!token) {
-      // Прерываем запрос, если нет токена
       headers.set('X-Stop', 'true');
     } else {
       headers.set("Authorization", `Bearer ${token}`);
@@ -23,7 +22,6 @@ const baseQuery = fetchBaseQuery({
 
 const baseQueryWithAuth: BaseQueryFn = async (args, api, extraOptions) => {
   const result = await baseQuery(args, api, extraOptions);
-  // Если нет токена - отклоняем запрос
   if (args.headers?.get('X-Stop')) {
     return { error: { status: 401, data: 'Unauthorized' } };
   }

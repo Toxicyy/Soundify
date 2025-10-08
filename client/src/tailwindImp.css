@@ -13,9 +13,9 @@
   background: linear-gradient(to bottom right, #0f172a, #581c87, #0f172a);
 }
 .glass {
-  background: rgba(255, 255, 255, 0.3); /* полупрозрачный белый */
-  backdrop-filter: blur(8px); /* размытие заднего фона */
-  -webkit-backdrop-filter: blur(8px); /* для поддержки Safari */
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #222;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
@@ -30,7 +30,7 @@
   display: inline;
 }
 .queue-scroll {
-  max-height: 27.5vh; /* подберите под ваш дизайн */
+  max-height: 27.5vh;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #575757 #181818;
@@ -90,7 +90,6 @@
   }
 }
 
-/* Анимации появления */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -113,7 +112,6 @@
   }
 }
 
-/* Классы для анимаций */
 .animate-shimmer {
   animation: shimmer 2s infinite ease-in-out;
 }
@@ -134,7 +132,6 @@
   animation: fadeInLeft 0.6s ease-out;
 }
 
-/* Стили для стеклянного эффекта */
 .glass-skeleton {
   background: linear-gradient(
     135deg,
@@ -145,7 +142,6 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Улучшенный pulse эффект */
 .pulse-enhanced {
   animation: pulse-enhanced 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -163,13 +159,12 @@
 }
 
 .tracks-scroll-light {
-  max-height: 42vh; /* или другая высота под ваш дизайн */
+  max-height: 42vh;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-/* Для Chrome, Edge, Safari - светлый вариант */
 .tracks-scroll-light::-webkit-scrollbar {
   width: 8px;
   background: transparent;
@@ -206,25 +201,21 @@
   animation: fadeInUpMenu 0.15s ease-out forwards;
 }
 
-/* Горизонтальный скролл для альбомов/синглов */
 .albums-scroll-light {
   max-width: 100%;
   overflow-x: auto;
-  overflow-y: hidden; /* Убираем вертикальный скролл */
+  overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 
-  /* Плавный скролл */
   scroll-behavior: smooth;
 
-  /* Убираем горизонтальную прокрутку на мобильных */
   -webkit-overflow-scrolling: touch;
 }
 
-/* Для Chrome, Edge, Safari - горизонтальный скролл */
 .albums-scroll-light::-webkit-scrollbar {
-  height: 8px; /* Высота для горизонтального скролла */
-  width: 8px; /* На случай если будет вертикальный */
+  height: 8px;
+  width: 8px;
   background: transparent;
   border-radius: 8px;
 }

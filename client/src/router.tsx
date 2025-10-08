@@ -83,7 +83,6 @@ export const router = createBrowserRouter([
             path: "/profile/:id",
             element: <Profile />,
           },
-          // Переместил дочерние роуты профиля на один уровень с основным роутом профиля
           {
             path: "/profile/:id/playlists",
             element: <UserPlaylistsPage />,

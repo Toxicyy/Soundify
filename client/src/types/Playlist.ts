@@ -1,5 +1,3 @@
-// types/Playlist.ts - обновленные типы для плейлиста
-
 import type { Track } from "./TrackData";
 
 export interface Playlist {
@@ -15,7 +13,7 @@ export interface Playlist {
     username: string;
     avatar?: string;
   };
-  tracks: Track[] | string[]; // Может быть как массив объектов, так и массив ID
+  tracks: Track[] | string[];
   tags: string[];
   category: string;
   privacy: "public" | "private" | "unlisted";
@@ -27,7 +25,6 @@ export interface Playlist {
   isDraft?: boolean;
 }
 
-// Для обновления плейлиста через API
 export interface PlaylistUpdate {
   name?: string;
   description?: string;

@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 interface LikeState {
-  likedTracks: string[]; // Используем массив для совместимости с Immer
-  pendingUpdates: string[]; // Треки, которые находятся в процессе обновления
+  likedTracks: string[];
+  pendingUpdates: string[];
 }
 
 const initialState: LikeState = {
@@ -14,12 +14,10 @@ export const likeUpdateSlice = createSlice({
   name: "likeUpdate",
   initialState,
   reducers: {
-    // Инициализация лайков из user.likedSongs
     initializeLikes: (state, action: PayloadAction<string[]>) => {
       state.likedTracks = action.payload;
     },
 
-    // Добавление лайка (оптимистичное обновление)
     addLike: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       if (!state.likedTracks.includes(trackId)) {
@@ -30,7 +28,6 @@ export const likeUpdateSlice = createSlice({
       }
     },
 
-    // Удаление лайка (оптимистичное обновление)
     removeLike: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       state.likedTracks = state.likedTracks.filter((id) => id !== trackId);
@@ -39,7 +36,6 @@ export const likeUpdateSlice = createSlice({
       }
     },
 
-    // Подтверждение успешного обновления на сервере
     confirmLikeUpdate: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       state.pendingUpdates = state.pendingUpdates.filter(
@@ -47,19 +43,16 @@ export const likeUpdateSlice = createSlice({
       );
     },
 
-    // Откат изменений при ошибке
     revertLikeUpdate: (
       state,
       action: PayloadAction<{ trackId: string; wasLiked: boolean }>
     ) => {
       const { trackId, wasLiked } = action.payload;
       if (wasLiked) {
-        // Восстанавливаем лайк
         if (!state.likedTracks.includes(trackId)) {
           state.likedTracks.push(trackId);
         }
       } else {
-        // Убираем лайк
         state.likedTracks = state.likedTracks.filter((id) => id !== trackId);
       }
       state.pendingUpdates = state.pendingUpdates.filter(
@@ -67,7 +60,6 @@ export const likeUpdateSlice = createSlice({
       );
     },
 
-    // Очистка всех лайков
     clearLikes: (state) => {
       state.likedTracks = [];
       state.pendingUpdates = [];
@@ -86,7 +78,6 @@ export const {
 
 export default likeUpdateSlice.reducer;
 
-// Селекторы
 export const selectIsLiked = (
   state: { likeUpdate: LikeState },
   trackId: string

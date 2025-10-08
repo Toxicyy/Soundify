@@ -10,11 +10,7 @@ import { api } from "../shared/api";
 
 /**
  * Artist Studio - main page for artists
- *
- * ИСПРАВЛЕНИЯ:
- * - Добавлен отступ сверху для header (pt-[200px])
- * - Исправлен overflow контейнера
- * - Правильная структура layout без налезания
+ * Complex parts: Access control, stats loading, error handling, responsive layout
  */
 
 interface DashboardStats {
@@ -279,7 +275,7 @@ export default function ArtistStudio() {
           />
         </div>
 
-        {/* Контент */}
+        {/* Content */}
         <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] pb-36 xl:pb-8">
           <div className="space-y-6">
             {/* Dashboard Overview Skeleton */}
@@ -572,10 +568,8 @@ export default function ArtistStudio() {
   if (isUserLoading || artistLoading || !artistData) return LoadingComponent;
   if (!hasArtistAccess) return null;
 
-  // Main page render - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ СТРУКТУРА
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900">
-      {/* Фиксированный header - БЕЗ FIXED POSITIONING */}
       <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] py-5">
         <ArtistStudioHeader
           artist={artistData}
@@ -585,7 +579,7 @@ export default function ArtistStudio() {
         />
       </div>
 
-      {/* Основной контент */}
+      {/* Main content */}
       <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] pb-36 xl:pb-8">
         <AnimatePresence mode="wait">{DashboardContent}</AnimatePresence>
       </div>

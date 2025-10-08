@@ -11,7 +11,7 @@ import { useFollowArtist } from "../hooks/useFollowArtist";
 
 /**
  * Artist page component displaying artist information, tracks, and albums
- * Provides comprehensive artist profile with responsive design and error handling
+ * Complex parts: Error handling, loading states, image preloading
  */
 const Artist = () => {
   const location = useLocation();
@@ -58,12 +58,12 @@ const Artist = () => {
 
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
-  // Determine overall loading state (исключаем isFollowingLoading)
+  // Determine overall loading state (excluding isFollowingLoading)
   const isDataLoading = artistLoading || tracksLoading || albumsLoading;
   const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
   const isOverallLoading = isDataLoading || isImagesLoading;
 
-  // Ошибки (followError обрабатываем отдельно в компонентах)
+  // Errors (followError handled separately in components)
   const isDataError = artistError || tracksError;
   const isImageError = !allImagesLoaded && imagesToPreload.length === 0;
   const isOverallError = isDataError || isImageError;
@@ -110,14 +110,12 @@ const Artist = () => {
 
           <div>
             <h2 className="text-white text-xl font-semibold mb-2">
-              {artistError?.includes("не найден") ||
-              artistError?.includes("not found")
+              {artistError?.includes("not found")
                 ? "Artist not found"
                 : "Loading error"}
             </h2>
             <p className="text-white/70 text-sm mb-1">
-              {artistError?.includes("не найден") ||
-              artistError?.includes("not found")
+              {artistError?.includes("not found")
                 ? `Artist with ID "${artistId}" doesn't exist or has been removed`
                 : artistError}
             </p>
@@ -180,7 +178,6 @@ const Artist = () => {
     );
   }
 
-  // Main content render - all data loaded successfully
   return (
     <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
       <Header artist={artist} isLoading={false} />

@@ -4,8 +4,8 @@
  */
 
 export interface LocalTrack {
-  tempId: string; // Возвращаем tempId - он нужен для React keys и состояния
-  index: number; // Числовой индекс для FormData отправки
+  tempId: string;
+  index: number;
   file: File;
   metadata: {
     name: string;
@@ -40,8 +40,8 @@ export interface SaveProgress {
   currentTrackProgress: number;
 
   tracks: Array<{
-    tempId: string; // Для React состояния
-    index: number; // For FormData
+    tempId: string;
+    index: number;
     name: string;
     status: "pending" | "processing" | "completed" | "failed";
     message?: string;

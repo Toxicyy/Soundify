@@ -7,11 +7,9 @@ import type { AppDispatch } from "../store.ts";
 import { motion } from "framer-motion";
 
 /**
- * Адаптивная страница авторизации
- * Desktop (xl+): классический дизайн с волной
- * Mobile (<xl): современный card-based дизайн с анимациями
- *
- * @returns JSX.Element - Страница авторизации с адаптивным дизайном
+ * Responsive login page
+ * Desktop (xl+): Classic design with wave
+ * Mobile (<xl): Modern card-based design with animations
  */
 export default function Login() {
   const { data: user } = useGetUserQuery();
@@ -25,14 +23,14 @@ export default function Login() {
   }
   return (
     <>
-      {/* Desktop версия (xl и выше) */}
+      {/* Desktop version (xl and above) */}
       {!user && (
         <div className="hidden xl:block">
           <LoginForm />
         </div>
       )}
 
-      {/* Mobile версия (меньше xl) */}
+      {/* Mobile version (less than xl) */}
       {!user && (
         <div className="block xl:hidden">
           <MobileAuthForm initialMode="login" />

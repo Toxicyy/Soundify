@@ -25,7 +25,7 @@ const listenEventSchema = new mongoose.Schema(
       default: "GLOBAL",
     },
     listenDuration: {
-      type: Number, // Duration in seconds
+      type: Number,
       required: true,
     },
     isValid: {
