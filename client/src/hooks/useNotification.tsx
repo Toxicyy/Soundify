@@ -12,13 +12,10 @@ interface CustomNotificationOptions {
 }
 
 /**
- * Hook for managing notifications throughout the application
+ * Hook for managing application-wide notifications
  * Provides methods for success, error, loading, and custom notifications
  */
 export const useNotification = () => {
-  /**
-   * Show success notification
-   */
   const showSuccess = (
     message: string,
     options?: CustomNotificationOptions
@@ -29,32 +26,23 @@ export const useNotification = () => {
     });
   };
 
-  /**
-   * Show error notification
-   */
   const showError = (message: string, options?: CustomNotificationOptions) => {
     return toast.error(message, {
-      duration: options?.duration || 5000, // Error messages stay longer
+      duration: options?.duration || 5000,
       position: options?.position,
     });
   };
 
-  /**
-   * Show loading notification
-   */
   const showLoading = (
     message: string,
     options?: CustomNotificationOptions
   ) => {
     return toast.loading(message, {
-      duration: options?.duration || Infinity, // Loading stays until dismissed
+      duration: options?.duration || Infinity,
       position: options?.position,
     });
   };
 
-  /**
-   * Show info notification (custom styled)
-   */
   const showInfo = (message: string, options?: CustomNotificationOptions) => {
     return toast(message, {
       duration: options?.duration || 4000,
@@ -67,9 +55,6 @@ export const useNotification = () => {
     });
   };
 
-  /**
-   * Show warning notification (custom styled)
-   */
   const showWarning = (
     message: string,
     options?: CustomNotificationOptions
@@ -85,9 +70,6 @@ export const useNotification = () => {
     });
   };
 
-  /**
-   * Show playlist limit error with custom styling
-   */
   const showPlaylistLimitError = (currentCount: number, limit: number) => {
     const isUserStatus = limit === 5;
 
@@ -117,19 +99,19 @@ export const useNotification = () => {
               </div>
               <div className="ml-3 flex-1">
                 <p className="text-sm font-semibold text-white">
-                  Лимит плейлистов превышен
+                  Playlist Limit Exceeded
                 </p>
                 <p className="mt-1 text-sm text-white/80">
-                  У вас уже {currentCount} из {limit} возможных плейлистов
+                  You have {currentCount} of {limit} possible playlists
                 </p>
                 {isUserStatus ? (
                   <p className="mt-1 text-xs text-white/60">
-                    Удалите ненужные плейлисты или обновитесь до Premium для
-                    увеличения лимита до 15 плейлистов
+                    Delete unused playlists or upgrade to Premium to increase
+                    limit to 15 playlists
                   </p>
                 ) : (
                   <p className="mt-1 text-xs text-white/60">
-                    Удалите ненужные плейлисты для создания новых
+                    Delete unused playlists to create new ones
                   </p>
                 )}
               </div>
@@ -146,28 +128,19 @@ export const useNotification = () => {
         </div>
       ),
       {
-        duration: 8000, // Увеличиваем время показа для важного сообщения
+        duration: 8000,
       }
     );
   };
 
-  /**
-   * Dismiss specific notification by ID
-   */
   const dismiss = (toastId: string) => {
     toast.dismiss(toastId);
   };
 
-  /**
-   * Dismiss all notifications
-   */
   const dismissAll = () => {
     toast.dismiss();
   };
 
-  /**
-   * Custom notification with full control
-   */
   const showCustom = (
     component: React.ReactElement,
     options?: CustomNotificationOptions
@@ -178,9 +151,6 @@ export const useNotification = () => {
     });
   };
 
-  /**
-   * Promise-based notification (useful for async operations)
-   */
   const showPromise = <T,>(
     promise: Promise<T>,
     messages: {

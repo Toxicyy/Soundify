@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { api } from "../shared/api";
 import type { Track } from "../types/TrackData";
 import { useGetUserQuery } from "../state/UserApi.slice";
@@ -16,6 +16,10 @@ interface LikedSongsResponse {
   message?: string;
 }
 
+/**
+ * Hook for counting liked tracks from specific artist
+ * Fetches user's liked songs and filters by artist ID
+ */
 export const useArtistLikedTracksCount = (
   artistId: string
 ): UseArtistLikedTracksCountResult => {
@@ -26,7 +30,6 @@ export const useArtistLikedTracksCount = (
   const { data: user } = useGetUserQuery();
   const userId = user?._id || null;
 
-  // Вычисляем количество треков от конкретного артиста
   const count = useMemo(() => {
     if (!artistId || !likedTracks.length) return 0;
 
@@ -36,8 +39,7 @@ export const useArtistLikedTracksCount = (
     ).length;
   }, [likedTracks, artistId]);
 
-  const fetchLikedTracks = async () => {
-    // Если пользователь не авторизован - возвращаем пустой результат
+  const fetchLikedTracks = useCallback(async () => {
     if (!userId) {
       setLikedTracks([]);
       setIsLoading(false);
@@ -60,26 +62,23 @@ export const useArtistLikedTracksCount = (
       if (data.success) {
         setLikedTracks(data.data || []);
       } else {
-        throw new Error(data.message || "Ошибка при получении любимых треков");
+        throw new Error(data.message || "Error fetching liked tracks");
       }
     } catch (err) {
-      console.error("Error fetching liked tracks:", err);
-      setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+      setError(err instanceof Error ? err.message : "Unknown error");
       setLikedTracks([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
-  // Функция для принудительного обновления данных
-  const refetch = () => {
+  const refetch = useCallback(() => {
     fetchLikedTracks();
-  };
+  }, [fetchLikedTracks]);
 
-  // Загружаем данные при монтировании компонента или изменении зависимостей
   useEffect(() => {
     fetchLikedTracks();
-  }, [userId]);
+  }, [fetchLikedTracks]);
 
   return {
     count,
@@ -88,5 +87,3 @@ export const useArtistLikedTracksCount = (
     refetch,
   };
 };
-
-export default useArtistLikedTracksCount;

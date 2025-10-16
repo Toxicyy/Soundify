@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { api } from "../shared/api";
 
-/**
- * Enhanced playlist save data interface with cover file support
- */
 interface PlaylistSaveData {
   name?: string;
   description?: string;
@@ -13,49 +10,27 @@ interface PlaylistSaveData {
   cover?: File | null;
 }
 
-/**
- * Enhanced usePlaylistSave hook return interface
- */
 interface UsePlaylistSaveReturn {
-  /** Function to save playlist changes */
   saveChanges: (changes: PlaylistSaveData) => Promise<any>;
-  /** Loading state for save operations */
   saving: boolean;
-  /** Error message if save failed */
   error: string | null;
-  /** Clear any existing errors */
   clearError: () => void;
 }
 
 /**
- * Enhanced hook for saving playlist changes with comprehensive error handling
- *
- * Features:
- * - Support for cover file uploads
- * - Comprehensive error handling and validation
- * - Loading state management
- * - Permission checking
- * - Retry logic for failed requests
- *
- * @param playlistId - ID of the playlist to save
- * @returns Object with save function and state
+ * Hook for saving playlist changes with cover upload support
+ * Validates data and handles comprehensive error scenarios
  */
 export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Clear any existing errors
-   */
   const clearError = () => {
     setError(null);
   };
 
   /**
-   * Save playlist changes with enhanced error handling
-   *
-   * @param changes - Object containing the changes to save
-   * @returns Promise that resolves to the updated playlist data
+   * Saves playlist changes with full validation and error handling
    */
   const saveChanges = async (changes: PlaylistSaveData) => {
     if (!playlistId) {
@@ -66,7 +41,6 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
     setError(null);
 
     try {
-      // Validate required fields
       if (
         changes.name !== undefined &&
         (!changes.name || changes.name.trim().length === 0)
@@ -74,7 +48,6 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
         throw new Error("Playlist name cannot be empty");
       }
 
-      // Validate tags if provided
       if (changes.tags && Array.isArray(changes.tags)) {
         const invalidTags = changes.tags.filter(
           (tag) => typeof tag !== "string" || tag.trim().length === 0
@@ -84,7 +57,6 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
         }
       }
 
-      // Validate privacy setting
       if (
         changes.privacy &&
         !["public", "private", "unlisted"].includes(changes.privacy)
@@ -92,21 +64,17 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
         throw new Error("Invalid privacy setting");
       }
 
-      // Validate cover file if provided
       if (changes.cover && changes.cover instanceof File) {
         if (!changes.cover.type.startsWith("image/")) {
           throw new Error("Cover must be an image file");
         }
         if (changes.cover.size > 5 * 1024 * 1024) {
-          // 5MB limit
           throw new Error("Cover image must be less than 5MB");
         }
       }
 
-      // Prepare FormData for the request
       const formData = new FormData();
 
-      // Add text fields to FormData
       if (changes.name !== undefined) {
         formData.append("name", changes.name.trim());
       }
@@ -123,16 +91,13 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
         formData.append("tags", JSON.stringify(changes.tags));
       }
 
-      // Add cover file if provided
       if (changes.cover instanceof File) {
         formData.append("cover", changes.cover);
       }
 
-      // Make the API request
       const response = await api.playlist.update(playlistId, formData);
 
       if (!response.ok) {
-        // Handle specific HTTP error codes
         if (response.status === 401) {
           throw new Error("Authentication failed. Please log in again.");
         }
@@ -149,19 +114,17 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
           throw new Error("Invalid data provided. Please check your inputs.");
         }
 
-        // Try to get error details from response
         let errorMessage = `Save failed with status ${response.status}`;
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (parseError) {
-          // Ignore JSON parse errors
+        } catch {
+          // Silent fail on JSON parse
         }
 
         throw new Error(errorMessage);
       }
 
-      // Parse successful response
       const data = await response.json();
 
       if (!data.success) {
@@ -173,10 +136,7 @@ export const usePlaylistSave = (playlistId: string): UsePlaylistSaveReturn => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
 
-      console.error("❌ Failed to save playlist:", errorMessage);
       setError(errorMessage);
-
-      // Re-throw error for component to handle
       throw error;
     } finally {
       setSaving(false);

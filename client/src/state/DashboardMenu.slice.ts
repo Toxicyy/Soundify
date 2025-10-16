@@ -7,7 +7,7 @@ const initialState: DashboardMenuState = {
 
 export const dashboardMenuSlice = createSlice({
   name: "dashboardMenu",
-  initialState: initialState,
+  initialState,
   reducers: {
     setMenuOpen: (state) => {
       state.isOpen = !state.isOpen;
@@ -18,5 +18,3 @@ export const dashboardMenuSlice = createSlice({
 export const { setMenuOpen } = dashboardMenuSlice.actions;
 
 export default dashboardMenuSlice.reducer;
-
-

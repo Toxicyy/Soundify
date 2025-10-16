@@ -22,9 +22,6 @@ interface AlbumHeaderFormProps {
   tracksCount: number;
 }
 
-/**
- * Styled components for consistent dark theme across different screen sizes
- */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -152,8 +149,8 @@ const StyledDatePicker = styled(DatePicker)`
 `;
 
 /**
- * Album Header Form Component
- * Responsive form for album metadata input
+ * Album metadata form component
+ * Features: cover upload, name, description, type, release date
  */
 const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
   albumData,
@@ -163,7 +160,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle cover image change
   const handleCoverChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -179,7 +175,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
         return;
       }
 
-      // Clean up previous preview
       if (albumData.coverPreview) {
         URL.revokeObjectURL(albumData.coverPreview);
       }
@@ -190,7 +185,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     [albumData.coverPreview, onChange]
   );
 
-  // Handle cover removal
   const handleRemoveCover = useCallback(() => {
     if (albumData.coverPreview) {
       URL.revokeObjectURL(albumData.coverPreview);
@@ -201,7 +195,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     }
   }, [albumData.coverPreview, onChange]);
 
-  // Get type color for visual feedback
   const getTypeColor = (type: string) => {
     switch (type) {
       case "single":
@@ -215,7 +208,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
     }
   };
 
-  // Get type description
   const getTypeDescription = (type: string) => {
     switch (type) {
       case "single":
@@ -236,7 +228,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
       </h2>
 
       <div className="space-y-4 lg:space-y-6">
-        {/* Album Cover - Responsive layout */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2 lg:mb-3">
             Album Cover *
@@ -290,7 +281,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
           </div>
         </div>
 
-        {/* Album Name */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">
             Album Name *
@@ -303,7 +293,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">
             Description
@@ -318,7 +307,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
           />
         </div>
 
-        {/* Album Type */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">
             Album Type
@@ -347,7 +335,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
           </div>
         </div>
 
-        {/* Release Date */}
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">
             Release Date (coming soon)
@@ -367,7 +354,6 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
           </p>
         </div>
 
-        {/* Album Stats - Responsive layout */}
         <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
           <h4 className="text-white font-medium mb-3 text-sm lg:text-base">
             Album Summary
@@ -393,30 +379,29 @@ const AlbumHeaderForm: React.FC<AlbumHeaderFormProps> = ({
               <span className="text-white/60">Status:</span>
               <span className="text-white font-medium">
                 {albumData.name && albumData.coverFile && tracksCount >= 2
-                  ? "✅ Ready to create"
-                  : "⏳ Needs more info"}
+                  ? "Ready to create"
+                  : "Needs more info"}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Requirements */}
         <div className="bg-blue-500/10 rounded-lg p-3 lg:p-4 border border-blue-500/20">
           <h4 className="text-blue-400 font-medium mb-2 flex items-center gap-2 text-sm lg:text-base">
-            <span>ℹ️</span>
+            <span>ℹ</span>
             Requirements
           </h4>
           <ul className="text-white/80 text-sm space-y-1">
             <li className="flex items-center gap-2">
-              <span className={albumData.name ? "✅" : "❌"}></span>
+              <span>{albumData.name ? "✅" : "❌"}</span>
               Album name
             </li>
             <li className="flex items-center gap-2">
-              <span className={albumData.coverFile ? "✅" : "❌"}></span>
+              <span>{albumData.coverFile ? "✅" : "❌"}</span>
               Album cover image
             </li>
             <li className="flex items-center gap-2">
-              <span className={tracksCount >= 2 ? "✅" : "❌"}></span>
+              <span>{tracksCount >= 2 ? "✅" : "❌"}</span>
               At least 2 tracks
             </li>
           </ul>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import LoginValid, {
@@ -11,31 +11,23 @@ import SignUpValid, {
 } from "../../validation/SignUpValid";
 import { api } from "../../shared/api";
 
-/**
- * Props for mobile authentication form
- */
 interface MobileAuthFormProps {
-  /** Initial form mode */
   initialMode: "login" | "signup";
 }
 
+const ERROR_MESSAGES: Record<number, string> = {
+  401: "Invalid email or password",
+  404: "User not found",
+  409: "User with this email or username already exists",
+  429: "Too many attempts. Try again later",
+  400: "Invalid data provided",
+};
+
 /**
  * Mobile authentication form with toggle between login and signup
- * Card-based design with modern animations and micro-interactions
- *
- * Features:
- * - Toggle between login and registration forms
- * - Card-based design with glassmorphism
- * - Swipe gestures for form switching
- * - Animated transitions and micro-interactions
- * - Real-time validation
- * - API error handling
- * - Responsive design for mobile devices
- * - Password visibility toggle
+ * Features card-based design with animations and validation
  */
-export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
-  initialMode,
-}) => {
+const MobileAuthForm: React.FC<MobileAuthFormProps> = ({ initialMode }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,43 +58,17 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
     check: [],
   });
 
-  /**
-   * Улучшенная обработка ошибок с бекенда
-   */
-  const getErrorMessage = (errorMessage: string, status: number) => {
-    // Обработка русских сообщений с бекенда
-    if (errorMessage.includes("Неверный email или пароль")) {
-      return "Invalid email or password";
+  const getErrorMessage = useCallback((errorMessage: string, status: number): string => {
+    if (status === 409) {
+      if (errorMessage.toLowerCase().includes("email")) {
+        return "User with this email already exists";
+      }
+      if (errorMessage.toLowerCase().includes("username")) {
+        return "User with this username already exists";
+      }
     }
-    if (errorMessage.includes("Пользователь с таким email уже существует")) {
-      return "User with this email already exists";
-    }
-    if (errorMessage.includes("Пользователь с таким username уже существует")) {
-      return "User with this username already exists";
-    }
-
-    // Обработка по статус кодам
-    switch (status) {
-      case 401:
-        return "Invalid email or password";
-      case 404:
-        return "User not found";
-      case 409:
-        if (errorMessage.toLowerCase().includes("email")) {
-          return "User with this email already exists";
-        }
-        if (errorMessage.toLowerCase().includes("username")) {
-          return "User with this username already exists";
-        }
-        return "User with this email or username already exists";
-      case 429:
-        return "Too many attempts. Try again later";
-      case 400:
-        return "Invalid data provided";
-      default:
-        return errorMessage || "Something went wrong";
-    }
-  };
+    return ERROR_MESSAGES[status] || errorMessage || "Something went wrong";
+  }, []);
 
   useEffect(() => {
     if (mode === "login") {
@@ -110,21 +76,15 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
     } else {
       setSignupErrors(SignUpValid(signupData));
     }
-  }, [loginData, signupData, mode, apiError]);
+  }, [loginData, signupData, mode]);
 
-  const handleLogin = async () => {
-    if (
-      loginErrors.username.length === 0 &&
-      loginErrors.password.length === 0
-    ) {
+  const handleLogin = useCallback(async () => {
+    if (loginErrors.username.length === 0 && loginErrors.password.length === 0) {
       setIsLoading(true);
       setApiError("");
 
       try {
-        const response = await api.auth.login(
-          loginData.username,
-          loginData.password
-        );
+        const response = await api.auth.login(loginData.username, loginData.password);
 
         if (response.ok) {
           const data = await response.json();
@@ -139,15 +99,14 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
           setApiError(errorMessage);
         }
       } catch (error) {
-        console.error("Login error:", error);
         setApiError("Network error. Check your connection");
       } finally {
         setIsLoading(false);
       }
     }
-  };
+  }, [loginErrors, loginData, navigate, getErrorMessage]);
 
-  const handleSignup = async () => {
+  const handleSignup = useCallback(async () => {
     if (isSignupFormValid()) {
       setIsLoading(true);
       setApiError("");
@@ -172,24 +131,23 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
           setApiError(errorMessage);
         }
       } catch (error) {
-        console.error("Signup error:", error);
         setApiError("Network error. Check your connection");
       } finally {
         setIsLoading(false);
       }
     }
-  };
+  }, [signupData, getErrorMessage]);
 
-  const isLoginFormValid = () => {
+  const isLoginFormValid = useCallback(() => {
     return (
       loginErrors.username.length === 0 &&
       loginErrors.password.length === 0 &&
       loginData.username.trim() !== "" &&
       loginData.password.trim() !== ""
     );
-  };
+  }, [loginErrors, loginData]);
 
-  const isSignupFormValid = () => {
+  const isSignupFormValid = useCallback(() => {
     return (
       signupErrors.name.length === 0 &&
       signupErrors.email.length === 0 &&
@@ -202,9 +160,9 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
       signupData.password.trim() !== "" &&
       signupData.check
     );
-  };
+  }, [signupErrors, signupData]);
 
-  const renderMobileInput = (
+  const renderMobileInput = useCallback((
     id: string,
     label: string,
     type: string,
@@ -252,38 +210,13 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
             disabled={isLoading}
           >
             {showPassword ? (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
               </svg>
             ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             )}
           </motion.button>
@@ -299,17 +232,15 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
         </motion.p>
       )}
     </motion.div>
-  );
+  ), [isLoading, showPassword]);
 
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{
-        background:
-          "linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)",
+        background: "linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)",
       }}
     >
-      {/* Header */}
       <motion.div
         className="flex items-center justify-between p-4 pt-12"
         initial={{ opacity: 0, y: -50 }}
@@ -323,18 +254,8 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
           whileTap={{ scale: 0.95 }}
           disabled={isLoading}
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </motion.button>
 
@@ -350,7 +271,6 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
         <div className="w-10"></div>
       </motion.div>
 
-      {/* Mode Toggle */}
       <motion.div
         className="mx-4 mb-6"
         initial={{ opacity: 0, y: 20 }}
@@ -366,7 +286,7 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
             }`}
             onClick={() => {
               setMode("login");
-              setApiError(""); // Очищаем ошибки при переключении
+              setApiError("");
             }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
@@ -381,7 +301,7 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
             }`}
             onClick={() => {
               setMode("signup");
-              setApiError(""); // Очищаем ошибки при переключении
+              setApiError("");
             }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
@@ -391,7 +311,6 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
         </div>
       </motion.div>
 
-      {/* Main Content */}
       <div className="flex-1 px-4">
         <AnimatePresence mode="wait">
           {mode === "login" ? (
@@ -409,15 +328,10 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                 transition={{ delay: 0.1, duration: 0.5 }}
                 className="text-center mb-6"
               >
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Welcome Back
-                </h2>
-                <p className="text-purple-200/70">
-                  Sign in to continue your music journey
-                </p>
+                <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
+                <p className="text-purple-200/70">Sign in to continue your music journey</p>
               </motion.div>
 
-              {/* API Error */}
               {apiError && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -428,21 +342,11 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-2.5 h-2.5 text-red-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
+                      <svg className="w-2.5 h-2.5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <p className="text-red-300 text-sm font-medium">
-                      {apiError}
-                    </p>
+                    <p className="text-red-300 text-sm font-medium">{apiError}</p>
                   </div>
                 </motion.div>
               )}
@@ -480,12 +384,8 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                       ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-lg"
                       : "bg-gray-600/50 cursor-not-allowed opacity-50"
                   }`}
-                  whileHover={
-                    isLoginFormValid() && !isLoading ? { scale: 1.02 } : {}
-                  }
-                  whileTap={
-                    isLoginFormValid() && !isLoading ? { scale: 0.98 } : {}
-                  }
+                  whileHover={isLoginFormValid() && !isLoading ? { scale: 1.02 } : {}}
+                  whileTap={isLoginFormValid() && !isLoading ? { scale: 0.98 } : {}}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
@@ -516,15 +416,10 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                 transition={{ delay: 0.1, duration: 0.5 }}
                 className="text-center mb-6"
               >
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Join Soundify
-                </h2>
-                <p className="text-purple-200/70">
-                  Create your account and start your musical journey
-                </p>
+                <h2 className="text-2xl font-bold text-white mb-2">Join Soundify</h2>
+                <p className="text-purple-200/70">Create your account and start your musical journey</p>
               </motion.div>
 
-              {/* API Error */}
               {apiError && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -535,21 +430,11 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-2.5 h-2.5 text-red-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
+                      <svg className="w-2.5 h-2.5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
                     </div>
-                    <p className="text-red-300 text-sm font-medium">
-                      {apiError}
-                    </p>
+                    <p className="text-red-300 text-sm font-medium">{apiError}</p>
                   </div>
                 </motion.div>
               )}
@@ -603,7 +488,6 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                   true
                 )}
 
-                {/* Terms Checkbox */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -611,9 +495,7 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                   className="flex items-start gap-3 mt-4"
                 >
                   <motion.button
-                    onClick={() =>
-                      setSignupData({ ...signupData, check: !signupData.check })
-                    }
+                    onClick={() => setSignupData({ ...signupData, check: !signupData.check })}
                     className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 mt-0.5 ${
                       signupData.check
                         ? "bg-gradient-to-br from-purple-500 to-violet-600 border-purple-400"
@@ -633,23 +515,15 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                         strokeWidth="2.5"
                         viewBox="0 0 16 16"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4 8l3 3 5-5"
-                        />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8l3 3 5-5" />
                       </motion.svg>
                     )}
                   </motion.button>
                   <div className="text-xs text-purple-100/80 leading-relaxed">
                     I agree to the{" "}
-                    <button className="text-purple-300 underline">
-                      Terms of Service
-                    </button>{" "}
+                    <button className="text-purple-300 underline">Terms of Service</button>{" "}
                     and{" "}
-                    <button className="text-purple-300 underline">
-                      Privacy Policy
-                    </button>
+                    <button className="text-purple-300 underline">Privacy Policy</button>
                   </div>
                 </motion.div>
 
@@ -671,12 +545,8 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
                       ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-lg"
                       : "bg-gray-600/50 cursor-not-allowed opacity-50"
                   }`}
-                  whileHover={
-                    isSignupFormValid() && !isLoading ? { scale: 1.02 } : {}
-                  }
-                  whileTap={
-                    isSignupFormValid() && !isLoading ? { scale: 0.98 } : {}
-                  }
+                  whileHover={isSignupFormValid() && !isLoading ? { scale: 1.02 } : {}}
+                  whileTap={isSignupFormValid() && !isLoading ? { scale: 0.98 } : {}}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7, duration: 0.5 }}
@@ -696,8 +566,10 @@ export const MobileAuthForm: React.FC<MobileAuthFormProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Footer spacing */}
       <div className="h-8"></div>
     </div>
   );
 };
+
+export default memo(MobileAuthForm);
+export { MobileAuthForm };

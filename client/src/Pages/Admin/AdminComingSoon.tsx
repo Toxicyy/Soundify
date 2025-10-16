@@ -1,4 +1,4 @@
-// Pages/Admin/AdminComingSoon.tsx
+// Placeholder page for admin features under development
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined } from "@ant-design/icons";
@@ -46,7 +46,7 @@ const AdminComingSoon: React.FC<AdminComingSoonProps> = ({
   );
 };
 
-// Individual page exports
+// Individual page exports for different admin sections
 export const AdminAnalytics = () => (
   <AdminComingSoon
     title="Analytics Dashboard"

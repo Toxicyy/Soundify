@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 /**
- * 404 Not Found Page - Purple gradient with glass morphism effects
+ * 404 Not Found Page with purple gradient and glass morphism effects
  */
 
 interface FloatingElement {
@@ -22,7 +22,6 @@ const NotFound404 = () => {
     []
   );
 
-  // Generate random floating elements
   useEffect(() => {
     const elements = Array.from({ length: 15 }, (_, i) => ({
       id: i,
@@ -35,7 +34,6 @@ const NotFound404 = () => {
     setFloatingElements(elements);
   }, []);
 
-  // Track mouse movement for parallax effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
@@ -48,7 +46,6 @@ const NotFound404 = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Navigation handlers
   const goHome = () => navigate("/");
   const goBack = () => navigate(-1);
 
@@ -60,7 +57,6 @@ const NotFound404 = () => {
           "linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)",
       }}
     >
-      {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {floatingElements.map((element) => (
           <motion.div
@@ -89,7 +85,6 @@ const NotFound404 = () => {
         ))}
       </div>
 
-      {/* Particle Effects */}
       <div className="absolute inset-0">
         {Array.from({ length: 50 }).map((_, i) => (
           <div
@@ -105,10 +100,8 @@ const NotFound404 = () => {
         ))}
       </div>
 
-      {/* Main Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <div className="max-w-4xl w-full text-center">
-          {/* 404 Number with Glass Effect */}
           <motion.div
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -129,7 +122,6 @@ const NotFound404 = () => {
             </div>
           </motion.div>
 
-          {/* Error Message */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -148,7 +140,6 @@ const NotFound404 = () => {
             </div>
           </motion.div>
 
-          {/* Floating Musical Elements */}
           <div className="absolute inset-0 pointer-events-none">
             {["🎵", "🎶", "🎤", "🎧", "🎸"].map((emoji, index) => (
               <motion.div
@@ -173,7 +164,6 @@ const NotFound404 = () => {
             ))}
           </div>
 
-          {/* Action Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -229,7 +219,6 @@ const NotFound404 = () => {
             </motion.button>
           </motion.div>
 
-          {/* Additional Help Section */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -246,27 +235,12 @@ const NotFound404 = () => {
                   whileHover={{ scale: 1.02 }}
                   className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
                 >
-                  Discover Music
-                </motion.button>
-                <motion.button
-                  onClick={() => navigate("/artists")}
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
-                >
-                  Browse Artists
-                </motion.button>
-                <motion.button
-                  onClick={() => navigate("/playlists")}
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-white/10 hover:bg-white/15 border border-white/20 text-purple-100 py-2 px-4 rounded-lg transition-all duration-200"
-                >
                   Playlists
                 </motion.button>
               </div>
             </div>
           </motion.div>
 
-          {/* Animated Wave Effect */}
           <div className="absolute bottom-0 left-0 right-0 h-24 overflow-hidden">
             <svg
               className="absolute bottom-0 w-full h-24"

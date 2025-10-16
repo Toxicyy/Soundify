@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, memo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   DeleteOutlined,
@@ -19,6 +19,10 @@ interface TrackListProps {
   onReorderTracks: (fromIndex: number, toIndex: number) => void;
 }
 
+/**
+ * Track list with drag-and-drop reordering and playback controls
+ * Shows track details, play state, and remove functionality
+ */
 const TrackList: React.FC<TrackListProps> = ({
   tracks,
   isEditing,
@@ -29,13 +33,11 @@ const TrackList: React.FC<TrackListProps> = ({
   const [draggedTrack, setDraggedTrack] = useState<Track | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Get current playing state from Redux
   const { currentTrack, isPlaying } = useSelector(
     (state: any) => state.currentTrack
   );
   const queueState = useSelector((state: any) => state.queue);
 
-  // Drag and drop handlers
   const handleDragStart = useCallback(
     (e: React.DragEvent, track: Track, index: number) => {
       if (!isEditing) return;
@@ -84,7 +86,6 @@ const TrackList: React.FC<TrackListProps> = ({
     setDragOverIndex(null);
   }, []);
 
-  // Handle play/pause
   const handlePlayPause = useCallback(
     (track: Track, index: number) => {
       const isCurrentTrack =
@@ -92,10 +93,8 @@ const TrackList: React.FC<TrackListProps> = ({
         queueState.currentTrack?._id === track._id;
 
       if (isCurrentTrack) {
-        // Toggle current track
         dispatch(setIsPlaying(!isPlaying));
       } else {
-        // Play new track with playlist context
         dispatch(
           playTrackAndQueue({
             contextTracks: tracks,
@@ -107,12 +106,18 @@ const TrackList: React.FC<TrackListProps> = ({
     [currentTrack, queueState.currentTrack, isPlaying, dispatch, tracks]
   );
 
-  // Format duration
-  const formatDuration = (seconds: number): string => {
+  const formatDuration = useCallback((seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
+  }, []);
+
+  const handleImageError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      e.currentTarget.src = "/default-cover.jpg";
+    },
+    []
+  );
 
   if (tracks.length === 0) {
     return (
@@ -208,10 +213,7 @@ const TrackList: React.FC<TrackListProps> = ({
                       src={track.coverUrl}
                       alt={track.name}
                       className="w-full h-full object-cover transition-transform duration-200 group-hover/cover:scale-105"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/default-cover.jpg";
-                      }}
+                      onError={handleImageError}
                     />
 
                     {/* Play/Pause Overlay */}
@@ -293,4 +295,4 @@ const TrackList: React.FC<TrackListProps> = ({
   );
 };
 
-export default TrackList;
+export default memo(TrackList);

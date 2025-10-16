@@ -20,54 +20,55 @@ import {
   toggleRepeat,
   toggleShuffle,
 } from "../../../../../state/Queue.slice";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, memo } from "react";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { useFormatTime } from "../../../../../hooks/useFormatTime";
 import { useLike } from "../../../../../hooks/useLike";
 import { Link } from "react-router-dom";
 
+const MOBILE_NAV_HEIGHT = 80;
+
+const SCREEN_BREAKPOINTS = {
+  VERY_SMALL: 520,
+  SMALL: 620,
+  MEDIUM: 720,
+} as const;
+
+const COVER_SIZES = {
+  VERY_SMALL: "240px",
+  SMALL: "260px",
+  MEDIUM: "320px",
+  LARGE: "360px",
+} as const;
+
 /**
  * Mobile player component with compact and expanded views
- * Features:
- * - Adaptive layout for different screen heights
- * - Compact bottom bar positioned above mobile navigation
- * - Full-screen expanded view optimized for small devices
- * - Swipe and button dismiss functionality
- * - Modern design with glassmorphism effects
- * - Responsive for mobile phones and tablets
+ * Features adaptive layout, swipe gestures, and glassmorphism effects
  */
-export const MobilePlayer = () => {
+const MobilePlayer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const queueState = useSelector((state: AppState) => state.queue);
 
-  // Component state
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, _setIsLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [likeHover, setLikeHover] = useState(false);
   const [screenHeight, setScreenHeight] = useState(window.innerHeight);
 
-  // Audio element reference for time synchronization
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // Screen height tracking for adaptive layout
   useEffect(() => {
     const handleResize = () => setScreenHeight(window.innerHeight);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Mobile navigation height is approximately 80px (py-2 + pb-4 + icon + text)
-  const MOBILE_NAV_HEIGHT = 80;
   const availableHeight = screenHeight - MOBILE_NAV_HEIGHT;
+  const isVerySmallScreen = availableHeight < SCREEN_BREAKPOINTS.VERY_SMALL;
+  const isSmallScreen = availableHeight < SCREEN_BREAKPOINTS.SMALL;
+  const isMediumScreen = availableHeight < SCREEN_BREAKPOINTS.MEDIUM;
 
-  // Determine screen size categories based on available height
-  const isVerySmallScreen = availableHeight < 520; // iPhone SE, small phones
-  const isSmallScreen = availableHeight < 620; // Standard phones
-  const isMediumScreen = availableHeight < 720; // Large phones, small tablets
-
-  // Like functionality
   const currentTrackId = currentTrack.currentTrack?._id || "";
   const {
     isLiked,
@@ -75,11 +76,9 @@ export const MobilePlayer = () => {
     toggleLike,
   } = useLike(currentTrackId);
 
-  // Format time utilities
   const currentStr = useFormatTime(currentTime);
   const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
 
-  // Find and sync with main audio element
   useEffect(() => {
     const findAudioElement = () => {
       const audioElement = document.querySelector("audio");
@@ -101,7 +100,6 @@ export const MobilePlayer = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync current time with main audio player
   useEffect(() => {
     if (!currentTrack.isPlaying || !audioElementRef.current) return;
 
@@ -114,12 +112,10 @@ export const MobilePlayer = () => {
     return () => clearInterval(interval);
   }, [currentTrack.isPlaying]);
 
-  // Reset time on track change
   useEffect(() => {
     setCurrentTime(0);
   }, [currentTrack.currentTrack?._id]);
 
-  // Control handlers
   const handleTogglePlayPause = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation();
@@ -157,7 +153,6 @@ export const MobilePlayer = () => {
     dispatch(setQueueOpen(!queueState.isOpen));
   }, [queueState.isOpen, dispatch]);
 
-  // Expand/collapse handlers
   const handleExpand = useCallback(() => {
     if (currentTrack.currentTrack) {
       setIsExpanded(true);
@@ -168,7 +163,6 @@ export const MobilePlayer = () => {
     setIsExpanded(false);
   }, []);
 
-  // Swipe to dismiss functionality
   const handleDragEnd = useCallback(
     (_event: any, info: PanInfo) => {
       if (info.offset.y > 100) {
@@ -178,7 +172,6 @@ export const MobilePlayer = () => {
     [handleCollapse]
   );
 
-  // Progress bar seek handler
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = Number(e.target.value);
     setCurrentTime(newTime);
@@ -187,7 +180,6 @@ export const MobilePlayer = () => {
     }
   }, []);
 
-  // Get repeat icon color
   const getRepeatColor = useCallback(() => {
     switch (queueState.repeat) {
       case "one":
@@ -198,11 +190,10 @@ export const MobilePlayer = () => {
     }
   }, [queueState.repeat]);
 
-  // No track state
   if (!currentTrack.currentTrack) {
     return (
       <div
-        className={`fixed left-0 right-0 xl:hidden bg-gradient-to-r from-slate-900/80 via-purple-900/60 to-slate-900/80 backdrop-blur-md border-t border-purple-500/20 p-3 z-40`}
+        className="fixed left-0 right-0 xl:hidden bg-gradient-to-r from-slate-900/80 via-purple-900/60 to-slate-900/80 backdrop-blur-md border-t border-purple-500/20 p-3 z-40"
         style={{ bottom: `${MOBILE_NAV_HEIGHT}px` }}
       >
         <div className="flex items-center justify-center">
@@ -219,7 +210,6 @@ export const MobilePlayer = () => {
 
   return (
     <>
-      {/* Compact Bottom Player - Positioned above mobile navigation */}
       <motion.div
         className="fixed left-0 right-0 xl:hidden z-40"
         style={{ bottom: `${MOBILE_NAV_HEIGHT}px` }}
@@ -227,7 +217,6 @@ export const MobilePlayer = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        {/* Animated Progress Bar */}
         <div className="relative h-0.5 bg-gradient-to-r from-transparent via-purple-500/20 to-transparent">
           <motion.div
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 shadow-sm shadow-purple-500/30"
@@ -242,13 +231,11 @@ export const MobilePlayer = () => {
           />
         </div>
 
-        {/* Main Player Bar */}
         <div
           className="bg-gradient-to-r from-slate-900/98 via-purple-900/95 to-slate-900/98 backdrop-blur-xl border-t border-purple-500/20 p-2.5 cursor-pointer active:scale-[0.98] transition-transform duration-150"
           onClick={handleExpand}
         >
           <div className="flex items-center justify-between gap-2.5">
-            {/* Track Info */}
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
               <div className="relative">
                 <img
@@ -268,7 +255,6 @@ export const MobilePlayer = () => {
               </div>
             </div>
 
-            {/* Compact Controls */}
             <div className="flex items-center gap-1">
               <motion.button
                 onClick={handlePrevious}
@@ -317,7 +303,6 @@ export const MobilePlayer = () => {
         </div>
       </motion.div>
 
-      {/* Expanded Full-Screen Player */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -331,16 +316,13 @@ export const MobilePlayer = () => {
             dragElastic={{ top: 0, bottom: 0.2 }}
             onDragEnd={handleDragEnd}
           >
-            {/* Background Effects */}
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/30 rounded-full blur-3xl" />
               <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-pink-500/30 rounded-full blur-3xl" />
             </div>
 
-            {/* Drag Indicator */}
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-10 h-1 bg-white/30 rounded-full" />
 
-            {/* Scrollable Content Container */}
             <div className="h-full overflow-hidden">
               <div
                 className="flex flex-col min-h-full justify-between"
@@ -357,7 +339,6 @@ export const MobilePlayer = () => {
                     : "40px",
                 }}
               >
-                {/* Header */}
                 <div
                   className={`flex items-center mt-2 justify-between ${
                     isVerySmallScreen ? "mb-1" : isSmallScreen ? "mb-4" : "mb-6"
@@ -393,25 +374,24 @@ export const MobilePlayer = () => {
                   </motion.button>
                 </div>
 
-                {/* Album Art Container - Flexible but with max constraints */}
                 <div className="flex-1 flex items-center justify-center">
                   <motion.div
                     className="relative w-full aspect-square"
                     style={{
                       maxWidth: isVerySmallScreen
-                        ? "240px"
+                        ? COVER_SIZES.VERY_SMALL
                         : isSmallScreen
-                        ? "260px"
+                        ? COVER_SIZES.SMALL
                         : isMediumScreen
-                        ? "320px"
-                        : "360px",
+                        ? COVER_SIZES.MEDIUM
+                        : COVER_SIZES.LARGE,
                       maxHeight: isVerySmallScreen
-                        ? "240px"
+                        ? COVER_SIZES.VERY_SMALL
                         : isSmallScreen
-                        ? "260px"
+                        ? COVER_SIZES.SMALL
                         : isMediumScreen
-                        ? "320px"
-                        : "360px",
+                        ? COVER_SIZES.MEDIUM
+                        : COVER_SIZES.LARGE,
                     }}
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -422,10 +402,8 @@ export const MobilePlayer = () => {
                       alt="Album Cover"
                       className="w-full h-full rounded-2xl object-cover shadow-2xl"
                     />
-                    {/* Modern glow effect */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/20 to-pink-400/20 shadow-xl shadow-purple-500/15" />
 
-                    {/* Loading overlay */}
                     {isLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-2">
@@ -437,9 +415,7 @@ export const MobilePlayer = () => {
                   </motion.div>
                 </div>
 
-                {/* Bottom Section - Track Info + Controls */}
                 <div className="flex-shrink-0 space-y-4">
-                  {/* Track Info */}
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -468,7 +444,6 @@ export const MobilePlayer = () => {
                         </Link>
                       </div>
 
-                      {/* Like Button */}
                       <motion.button
                         className="p-1"
                         whileTap={{ scale: 0.9 }}
@@ -498,14 +473,12 @@ export const MobilePlayer = () => {
                     </div>
                   </motion.div>
 
-                  {/* Progress Bar */}
                   <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3, duration: 0.4 }}
                   >
                     <div className="relative mb-2">
-                      {/* Track background */}
                       <div
                         className={`w-full bg-white/20 rounded-full overflow-hidden ${
                           isVerySmallScreen ? "h-1.5" : "h-2"
@@ -513,7 +486,6 @@ export const MobilePlayer = () => {
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-                        {/* Progress */}
                         <motion.div
                           className="h-full bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 rounded-full relative overflow-hidden"
                           style={{ width: `${progress}%` }}
@@ -523,7 +495,6 @@ export const MobilePlayer = () => {
                         </motion.div>
                       </div>
 
-                      {/* Seek input */}
                       <input
                         type="range"
                         min={0}
@@ -536,7 +507,6 @@ export const MobilePlayer = () => {
                       />
                     </div>
 
-                    {/* Time labels */}
                     <div
                       className={`flex justify-between text-white/50 ${
                         isVerySmallScreen ? "text-xs" : "text-sm"
@@ -547,14 +517,12 @@ export const MobilePlayer = () => {
                     </div>
                   </motion.div>
 
-                  {/* Main Controls */}
                   <motion.div
                     className="flex items-center justify-between"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4, duration: 0.4 }}
                   >
-                    {/* Shuffle */}
                     <motion.button
                       onClick={handleShuffle}
                       className={`rounded-full z-100 hover:bg-white/10 transition-colors duration-150 ${
@@ -572,7 +540,6 @@ export const MobilePlayer = () => {
                       />
                     </motion.button>
 
-                    {/* Previous */}
                     <motion.button
                       onClick={handlePrevious}
                       className={`rounded-full z-100 hover:bg-white/10 transition-colors duration-150 ${
@@ -586,7 +553,6 @@ export const MobilePlayer = () => {
                       />
                     </motion.button>
 
-                    {/* Play/Pause - Smaller and adaptive */}
                     <motion.button
                       onClick={handleTogglePlayPause}
                       className={`rounded-full z-100 bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25 ${
@@ -620,7 +586,6 @@ export const MobilePlayer = () => {
                       )}
                     </motion.button>
 
-                    {/* Next */}
                     <motion.button
                       onClick={handleNext}
                       className={`rounded-full z-100 hover:bg-white/10 transition-colors duration-150 ${
@@ -634,7 +599,6 @@ export const MobilePlayer = () => {
                       />
                     </motion.button>
 
-                    {/* Repeat */}
                     <motion.button
                       onClick={handleRepeat}
                       className={`rounded-full z-100 hover:bg-white/10 transition-colors duration-150 relative ${
@@ -655,7 +619,6 @@ export const MobilePlayer = () => {
                       )}
                     </motion.button>
                   </motion.div>
-                  {/* Safe area for mobile navigation */}
                   <div className="h-16" />
                 </div>
               </div>
@@ -666,3 +629,6 @@ export const MobilePlayer = () => {
     </>
   );
 };
+
+export default memo(MobilePlayer);
+export { MobilePlayer };

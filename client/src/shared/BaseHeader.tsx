@@ -29,7 +29,7 @@ interface HeaderContentProps {
 }
 
 /**
- * Skeleton loader component for header elements
+ * Skeleton loader for header elements
  */
 const HeaderSkeleton: FC<{ className: string }> = ({ className }) => (
   <div
@@ -67,7 +67,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
   if (isLoading) {
     return (
       <div className="flex gap-3 sm:gap-5 items-end flex-row">
-        {/* Image skeleton */}
         <div
           className={`${image.className} bg-gradient-to-br from-white/10 via-white/20 to-white/5 border border-white/20 relative overflow-hidden`}
         >
@@ -75,7 +74,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
         </div>
 
         <div className="flex-1 text-center sm:text-left">
-          {/* Badge skeleton */}
           {badge?.show && (
             <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
               <HeaderSkeleton className="w-8 h-8 rounded-full" />
@@ -83,10 +81,7 @@ export const HeaderContent: FC<HeaderContentProps> = ({
             </div>
           )}
 
-          {/* Title skeleton */}
           <HeaderSkeleton className="h-12 sm:h-16 lg:h-20 w-64 sm:w-80 lg:w-96 rounded-2xl mb-2 mx-auto sm:mx-0" />
-
-          {/* Subtitle skeleton */}
           <HeaderSkeleton className="h-4 sm:h-5 w-24 sm:w-32 rounded-md mx-auto sm:mx-0" />
         </div>
       </div>
@@ -95,7 +90,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
 
   return (
     <div className="flex gap-3 sm:gap-5 items-end flex-row">
-      {/* Main image */}
       <img
         src={image.src}
         alt={image.alt}
@@ -105,7 +99,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
       />
 
       <div className="flex-1 sm:text-left">
-        {/* Verified badge */}
         {badge?.show && (
           <div className="flex items-center gap-2 mb-2 sm:justify-start">
             {badge.showVerified && (
@@ -117,7 +110,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
           </div>
         )}
 
-        {/* Main title */}
         <h1
           className={`text-2xl sm:text-4xl lg:text-[5rem] font-bold text-white mb-2 break-words cursor-${
             title.callback ? "pointer" : "default"
@@ -127,7 +119,6 @@ export const HeaderContent: FC<HeaderContentProps> = ({
           {typeof title.text === "string" ? title.text : title.text}
         </h1>
 
-        {/* Subtitle/metadata */}
         {subtitle && (
           <div className="text-sm sm:text-lg text-white/80 truncate">{subtitle}</div>
         )}

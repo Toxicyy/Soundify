@@ -1,28 +1,30 @@
+import { memo, useState, useRef, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   PauseOutlined,
   CaretRightOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, type FC, useCallback } from "react";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useLike } from "../../../../hooks/useLike";
-import { useDispatch, useSelector } from "react-redux";
+import { useNotification } from "../../../../hooks/useNotification";
 import { type AppDispatch, type AppState } from "../../../../store";
 import { setIsPlaying } from "../../../../state/CurrentTrack.slice";
+import { addToQueue } from "../../../../state/Queue.slice";
 import type { Track } from "../../../../types/TrackData";
 import ContextMenu from "../../../mainPage/mainMenu/components/ContextMenu";
-import { addToQueue } from "../../../../state/Queue.slice";
-import { Link, useNavigate } from "react-router-dom";
-import { useNotification } from "../../../../hooks/useNotification";
 
 interface CurrentTrackTemplateProps {
   track: Track;
 }
 
-export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
-  track,
-}) => {
-  const [hover, setHover] = useState<boolean>(false);
+/**
+ * Template for currently playing track in queue
+ * Shows play controls, track info, and context menu
+ */
+const CurrentTrackTemplate = ({ track }: CurrentTrackTemplateProps) => {
+  const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
@@ -33,51 +35,49 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
   const navigate = useNavigate();
   const { showError, showSuccess } = useNotification();
 
-  // Используем кастомный хук для лайков
   const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
 
-  const togglePlayPause = () => {
+  const togglePlayPause = useCallback(() => {
     dispatch(setIsPlaying(!isPlaying));
-  };
+  }, [dispatch, isPlaying]);
 
-  const handleEllipsisClick = (e: React.MouseEvent) => {
+  const handleEllipsisClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setMenuOpen(!menuOpen);
-  };
+    setMenuOpen((prev) => !prev);
+  }, []);
 
-  const handleLikeClick = async () => {
+  const handleLikeClick = useCallback(async () => {
     if (!track?._id) return;
     await toggleLike();
-  };
+  }, [track, toggleLike]);
 
-  const handleAddToQueue = () => {
+  const handleAddToQueue = useCallback(() => {
     if (!track) return;
     dispatch(addToQueue(track));
-  };
+  }, [track, dispatch]);
 
-  const handleArtistClick = () => {
+  const handleArtistClick = useCallback(() => {
     navigate(`/artist/${track.artist._id}`);
-  };
+  }, [navigate, track.artist._id]);
 
-  const handleAlbumClick = () => {
-    if (track.album == "single") {
+  const handleAlbumClick = useCallback(() => {
+    if (track.album === "single") {
       navigate(`/single/${track._id}`);
     } else {
       navigate(`/album/${track.album}`);
     }
-  };
+  }, [navigate, track.album, track._id]);
 
-  const handleInfoClick = () => {
+  const handleInfoClick = useCallback(() => {
     if (!track) return;
     navigate(`/track/${track._id}`);
-  };
+  }, [navigate, track]);
 
   const handleShareClick = useCallback(async () => {
     try {
       if (!track) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
-      // Проверяем поддержку Web Share API (для мобильных устройств)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
           typeof track.artist === "string" ? track.artist : track.artist?.name;
@@ -94,12 +94,9 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Обработка ошибок
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!track) return;
@@ -112,24 +109,33 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     }
   }, [track, showSuccess, showError]);
 
-  const handleMenuItemClick = (index: number) => {
-    const menuActions = [
+  const handleMenuItemClick = useCallback(
+    (index: number) => {
+      const menuActions = [
+        handleLikeClick,
+        handleAddToQueue,
+        handleArtistClick,
+        handleAlbumClick,
+        handleInfoClick,
+        handleShareClick,
+      ];
+
+      if (index >= menuActions.length) return;
+      menuActions[index]();
+    },
+    [
       handleLikeClick,
       handleAddToQueue,
       handleArtistClick,
       handleAlbumClick,
       handleInfoClick,
       handleShareClick,
-    ];
+    ]
+  );
 
-    if (index >= menuActions.length) return;
-
-    menuActions[index]();
-  };
-
-  const handleCloseMenu = () => {
+  const handleCloseMenu = useCallback(() => {
     setMenuOpen(false);
-  };
+  }, []);
 
   return (
     <div
@@ -139,7 +145,6 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* Album Cover */}
           <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
             <img
               src={track.coverUrl}
@@ -148,7 +153,6 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
             />
           </div>
 
-          {/* Play Button */}
           <div
             className="flex items-center justify-center cursor-pointer"
             onClick={togglePlayPause}
@@ -172,7 +176,6 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
             )}
           </div>
 
-          {/* Track Info */}
           <div className="flex flex-col min-w-0 flex-1">
             <h1 className="text-white font-medium truncate">{track.name}</h1>
             <Link to={`/artist/${track.artist._id}`}>
@@ -202,19 +205,18 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
               anchorRef={ellipsisRef}
               isPlaying={isCurrentTrack}
               isLiked={isLiked}
-              isPending={likePending} // Передаем состояние загрузки
+              isPending={likePending}
             />
           </div>
         </div>
       </div>
 
-      {/* Now Playing Indicator */}
       {isPlaying && (
         <div className="flex items-center gap-2 mt-2 pl-16">
           <div className="flex items-center gap-1">
-            <div className="w-1 h-3 bg-[#5cec8c] rounded-full animate-pulse"></div>
-            <div className="w-1 h-2 bg-[#5cec8c] rounded-full animate-pulse delay-100"></div>
-            <div className="w-1 h-4 bg-[#5cec8c] rounded-full animate-pulse delay-200"></div>
+            <div className="w-1 h-3 bg-[#5cec8c] rounded-full animate-pulse" />
+            <div className="w-1 h-2 bg-[#5cec8c] rounded-full animate-pulse delay-100" />
+            <div className="w-1 h-4 bg-[#5cec8c] rounded-full animate-pulse delay-200" />
           </div>
           <span className="text-[#5cec8c] text-xs font-medium">
             NOW PLAYING
@@ -224,3 +226,5 @@ export const CurrentTrackTemplate: FC<CurrentTrackTemplateProps> = ({
     </div>
   );
 };
+
+export default memo(CurrentTrackTemplate);

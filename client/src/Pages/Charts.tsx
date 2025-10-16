@@ -14,17 +14,16 @@ import {
   RiseOutlined,
   CaretRightOutlined,
   PauseOutlined,
-  UserOutlined,
   LoginOutlined,
-  HeartOutlined,
   PlayCircleOutlined,
   SoundOutlined,
+  StarFilled,
 } from "@ant-design/icons";
 import { api } from "../shared/api";
 
 /**
  * Charts page with authentication requirement
- * Complex parts: Authentication flow, chart data fetching, track playback
+ * Features: global/trending charts, track playback, auth-gated content
  */
 
 interface ChartTrack {
@@ -74,18 +73,14 @@ const Charts: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Auth state
   const { data: user, isLoading: userLoading } = useGetUserQuery();
-  
-  // Redux state
+
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
   );
 
-  // Local state
   const [activeTab, setActiveTab] = useState<"global" | "trending">("global");
 
-  // Chart data fetching
   const {
     data: chartData,
     metadata,
@@ -114,9 +109,6 @@ const Charts: React.FC = () => {
 
   const uniqueChartData = getBestRankedTracks(chartData);
 
-  /**
-   * Tab configuration
-   */
   const tabs: ChartTab[] = [
     {
       id: "global",
@@ -132,9 +124,6 @@ const Charts: React.FC = () => {
     },
   ];
 
-  /**
-   * Authentication required state component
-   */
   const AuthRequiredState: React.FC = () => (
     <motion.div
       className="flex flex-col items-center justify-center py-16 xs:py-12 px-4"
@@ -142,82 +131,79 @@ const Charts: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
-      {/* Animated music icons background */}
       <div className="absolute inset-0 overflow-hidden opacity-5">
         <motion.div
           className="absolute top-10 left-10"
-          animate={{ 
+          animate={{
             y: [0, -20, 0],
-            rotate: [0, 10, 0]
+            rotate: [0, 10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 4,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         >
           <SoundOutlined className="text-6xl text-white" />
         </motion.div>
         <motion.div
           className="absolute top-20 right-20"
-          animate={{ 
+          animate={{
             y: [0, 20, 0],
-            rotate: [0, -15, 0]
+            rotate: [0, -15, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 1,
           }}
         >
           <PlayCircleOutlined className="text-8xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-20 left-20"
-          animate={{ 
+          animate={{
             y: [0, -15, 0],
-            rotate: [0, 20, 0]
+            rotate: [0, 20, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 2
+            delay: 2,
           }}
         >
-          <HeartOutlined className="text-5xl text-white" />
+          <StarFilled className="text-5xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-16 right-16"
-          animate={{ 
+          animate={{
             y: [0, 25, 0],
-            rotate: [0, -10, 0]
+            rotate: [0, -10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3.5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 0.5
+            delay: 0.5,
           }}
         >
           <TrophyOutlined className="text-7xl text-white" />
         </motion.div>
       </div>
 
-      {/* Main content */}
       <motion.div
         className="relative z-10 text-center max-w-md"
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
-        transition={{ 
+        transition={{
           duration: 0.8,
           type: "spring",
           bounce: 0.4,
-          delay: 0.2
+          delay: 0.2,
         }}
       >
-        {/* Trophy with glow effect */}
         <motion.div
           className="relative mb-6 xs:mb-4"
           initial={{ rotate: -180, scale: 0 }}
@@ -226,20 +212,20 @@ const Charts: React.FC = () => {
             duration: 1.2,
             type: "spring",
             bounce: 0.6,
-            delay: 0.3
+            delay: 0.3,
           }}
         >
           <div className="relative inline-block">
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-yellow-400/30 to-orange-500/30 rounded-full blur-xl scale-150"
-              animate={{ 
+              animate={{
                 opacity: [0.3, 0.7, 0.3],
-                scale: [1.4, 1.6, 1.4]
+                scale: [1.4, 1.6, 1.4],
               }}
               transition={{
                 duration: 3,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
             />
             <div className="relative p-6 xs:p-4 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-lg rounded-2xl border border-yellow-500/30">
@@ -248,7 +234,6 @@ const Charts: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Title */}
         <motion.h2
           className="text-2xl xs:text-xl font-bold text-white mb-3 xs:mb-2"
           initial={{ opacity: 0, y: 20 }}
@@ -258,17 +243,16 @@ const Charts: React.FC = () => {
           Join the Music Charts
         </motion.h2>
 
-        {/* Description */}
         <motion.p
           className="text-white/70 text-base xs:text-sm leading-relaxed mb-8 xs:mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
         >
-          Sign in to discover trending tracks, see what's climbing the charts, and compete with music lovers worldwide
+          Sign in to discover trending tracks, see what's climbing the charts,
+          and compete with music lovers worldwide
         </motion.p>
 
-        {/* Features list */}
         <motion.div
           className="mb-8 xs:mb-6 space-y-3 xs:space-y-2"
           initial={{ opacity: 0, y: 20 }}
@@ -289,7 +273,6 @@ const Charts: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Action buttons */}
         <motion.div
           className="flex flex-col xs:flex-row gap-3 xs:gap-2"
           initial={{ opacity: 0, y: 20 }}
@@ -297,7 +280,7 @@ const Charts: React.FC = () => {
           transition={{ duration: 0.6, delay: 1.1 }}
         >
           <motion.button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl xs:rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
@@ -305,19 +288,17 @@ const Charts: React.FC = () => {
             <LoginOutlined className="text-base xs:text-sm" />
             Sign In
           </motion.button>
-          
+
           <motion.button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate("/signup")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl xs:rounded-lg transition-all duration-300 border border-white/20 hover:border-white/30 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
           >
-            <UserOutlined className="text-base xs:text-sm" />
             Create Account
           </motion.button>
         </motion.div>
 
-        {/* Additional info */}
         <motion.p
           className="text-white/50 text-xs xs:text-[10px] mt-6 xs:mt-4"
           initial={{ opacity: 0 }}
@@ -328,7 +309,6 @@ const Charts: React.FC = () => {
         </motion.p>
       </motion.div>
 
-      {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 6 }).map((_, i) => (
           <motion.div
@@ -354,22 +334,17 @@ const Charts: React.FC = () => {
     </motion.div>
   );
 
-  /**
-   * Handles play/pause functionality for chart tracks
-   */
   const togglePlayPause = useCallback(
     async (track: ChartTrack["track"]) => {
       try {
         const isCurrentTrack =
           currentTrackState.currentTrack?._id === track._id;
 
-        // Toggle play/pause for current track
         if (isCurrentTrack) {
           dispatch(setIsPlaying(!currentTrackState.isPlaying));
           return;
         }
 
-        // Fetch full track data if audioUrl is missing
         if (!track.audioUrl) {
           const response = await api.track.getTrack(track._id);
 
@@ -384,13 +359,11 @@ const Charts: React.FC = () => {
           dispatch(setCurrentTrack(track as Track));
         }
 
-        // Start playback with slight delay for state synchronization
         setTimeout(() => {
           dispatch(setIsPlaying(true));
         }, 50);
       } catch (error) {
         console.error("Error toggling playback:", error);
-        // Fallback - attempt playback with available data
         dispatch(setCurrentTrack(track as Track));
         setTimeout(() => {
           dispatch(setIsPlaying(true));
@@ -400,27 +373,18 @@ const Charts: React.FC = () => {
     [currentTrackState.currentTrack?._id, currentTrackState.isPlaying, dispatch]
   );
 
-  /**
-   * Formats duration from seconds to MM:SS format
-   */
   const formatDuration = useCallback((seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
-  /**
-   * Formats large numbers with K/M suffixes
-   */
   const formatNumber = useCallback((num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   }, []);
 
-  /**
-   * Loading skeleton for chart items
-   */
   const ChartItemSkeleton: React.FC<{ index: number }> = ({ index }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -429,13 +393,8 @@ const Charts: React.FC = () => {
       className="p-3 xs:p-4 rounded-xl"
     >
       <div className="flex items-center gap-3 xs:gap-4">
-        {/* Rank skeleton */}
         <div className="w-10 xs:w-12 h-5 xs:h-6 bg-white/10 rounded animate-pulse" />
-
-        {/* Album art skeleton */}
         <div className="w-12 h-12 xs:w-16 xs:h-16 bg-white/10 rounded-lg animate-pulse" />
-
-        {/* Track info skeleton */}
         <div className="flex-1 space-y-1 xs:space-y-2">
           <div className="h-4 xs:h-5 bg-white/10 rounded w-3/4 animate-pulse" />
           <div className="h-3 xs:h-4 bg-white/10 rounded w-1/2 animate-pulse" />
@@ -444,8 +403,6 @@ const Charts: React.FC = () => {
             <div className="h-2 xs:h-3 bg-white/10 rounded w-16 xs:w-20 animate-pulse" />
           </div>
         </div>
-
-        {/* Stats skeleton */}
         <div className="hidden sm:flex flex-col items-end gap-1">
           <div className="h-3 xs:h-4 bg-white/10 rounded w-10 xs:w-12 animate-pulse" />
           <div className="h-2 xs:h-3 bg-white/10 rounded w-12 xs:w-16 animate-pulse" />
@@ -454,9 +411,6 @@ const Charts: React.FC = () => {
     </motion.div>
   );
 
-  /**
-   * Renders individual chart item with play controls and metadata
-   */
   const renderChartItem = useCallback(
     (item: ChartTrack, index: number) => {
       const isCurrentTrack =
@@ -475,7 +429,6 @@ const Charts: React.FC = () => {
           className="p-3 xs:p-4 hover:bg-white/5 rounded-xl transition-all duration-200 group"
         >
           <div className="flex items-center gap-3 xs:gap-4">
-            {/* Rank Display */}
             <div className="flex items-center justify-center w-10 xs:w-12 text-center">
               <span
                 className={`text-base xs:text-lg font-bold ${
@@ -490,7 +443,6 @@ const Charts: React.FC = () => {
               </span>
             </div>
 
-            {/* Album Art with Play Button */}
             <div className="relative flex-shrink-0">
               <div className="w-12 h-12 xs:w-16 xs:h-16 rounded-lg overflow-hidden bg-white/10">
                 {item.track.coverUrl ? (
@@ -507,7 +459,6 @@ const Charts: React.FC = () => {
                 )}
               </div>
 
-              {/* Play/Pause Button Overlay */}
               <motion.button
                 className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => togglePlayPause(item.track)}
@@ -522,7 +473,6 @@ const Charts: React.FC = () => {
                 )}
               </motion.button>
 
-              {/* Currently Playing Indicator */}
               {isCurrentTrack && (
                 <div className="absolute -top-0.5 -right-0.5 xs:-top-1 xs:-right-1 w-3 h-3 xs:w-4 xs:h-4 bg-green-500 rounded-full flex items-center justify-center">
                   {isPlaying ? (
@@ -538,7 +488,6 @@ const Charts: React.FC = () => {
               )}
             </div>
 
-            {/* Track Information */}
             <div className="flex-1 min-w-0">
               <h3
                 className={`font-semibold truncate mb-1 text-sm xs:text-base ${
@@ -563,7 +512,6 @@ const Charts: React.FC = () => {
               )}
             </div>
 
-            {/* Track Statistics */}
             <div className="hidden sm:flex flex-col items-end text-right">
               <span className="text-white/60 text-xs xs:text-sm">
                 {formatDuration(item.track.duration)}
@@ -587,11 +535,7 @@ const Charts: React.FC = () => {
     ]
   );
 
-  /**
-   * Renders main content based on loading/error/data states
-   */
   const renderContent = useCallback(() => {
-    // Loading state with skeletons
     if (isLoading) {
       return (
         <div className="space-y-1">
@@ -602,13 +546,16 @@ const Charts: React.FC = () => {
       );
     }
 
-    // Error state
     if (error) {
       return (
         <div className="flex flex-col items-center justify-center py-16 xs:py-12">
           <TrophyOutlined className="text-3xl xs:text-4xl text-white/30 mb-3 xs:mb-4" />
-          <h3 className="text-white/70 text-lg xs:text-xl mb-2">Failed to load charts</h3>
-          <p className="text-white/50 text-center max-w-md mb-4 text-sm xs:text-base px-4">{error}</p>
+          <h3 className="text-white/70 text-lg xs:text-xl mb-2">
+            Failed to load charts
+          </h3>
+          <p className="text-white/50 text-center max-w-md mb-4 text-sm xs:text-base px-4">
+            {error}
+          </p>
           <motion.button
             onClick={refetch}
             className="px-4 xs:px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors duration-200 text-sm xs:text-base"
@@ -621,7 +568,6 @@ const Charts: React.FC = () => {
       );
     }
 
-    // Empty state
     if (!chartData || chartData.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-16 xs:py-12">
@@ -636,15 +582,21 @@ const Charts: React.FC = () => {
       );
     }
 
-    // Data state
     return (
       <div className="space-y-1">
         {uniqueChartData.map((item, index) => renderChartItem(item, index))}
       </div>
     );
-  }, [isLoading, error, chartData, activeTab, refetch, renderChartItem, uniqueChartData]);
+  }, [
+    isLoading,
+    error,
+    chartData,
+    activeTab,
+    refetch,
+    renderChartItem,
+    uniqueChartData,
+  ]);
 
-  // Show loading state while checking user auth
   if (userLoading) {
     return (
       <motion.main
@@ -660,7 +612,6 @@ const Charts: React.FC = () => {
     );
   }
 
-  // Show auth required state if user is not logged in
   if (!user) {
     return (
       <motion.main
@@ -669,7 +620,6 @@ const Charts: React.FC = () => {
         animate={{ opacity: 1 }}
         transition={ANIMATION_CONFIG.pageTransition}
       >
-        {/* Page Header */}
         <motion.header
           className="flex items-center gap-3 xs:gap-4"
           initial={{ opacity: 0, y: -20 }}
@@ -705,13 +655,16 @@ const Charts: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <h1 className="text-white text-2xl xs:text-3xl font-bold">Charts</h1>
-              <p className="text-white/70 text-sm xs:text-lg">Discover what's trending</p>
+              <h1 className="text-white text-2xl xs:text-3xl font-bold">
+                Charts
+              </h1>
+              <p className="text-white/70 text-sm xs:text-lg">
+                Discover what's trending
+              </p>
             </motion.div>
           </div>
         </motion.header>
 
-        {/* Auth Required Content */}
         <motion.section
           className="bg-white/8 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -724,7 +677,6 @@ const Charts: React.FC = () => {
     );
   }
 
-  // Regular charts content for authenticated users
   return (
     <motion.main
       className="w-full min-h-screen pl-3 pr-3 xs:pl-4 xs:pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-4 xs:gap-6 mb-32 xs:mb-45 xl:mb-6 py-4 xs:py-6"
@@ -732,7 +684,6 @@ const Charts: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={ANIMATION_CONFIG.pageTransition}
     >
-      {/* Page Header */}
       <motion.header
         className="flex items-center gap-3 xs:gap-4"
         initial={{ opacity: 0, y: -20 }}
@@ -768,13 +719,16 @@ const Charts: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <h1 className="text-white text-2xl xs:text-3xl font-bold">Charts</h1>
-            <p className="text-white/70 text-sm xs:text-lg">Discover what's trending</p>
+            <h1 className="text-white text-2xl xs:text-3xl font-bold">
+              Charts
+            </h1>
+            <p className="text-white/70 text-sm xs:text-lg">
+              Discover what's trending
+            </p>
           </motion.div>
         </div>
       </motion.header>
 
-      {/* Tab Navigation */}
       <motion.nav
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -785,11 +739,12 @@ const Charts: React.FC = () => {
             <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 xs:px-6 py-2.5 xs:py-3 rounded-lg xs:rounded-xl text-xs xs:text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                activeTab === tab.id
-                  ? "bg-white/20 text-white"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
-              }`}
+              className={`
+                flex items-center gap-2 px-4 xs:px-6 py-2.5 xs:py-3 rounded-lg xs:rounded-xl text-xs xs:text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  activeTab === tab.id
+                    ? "bg-white/20 text-white"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               aria-pressed={activeTab === tab.id}
@@ -797,14 +752,15 @@ const Charts: React.FC = () => {
               {tab.icon}
               <div className="text-left">
                 <div>{tab.label}</div>
-                <div className="text-[10px] xs:text-xs opacity-60">{tab.description}</div>
+                <div className="text-[10px] xs:text-xs opacity-60">
+                  {tab.description}
+                </div>
               </div>
             </motion.button>
           ))}
         </div>
       </motion.nav>
 
-      {/* Chart Metadata */}
       {metadata && !isLoading && (
         <motion.div
           className="bg-white/8 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-lg xs:rounded-xl p-3 xs:p-4 mb-3 xs:mb-4"
@@ -827,7 +783,6 @@ const Charts: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Main Content */}
       <motion.section
         className="bg-white/8 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden"
         initial={{ opacity: 0, y: 20 }}

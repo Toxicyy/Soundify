@@ -1,32 +1,45 @@
+import { useMemo, memo } from "react";
 import { useQuickPlaylist } from "../../../hooks/useQuickPlaylist";
 import { MainBar } from "./components/mainBars/MainBar";
 import { Player } from "./components/player/Player";
 import { MobilePlayer } from "./components/player/MobilePlayer";
 import { MobileNavigation } from "./components/navigation/MobileNavigation";
 
-export default function Aside() {
+interface NavigationItem {
+  text: string;
+  animationDuration: number;
+  path: string;
+  callback?: () => void;
+}
+
+/**
+ * Sidebar navigation component
+ * Renders desktop sidebar with navigation and player, plus mobile bottom navigation
+ */
+const Aside = () => {
   const { createQuickPlaylist } = useQuickPlaylist();
 
-  const navigationItems = [
-    { text: "Home", animationDuration: 0.5, path: "/" },
-    { text: "Playlists", animationDuration: 0.6, path: "/playlists" },
-    { text: "Artists", animationDuration: 0.7, path: "/artists" },
-    { text: "Liked Songs", animationDuration: 0.8, path: "/liked" },
-    { text: "Recently", animationDuration: 0.9, path: "/recently" },
-    {
-      text: "New Playlist",
-      animationDuration: 1,
-      path: "/",
-      callback: createQuickPlaylist,
-    },
-  ];
+  const navigationItems: NavigationItem[] = useMemo(
+    () => [
+      { text: "Home", animationDuration: 0.5, path: "/" },
+      { text: "Playlists", animationDuration: 0.6, path: "/playlists" },
+      { text: "Artists", animationDuration: 0.7, path: "/artists" },
+      { text: "Liked Songs", animationDuration: 0.8, path: "/liked" },
+      { text: "Recently", animationDuration: 0.9, path: "/recently" },
+      {
+        text: "New Playlist",
+        animationDuration: 1,
+        path: "/",
+        callback: createQuickPlaylist,
+      },
+    ],
+    [createQuickPlaylist]
+  );
 
   return (
     <>
-      {/* Desktop Aside - адаптивная высота */}
       <div className="hidden xl:flex fixed h-screen flex-col w-[20vw] aside pl-10 pr-10">
         <div className="h-full flex flex-col justify-between">
-          {/* Навигация с адаптивными отступами */}
           <div className="flex flex-col gap-[2vh] justify-center pt-[5vh] lg:pt-[5vh] 2xl:pt-[5vh] items-center">
             {navigationItems.map((item) => (
               <MainBar
@@ -45,13 +58,12 @@ export default function Aside() {
         </div>
       </div>
 
-      {/* Mobile Bottom Player - виден только на мобильных */}
       <div className="xl:hidden">
         <MobilePlayer />
         <MobileNavigation navigationItems={navigationItems} />
       </div>
-
-      <div className=""></div>
     </>
   );
-}
+};
+
+export default memo(Aside);

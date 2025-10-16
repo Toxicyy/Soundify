@@ -1,39 +1,11 @@
-import { useState } from "react";
+// User playlists page with public/private filtering
+import { useState, useMemo } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useUserPlaylists } from "../../hooks/useUserPlaylists";
 import { useUserData } from "../../hooks/useUserData";
 import { useGetUserQuery } from "../../state/UserApi.slice";
 import ProfilePlaylistTemplate from "../../components/Profile/components/ProfilePlaylistTemplate";
-
-/**
- * User Playlists Page - Responsive design with authentication
- *
- * RESPONSIVE DESIGN:
- * - Adaptive padding system for sidebar compatibility
- * - Mobile-first grid layout with proper breakpoints
- * - Responsive typography and interactive elements
- * - Touch-optimized pagination and navigation
- *
- * ACCESS CONTROL & PRIVACY:
- * - Public/private playlist filtering based on access level
- * - Own playlists: Shows all (public + private)
- * - Other users: Shows public playlists only
- * - Admin users: Full access to all playlists
- * - Clear privacy indicators in UI
- *
- * AUTHENTICATION:
- * - Requires user authentication to view
- * - Shows auth warning for unauthenticated users
- * - Proper error handling with retry functionality
- * - Graceful loading states during auth checks
- *
- * PERFORMANCE FEATURES:
- * - Efficient pagination with smooth scrolling
- * - Optimized grid rendering with proper aspect ratios
- * - Smart loading states with skeleton placeholders
- * - Responsive image handling with fallbacks
- */
 
 const UserPlaylistsPage = () => {
   const location = useLocation();
@@ -42,32 +14,31 @@ const UserPlaylistsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
 
-  // Authentication check
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useGetUserQuery();
   const isAuthenticated = !!currentUser && !isCurrentUserLoading;
 
-  // Access control for playlist visibility
-  const hasAccess =
-    isAuthenticated &&
-    (userId === currentUser?._id || currentUser?.status === "ADMIN");
+  // Owner or admin sees all playlists, others see public only
+  const hasAccess = useMemo(
+    () =>
+      isAuthenticated &&
+      (userId === currentUser?._id || currentUser?.status === "ADMIN"),
+    [isAuthenticated, userId, currentUser]
+  );
 
-  // Data fetching
   const { data: userData, isLoading: userLoading } = useUserData(userId || "");
   const { playlists, isLoading, error, pagination, refetch, hasData } =
     useUserPlaylists(userId || "", {
       page: currentPage,
       limit,
-      privacy: hasAccess ? undefined : "public", // Show all playlists if has access, public only otherwise
+      privacy: hasAccess ? undefined : "public",
     });
 
-  // Handle page changes with smooth scrolling
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Show authentication warning for unauthenticated users
   if (!isAuthenticated && !isCurrentUserLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4">
@@ -112,7 +83,6 @@ const UserPlaylistsPage = () => {
     );
   }
 
-  // Show error state
   if (error && !isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4">
@@ -145,10 +115,9 @@ const UserPlaylistsPage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col mb-35 xl:mb-0">
-      {/* Responsive container with adaptive padding */}
       <div className="flex-1 pl-4 pr-4 md:pl-6 md:pr-6 xl:pl-[22vw] xl:pr-[2vw] py-4 sm:py-6 transition-all duration-300">
         <div className="max-w-7xl mx-auto">
-          {/* Responsive Header */}
+          {/* Page header */}
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
               <button
@@ -172,7 +141,7 @@ const UserPlaylistsPage = () => {
             </div>
           </div>
 
-          {/* Loading State */}
+          {/* Loading skeleton */}
           {(isLoading || userLoading) && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
               {Array.from({ length: 12 }).map((_, index) => (
@@ -190,7 +159,7 @@ const UserPlaylistsPage = () => {
             <>
               {hasData ? (
                 <>
-                  {/* Responsive Playlists Grid */}
+                  {/* Playlists grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-8">
                     {playlists.map((playlist) => (
                       <ProfilePlaylistTemplate
@@ -200,10 +169,9 @@ const UserPlaylistsPage = () => {
                     ))}
                   </div>
 
-                  {/* Responsive Pagination */}
+                  {/* Pagination */}
                   {pagination && pagination.totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8">
-                      {/* Previous Button */}
                       <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={!pagination.hasPreviousPage}
@@ -212,7 +180,6 @@ const UserPlaylistsPage = () => {
                         Previous
                       </button>
 
-                      {/* Page Numbers */}
                       <div className="flex gap-1 overflow-x-auto pb-2 sm:pb-0">
                         {Array.from(
                           { length: Math.min(5, pagination.totalPages) },
@@ -244,7 +211,6 @@ const UserPlaylistsPage = () => {
                         )}
                       </div>
 
-                      {/* Next Button */}
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={!pagination.hasNextPage}
@@ -256,7 +222,7 @@ const UserPlaylistsPage = () => {
                   )}
                 </>
               ) : (
-                /* Responsive Empty State */
+                /* Empty state */
                 <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
                     <svg

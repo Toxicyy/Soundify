@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from "react";
 
 /**
- * Custom checkbox component with purple design
- * Simple and reliable component without excessive animations
- *
- * Features:
- * - Purple color scheme
- * - Hover effects
- * - Simple animated checkmark
- * - Support for children text content
+ * Custom checkbox with purple styling
+ * Supports both controlled and uncontrolled modes
  */
 export const CustomCheckbox: React.FC<
   React.InputHTMLAttributes<HTMLInputElement> & {
@@ -19,7 +13,6 @@ export const CustomCheckbox: React.FC<
     controlledChecked || false
   );
 
-  // Синхронизируем внутреннее состояние с внешним пропом
   useEffect(() => {
     if (controlledChecked !== undefined) {
       setInternalChecked(controlledChecked);
@@ -29,19 +22,13 @@ export const CustomCheckbox: React.FC<
   const isChecked =
     controlledChecked !== undefined ? controlledChecked : internalChecked;
 
-  /**
-   * Handles checkbox state change
-   * @param e - Change event from input element
-   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newChecked = e.target.checked;
 
-    // Если компонент неконтролируемый, обновляем внутреннее состояние
     if (controlledChecked === undefined) {
       setInternalChecked(newChecked);
     }
 
-    // Вызываем внешний onChange если он есть
     if (onChange) {
       onChange(e);
     }

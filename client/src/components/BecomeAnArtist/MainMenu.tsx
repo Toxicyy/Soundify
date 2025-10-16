@@ -9,34 +9,6 @@ import {
 import styled from "styled-components";
 import type { ArtistCreate } from "../../Pages/BecomeAnArtist";
 
-/**
- * Become Artist Main Menu - Responsive form with enhanced UX
- *
- * RESPONSIVE DESIGN:
- * - Mobile-first approach with stacked sections
- * - Adaptive card layouts that work on all screen sizes
- * - Touch-optimized form controls and buttons
- * - Flexible typography and spacing system
- *
- * FORM VALIDATION:
- * - Real-time validation with helpful error messages
- * - Progressive disclosure of form requirements
- * - Visual feedback for completed sections
- * - Smart form state management
- *
- * ACCESSIBILITY FEATURES:
- * - Comprehensive ARIA labels and roles
- * - Keyboard navigation throughout the form
- * - Screen reader friendly error messages
- * - High contrast focus indicators
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Debounced input validation
- * - Efficient state updates with minimal re-renders
- * - Smart component memoization
- * - Optimized styled-components for faster rendering
- */
-
 interface MainMenuProps {
   localChanges: ArtistCreate;
   setLocalChanges: (changes: Partial<ArtistCreate>) => void;
@@ -257,6 +229,10 @@ const socialPlatforms = [
   },
 ];
 
+/**
+ * Artist profile creation form
+ * Features: genre selection, social links, progress tracking
+ */
 const MainMenu: FC<MainMenuProps> = ({
   localChanges,
   setLocalChanges,
@@ -317,7 +293,6 @@ const MainMenu: FC<MainMenuProps> = ({
       await onSave(localChanges);
       message.success("Artist profile created successfully!");
     } catch (error) {
-      console.error("Failed to create artist profile:", error);
       message.error("Failed to create artist profile. Please try again.");
     } finally {
       setIsLoading(false);
@@ -330,7 +305,6 @@ const MainMenu: FC<MainMenuProps> = ({
     localChanges.socialLinks &&
     Object.keys(localChanges.socialLinks).length > 0;
 
-  // Calculate completion percentage for progress indicator
   const completionPercentage = () => {
     let completed = 0;
     const total = 4;
@@ -349,7 +323,6 @@ const MainMenu: FC<MainMenuProps> = ({
 
   return (
     <div className="w-full space-y-4 sm:space-y-6">
-      {/* Progress Indicator */}
       <GlassContainer>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
@@ -370,10 +343,9 @@ const MainMenu: FC<MainMenuProps> = ({
         </p>
       </GlassContainer>
 
-      {/* Information Section */}
       <GlassContainer>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-1 sm:w-2 h-6 sm:h-8 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1"></div>
+          <div className="w-1 sm:w-2 h-6 sm:h-8 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2">
               Create Your Artist Profile
@@ -388,10 +360,9 @@ const MainMenu: FC<MainMenuProps> = ({
         </div>
       </GlassContainer>
 
-      {/* Genres Section */}
       <GlassContainer>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1"></div>
+          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-2">
               Music Genres
@@ -433,10 +404,9 @@ const MainMenu: FC<MainMenuProps> = ({
         )}
       </GlassContainer>
 
-      {/* Social Links Section */}
       <GlassContainer>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1"></div>
+          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-2">
               Social Media Links
@@ -465,7 +435,6 @@ const MainMenu: FC<MainMenuProps> = ({
 
             return (
               <div key={platform.key} className="space-y-2">
-                {/* Platform Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base sm:text-lg">
@@ -496,7 +465,6 @@ const MainMenu: FC<MainMenuProps> = ({
                   )}
                 </div>
 
-                {/* URL Input */}
                 <div className="flex flex-col sm:flex-row rounded-lg overflow-hidden gap-2 sm:gap-0">
                   <div className="bg-white/5 border border-white/20 px-3 py-2 text-white/70 text-xs sm:text-sm flex items-center sm:border-r-0 rounded-lg sm:rounded-r-none">
                     <span className="truncate">{platform.prefix}</span>
@@ -516,7 +484,6 @@ const MainMenu: FC<MainMenuProps> = ({
                   </div>
                 </div>
 
-                {/* Success indicator */}
                 {currentValue && (
                   <p className="text-green-400 text-xs flex items-center gap-1">
                     <span>✓</span>
@@ -528,7 +495,6 @@ const MainMenu: FC<MainMenuProps> = ({
           })}
         </div>
 
-        {/* Social Links Summary */}
         <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
           <p className="text-white/60 text-xs sm:text-sm">
             Connected platforms:{" "}
@@ -542,10 +508,9 @@ const MainMenu: FC<MainMenuProps> = ({
         </div>
       </GlassContainer>
 
-      {/* Profile Summary */}
       <GlassContainer>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1"></div>
+          <div className="w-1 sm:w-2 h-5 sm:h-6 bg-gradient-to-b from-[#1db954] to-[#1ed760] rounded-full flex-shrink-0 mt-1" />
           <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white">
             Profile Summary
           </h3>
@@ -592,7 +557,6 @@ const MainMenu: FC<MainMenuProps> = ({
         </div>
       </GlassContainer>
 
-      {/* Save Button */}
       <div className="flex justify-center pt-4 sm:pt-6 pb-8">
         <SaveButton
           size="large"
@@ -605,7 +569,6 @@ const MainMenu: FC<MainMenuProps> = ({
         </SaveButton>
       </div>
 
-      {/* Form validation notice */}
       {!isFormValid && (
         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 sm:p-4">
           <p className="text-yellow-300 text-xs sm:text-sm">

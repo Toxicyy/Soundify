@@ -10,6 +10,10 @@ interface PlaylistLimitError {
   userStatus: string;
 }
 
+/**
+ * Hook for quick playlist creation
+ * Handles limit errors and navigation
+ */
 export const useQuickPlaylist = () => {
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
@@ -25,37 +29,29 @@ export const useQuickPlaylist = () => {
   const createQuickPlaylist = async () => {
     setCreating(true);
 
-    // Show loading notification
-    const loadingToast = showLoading("Создаем плейлист...");
+    const loadingToast = showLoading("Creating playlist...");
 
     try {
       const response = await api.playlist.createQuick();
 
-      // Handle different response statuses
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
 
-        // Handle playlist limit exceeded (403 status)
         if (
           response.status === 403 &&
           errorData.data?.errorCode === "PLAYLIST_LIMIT_EXCEEDED"
         ) {
           const limitData = errorData.data as PlaylistLimitError;
 
-          // Dismiss loading toast
           dismiss(loadingToast);
-
-          // Show custom limit error notification
           showPlaylistLimitError(limitData.currentCount, limitData.limit);
           return;
         }
 
-        // Handle authentication errors
         if (response.status === 401) {
-          throw new Error("Необходимо войти в аккаунт для создания плейлистов");
+          throw new Error("Login required to create playlists");
         }
 
-        // Handle other errors
         throw new Error(
           errorData.message || `HTTP error! status: ${response.status}`
         );
@@ -65,13 +61,11 @@ export const useQuickPlaylist = () => {
 
       if (data.success && data.data?.id) {
         const playlistId = data.data.id;
-        const playlistName = data.data.name || "Новый плейлист";
+        const playlistName = data.data.name || "New Playlist";
 
-        // Dismiss loading and show success
         dismiss(loadingToast);
-        showSuccess(`Плейлист "${playlistName}" создан!`);
+        showSuccess(`Playlist "${playlistName}" created!`);
 
-        // Navigate to the new playlist
         setTimeout(() => {
           navigate(`/playlist/${playlistId}`);
         }, 0);
@@ -81,17 +75,12 @@ export const useQuickPlaylist = () => {
         throw new Error(data.message || "Failed to create playlist");
       }
     } catch (error) {
-      console.error("Failed to create playlist:", error);
-
-      // Dismiss loading toast
       dismiss(loadingToast);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Неизвестная ошибка";
+        error instanceof Error ? error.message : "Unknown error";
 
-      // Show appropriate error message
       showError(errorMessage);
-
       throw error;
     } finally {
       setCreating(false);

@@ -10,6 +10,10 @@ interface SearchResults {
   query: string;
 }
 
+/**
+ * Hook for global search across all content types
+ * Searches tracks, artists, albums, and playlists
+ */
 export const useGlobalSearch = () => {
   const [searchResults, setSearchResults] = useState<SearchResults | null>(
     null
@@ -36,11 +40,10 @@ export const useGlobalSearch = () => {
         if (data.success) {
           setSearchResults(data.data);
         } else {
-          setError(data.message || "Ошибка поиска");
+          setError(data.message || "Search error");
         }
       } catch (err) {
-        console.error("Error during global search:", err);
-        setError("Ошибка сети");
+        setError("Network error");
       } finally {
         setIsLoading(false);
       }
@@ -75,11 +78,10 @@ export const useGlobalSearch = () => {
           query: "",
         });
       } else {
-        setError(data.message || "Ошибка получения популярного контента");
+        setError(data.message || "Error fetching popular content");
       }
     } catch (err) {
-      console.error("Error fetching popular content:", err);
-      setError("Ошибка получения популярного контента");
+      setError("Error fetching popular content");
     } finally {
       setIsLoading(false);
     }

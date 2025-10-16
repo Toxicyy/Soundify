@@ -18,9 +18,6 @@ interface UploadTrackToAlbumModalProps {
   existingTracks: LocalTrack[];
 }
 
-/**
- * Responsive styled components for consistent dark theme
- */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -127,7 +124,6 @@ const StyledMultiSelect = styled(Select<string[]>)`
   }
 `;
 
-// Genre and tags data
 const genres = [
   "Pop",
   "Rock",
@@ -200,8 +196,8 @@ const predefinedTags = [
 ];
 
 /**
- * Upload Track Modal Component
- * Responsive modal for adding individual tracks to album
+ * Single track uploader for album
+ * Uploads audio, cover, and metadata for one track
  */
 const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
   isOpen,
@@ -227,7 +223,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset form
   const resetForm = useCallback(() => {
     setTrackData({ name: "", genre: "", tags: [] });
     setAudioFile(null);
@@ -245,7 +240,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
     if (coverInputRef.current) coverInputRef.current.value = "";
   }, [audioPreview, coverPreview]);
 
-  // Handle audio file selection
   const handleAudioChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -261,7 +255,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
         return;
       }
 
-      // Check for duplicates
       const isDuplicate = existingTracks.some(
         (track) =>
           track.file.name === file.name && track.file.size === file.size
@@ -275,11 +268,9 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       setIsAnalyzing(true);
       setAudioFile(file);
 
-      // Create preview URL
       const preview = URL.createObjectURL(file);
       setAudioPreview(preview);
 
-      // Extract track name from filename
       const nameFromFile = file.name
         .replace(/\.[^/.]+$/, "")
         .replace(/[-_]/g, " ");
@@ -288,7 +279,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
         name: prev.name || nameFromFile,
       }));
 
-      // Get audio duration
       try {
         const audio = new Audio(preview);
         audio.addEventListener("loadedmetadata", () => {
@@ -301,13 +291,11 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
         });
       } catch (error) {
         setIsAnalyzing(false);
-        console.error("Error analyzing audio:", error);
       }
     },
     [existingTracks, showError]
   );
 
-  // Handle cover file selection
   const handleCoverChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -332,7 +320,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
     [coverPreview, showError]
   );
 
-  // Remove files
   const removeAudio = useCallback(() => {
     if (audioPreview) URL.revokeObjectURL(audioPreview);
     setAudioFile(null);
@@ -348,9 +335,7 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
     if (coverInputRef.current) coverInputRef.current.value = "";
   }, [coverPreview]);
 
-  // Handle form submission
   const handleUpload = useCallback(() => {
-    // Validation
     if (!trackData.name.trim()) {
       showError("Track name is required");
       return;
@@ -368,7 +353,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       return;
     }
 
-    // Create LocalTrack object
     const newTrack: LocalTrack = {
       index: existingTracks.length,
       tempId: crypto.randomUUID(),
@@ -401,7 +385,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
     showSuccess,
   ]);
 
-  // Handle close
   const handleClose = useCallback(() => {
     resetForm();
     onClose();
@@ -437,7 +420,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
       maskClosable={!isAnalyzing}
     >
       <div className="space-y-4 lg:space-y-6">
-        {/* Header - Responsive */}
         <div className="flex justify-between items-center">
           <div className="text-white text-xl lg:text-2xl font-semibold tracking-wider">
             Add Track to Album
@@ -449,7 +431,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
           />
         </div>
 
-        {/* Progress indicator */}
         {isAnalyzing && (
           <div className="bg-blue-500/10 rounded-lg p-3 lg:p-4 border border-blue-500/20">
             <div className="flex items-center gap-3">
@@ -462,7 +443,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
         )}
 
         <div className="space-y-3 lg:space-y-4">
-          {/* Track Name */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Track Name *
@@ -477,9 +457,7 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
             />
           </div>
 
-          {/* File Uploads - Responsive grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-            {/* Audio Upload */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">
                 Audio File * (MP3, WAV)
@@ -548,7 +526,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
               </div>
             </div>
 
-            {/* Cover Upload */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">
                 Cover Image *
@@ -602,7 +579,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
             </div>
           </div>
 
-          {/* Genre */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Genre *
@@ -624,7 +600,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
             />
           </div>
 
-          {/* Tags */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Tags (Optional) - Max 5
@@ -656,7 +631,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
             </span>
           </div>
 
-          {/* Track Preview */}
           {audioPreview && coverPreview && trackData.name && (
             <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
               <h4 className="text-white font-medium mb-3 text-sm lg:text-base">
@@ -690,7 +664,6 @@ const UploadTrackToAlbumModal: React.FC<UploadTrackToAlbumModalProps> = ({
           )}
         </div>
 
-        {/* Footer - Responsive buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <button
             onClick={handleClose}

@@ -1,7 +1,7 @@
 import { type FC, memo, useCallback } from "react";
 import type { Artist } from "../../../types/ArtistData";
 import { Link } from "react-router-dom";
-import useArtistLikedTracksCount from "../../../hooks/useArtistLikedTracksCount";
+import { useArtistLikedTracksCount } from "../../../hooks/useArtistLikedTracksCount";
 
 interface LikedTracksInfoProps {
   artist: Artist;
@@ -9,8 +9,8 @@ interface LikedTracksInfoProps {
 }
 
 /**
- * Liked tracks information component displaying user's liked tracks count for specific artist
- * Features responsive design, loading states, and accessibility support
+ * Liked tracks info showing count of user's liked tracks by specific artist
+ * Links to liked tracks page
  */
 const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
   artist,
@@ -18,9 +18,6 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
 }) => {
   const { count } = useArtistLikedTracksCount(artist._id);
 
-  /**
-   * Handle image loading errors gracefully
-   */
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       e.currentTarget.style.display = "none";
@@ -28,38 +25,30 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
     []
   );
 
-  /**
-   * Format liked tracks text with proper pluralization
-   */
   const getLikedTracksText = useCallback((count: number) => {
     return `You liked ${count} ${count === 1 ? "track" : "tracks"}`;
   }, []);
 
-  // Render loading state
   if (isLoading) {
     return (
       <section
         className="flex flex-col h-full animate-pulse"
         aria-labelledby="liked-tracks-title"
       >
-        {/* Title skeleton */}
-        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden mb-3">
+        <div className="h-8 sm:h-9 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15 border border-white/25 rounded-lg relative overflow-hidden mb-3">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
-        {/* Content skeleton */}
         <div className="flex gap-3 sm:gap-5 items-center">
-          {/* Avatar skeleton */}
-          <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] bg-gradient-to-br from-white/10 via-white/20 to-white/5  border border-white/20 rounded-full relative overflow-hidden flex-shrink-0">
+          <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 border border-white/20 rounded-full relative overflow-hidden flex-shrink-0">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
 
-          {/* Text content skeleton */}
           <div className="flex flex-col justify-center space-y-2 flex-1">
-            <div className="h-5 sm:h-6 w-32 sm:w-40 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-md relative overflow-hidden">
+            <div className="h-5 sm:h-6 w-32 sm:w-40 bg-gradient-to-r from-white/10 via-white/20 to-white/10 border border-white/20 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
             </div>
-            <div className="h-5 sm:h-6 w-24 sm:w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8  border border-white/15 rounded-md relative overflow-hidden">
+            <div className="h-5 sm:h-6 w-24 sm:w-32 bg-gradient-to-r from-white/8 via-white/15 to-white/8 border border-white/15 rounded-md relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
             </div>
           </div>
@@ -81,7 +70,6 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
       </h2>
 
       <div className="flex hover:scale-[1.005] transition-all duration-300 gap-3 sm:gap-5 items-center p-2 rounded-lg hover:bg-white/5">
-        {/* Artist avatar with link */}
         <Link
           to="/liked"
           className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-full"
@@ -95,12 +83,10 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
               onError={handleImageError}
               loading="lazy"
             />
-            {/* Hover overlay */}
             <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors duration-300 rounded-full" />
           </div>
         </Link>
 
-        {/* Liked tracks information */}
         <div className="flex flex-col justify-center flex-1 min-w-0">
           <Link
             to="/liked"
@@ -111,13 +97,12 @@ const LikedTracksInfo: FC<LikedTracksInfoProps> = ({
             </h3>
           </Link>
 
-          <p className=" text-lg sm:text-xl text-white/80">
+          <p className="text-lg sm:text-xl text-white/80">
             from: <span className="font-medium">{artist?.name}</span>
           </p>
         </div>
       </div>
 
-      {/* Additional context for screen readers */}
       <div className="sr-only">
         <p>
           Navigate to your liked tracks page to see all {count} tracks you've

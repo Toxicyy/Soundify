@@ -1,3 +1,4 @@
+// User's liked playlists page with strict access control
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeftOutlined } from "@ant-design/icons";
@@ -6,28 +7,6 @@ import { useUserData } from "../../hooks/useUserData";
 import { useGetUserQuery } from "../../state/UserApi.slice";
 import ProfilePlaylistTemplate from "../../components/Profile/components/ProfilePlaylistTemplate";
 
-/**
- * User Liked Playlists Page - Responsive design with authentication
- *
- * RESPONSIVE DESIGN:
- * - Adaptive layout that works with/without player sidebar
- * - Mobile-optimized grid and pagination
- * - Flexible typography and spacing
- * - Touch-friendly interaction targets
- *
- * ACCESS CONTROL:
- * - Strict authentication requirement
- * - Auto-redirect for unauthorized access
- * - Different content for owners vs admins
- * - Proper error handling and user feedback
- *
- * PRIVACY FEATURES:
- * - Liked playlists are always private content
- * - Only accessible by owner or admin users
- * - Automatic redirection for unauthorized users
- * - Clear privacy indicators in UI
- */
-
 const UserLikedPlaylistsPage = () => {
   const location = useLocation();
   const userId = location.pathname.split("/")[2];
@@ -35,15 +14,15 @@ const UserLikedPlaylistsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
 
-  // Authentication and access control
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useGetUserQuery();
   const isAuthenticated = !!currentUser && !isCurrentUserLoading;
+
+  // Liked playlists are private - only owner or admin can view
   const hasAccess =
     isAuthenticated &&
     (userId === currentUser?._id || currentUser?.status === "ADMIN");
 
-  // Data fetching
   const { data: userData, isLoading: userLoading } = useUserData(userId || "");
   const { playlists, isLoading, error, pagination, refetch, hasData } =
     useUserLikedPlaylists(userId || "", {
@@ -51,13 +30,12 @@ const UserLikedPlaylistsPage = () => {
       limit,
     });
 
-  // Handle page changes
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Redirect if no access to liked playlists
+  // Redirect unauthorized users
   useEffect(() => {
     if (!isAuthenticated && !isCurrentUserLoading) {
       navigate("/login");
@@ -77,7 +55,6 @@ const UserLikedPlaylistsPage = () => {
     isCurrentUserLoading,
   ]);
 
-  // Show error state
   if (error && !isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-4">
@@ -108,7 +85,6 @@ const UserLikedPlaylistsPage = () => {
     );
   }
 
-  // Don't render if no access (will redirect)
   if (!hasAccess) {
     return null;
   }
@@ -117,7 +93,7 @@ const UserLikedPlaylistsPage = () => {
     <div className="min-h-screen w-full flex flex-col mb-35 xl:mb-0">
       <div className="flex-1 pl-4 pr-4 md:pl-6 md:pr-6 xl:pl-[22vw] xl:pr-[2vw] py-4 sm:py-6 transition-all duration-300">
         <div className="max-w-7xl mx-auto">
-          {/* Responsive Header */}
+          {/* Page header */}
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
               <button
@@ -138,7 +114,7 @@ const UserLikedPlaylistsPage = () => {
             </div>
           </div>
 
-          {/* Loading State */}
+          {/* Loading skeleton */}
           {(isLoading || userLoading) && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
               {Array.from({ length: 12 }).map((_, index) => (
@@ -156,7 +132,7 @@ const UserLikedPlaylistsPage = () => {
             <>
               {hasData ? (
                 <>
-                  {/* Responsive Playlists Grid */}
+                  {/* Playlists grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 mb-8">
                     {playlists.map((playlist) => (
                       <ProfilePlaylistTemplate
@@ -166,7 +142,7 @@ const UserLikedPlaylistsPage = () => {
                     ))}
                   </div>
 
-                  {/* Responsive Pagination */}
+                  {/* Pagination */}
                   {pagination && pagination.totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-8">
                       <button
@@ -219,7 +195,7 @@ const UserLikedPlaylistsPage = () => {
                   )}
                 </>
               ) : (
-                /* Responsive Empty State */
+                /* Empty state */
                 <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-full flex items-center justify-center mb-6">
                     <svg

@@ -31,8 +31,8 @@ interface UsePlaylistTracksReturn {
 }
 
 /**
- * Custom hook for fetching playlist tracks with pagination and metadata
- * Handles loading states, error management, and data fetching lifecycle
+ * Hook for fetching playlist tracks with pagination
+ * Provides comprehensive error handling and loading states
  */
 export const usePlaylistTracks = (
   playlistId: string,
@@ -40,30 +40,26 @@ export const usePlaylistTracks = (
 ): UsePlaylistTracksReturn => {
   const { page = 1, limit = 20, sortOrder = -1 } = options;
 
-  // State management
   const [playlist, setPlaylist] = useState<Playlist>({} as Playlist);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // Refs for cleanup and mount state tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
   /**
-   * Main data fetching function with comprehensive error handling
+   * Loads playlist tracks with comprehensive validation
    */
   const loadPlaylistTracks = useCallback(
     async (id: string, pageNum: number = 1, limitNum: number = 20) => {
-      // Input validation
       if (!id?.trim()) {
         setError("Invalid playlist ID");
         setIsLoading(false);
         return;
       }
 
-      // Cancel previous request to prevent race conditions
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
@@ -79,7 +75,6 @@ export const usePlaylistTracks = (
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
 
-          // Handle specific error cases
           if (response.status === 401) {
             throw new Error("Authentication required. Please log in.");
           }
@@ -104,15 +99,12 @@ export const usePlaylistTracks = (
 
         const responseData = await response.json();
 
-        // Validate response structure
         if (!responseData || typeof responseData !== "object") {
           throw new Error("Invalid response format");
         }
 
-        // Early return if component unmounted
         if (!isMountedRef.current) return;
 
-        // Extract and validate data
         const playlistData = responseData.data?.playlist;
         const tracksData = responseData.data?.tracks;
         const paginationData = responseData.pagination;
@@ -121,26 +113,22 @@ export const usePlaylistTracks = (
           throw new Error("Invalid tracks data format");
         }
 
-        // Update state with validated data
         setPlaylist(playlistData || ({} as Playlist));
         setTracks(tracksData);
         setPagination(paginationData || null);
       } catch (error) {
-        // Ignore abort errors (expected when component unmounts or new request starts)
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
 
         if (!isMountedRef.current) return;
 
-        // Transform error messages for better UX
         let errorMessage = "Unknown error occurred";
 
         if (error instanceof Error) {
           errorMessage = error.message;
         }
 
-        // Provide user-friendly error messages
         if (
           errorMessage.includes("Failed to fetch") ||
           errorMessage.includes("NetworkError")
@@ -152,7 +140,6 @@ export const usePlaylistTracks = (
           errorMessage = "Server error";
         }
 
-        console.error("Playlist tracks loading error:", error);
         setError(errorMessage);
         setPlaylist({} as Playlist);
         setTracks([]);
@@ -166,30 +153,22 @@ export const usePlaylistTracks = (
     []
   );
 
-  /**
-   * Refetch current data with same parameters
-   */
   const refetch = useCallback(() => {
     if (playlistId) {
       loadPlaylistTracks(playlistId, page, limit);
     }
   }, [playlistId, page, limit, loadPlaylistTracks]);
 
-  /**
-   * Load next page of data if available
-   */
   const loadMore = useCallback(() => {
     if (playlistId && pagination?.hasNextPage) {
       loadPlaylistTracks(playlistId, pagination.currentPage + 1, limit);
     }
   }, [playlistId, pagination, limit, loadPlaylistTracks]);
 
-  // Initial data loading effect
   useEffect(() => {
     if (playlistId) {
       loadPlaylistTracks(playlistId, page, limit);
     } else {
-      // Reset state when no playlist ID provided
       setPlaylist({} as Playlist);
       setTracks([]);
       setIsLoading(false);
@@ -202,7 +181,6 @@ export const usePlaylistTracks = (
     };
   }, [playlistId, page, limit, sortOrder, loadPlaylistTracks]);
 
-  // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
 

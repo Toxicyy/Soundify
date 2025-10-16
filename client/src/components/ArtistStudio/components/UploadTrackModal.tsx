@@ -22,37 +22,8 @@ import {
 import { api } from "../../../shared/api";
 
 /**
- * UploadTrackModal - Fixed modal with proper scroll handling and responsive design
- *
- * SCROLL HANDLING FIXES:
- * - Removed internal modal scrollbars completely
- * - Modal scrolls with main viewport when content exceeds screen height
- * - Background content is locked to prevent scroll position jumping
- * - Proper z-index management for consistent layering
- *
- * RESPONSIVE IMPROVEMENTS:
- * - Mobile-first design with optimized touch targets
- * - Adaptive file upload zones for different screen sizes
- * - Improved form layout that works on all devices
- * - Better spacing and typography scaling
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Memoized drag handlers to prevent unnecessary re-renders
- * - Optimized file validation with early returns
- * - Debounced form validation for better UX
- * - Lazy loading of audio previews
- *
- * ACCESSIBILITY ENHANCEMENTS:
- * - Proper ARIA labels for all interactive elements
- * - Keyboard navigation support throughout
- * - Screen reader friendly progress indicators
- * - Focus management during upload process
- *
- * FILE UPLOAD IMPROVEMENTS:
- * - Better visual feedback during drag operations
- * - Improved error handling with detailed messages
- * - Progress tracking with smooth animations
- * - Support for multiple file formats with validation
+ * Upload track modal with audio and cover file upload
+ * Features drag-and-drop, progress tracking, and form validation
  */
 
 interface UploadTrackModalProps {
@@ -85,7 +56,6 @@ interface ValidationErrors {
   coverFile?: string;
 }
 
-// Enhanced genre list with categorization
 const genres = [
   "Pop",
   "Rock",
@@ -119,9 +89,7 @@ const genres = [
   "World",
 ];
 
-// Categorized tags for better UX
 const predefinedTags = [
-  // Mood
   "Energetic",
   "Chill",
   "Sad",
@@ -130,7 +98,6 @@ const predefinedTags = [
   "Romantic",
   "Melancholic",
   "Uplifting",
-  // Activity
   "Workout",
   "Study",
   "Party",
@@ -139,14 +106,12 @@ const predefinedTags = [
   "Focus",
   "Dance",
   "Relax",
-  // Time
   "Morning",
   "Night",
   "Summer",
   "Winter",
   "Weekend",
   "Holiday",
-  // Style
   "Acoustic",
   "Electric",
   "Instrumental",
@@ -155,7 +120,6 @@ const predefinedTags = [
   "Studio",
   "Remix",
   "Cover",
-  // Tempo
   "Fast",
   "Medium",
   "Slow",
@@ -170,7 +134,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
 }) => {
   const { showSuccess, showError, showWarning } = useNotification();
 
-  // State management
   const [trackData, setTrackData] = useState<TrackData>({
     name: "",
     genre: "",
@@ -199,10 +162,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
   const dragCounterAudio = useRef(0);
   const dragCounterCover = useRef(0);
 
-  /**
-   * Body scroll lock effect - prevents background scrolling during modal interaction
-   * Maintains scroll position when modal closes to prevent jarring UX
-   */
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -222,9 +181,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     }
   }, [isOpen]);
 
-  /**
-   * Form validation with improved error messages
-   */
   const validateForm = useCallback((): ValidationErrors => {
     const errors: ValidationErrors = {};
 
@@ -251,9 +207,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     return errors;
   }, [trackData, fileState]);
 
-  /**
-   * Enhanced file validation with detailed error reporting
-   */
   const validateFile = useCallback(
     (file: File, type: "audio" | "image"): string | null => {
       if (type === "audio") {
@@ -261,7 +214,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
           return "Please select a valid audio file";
         }
         if (file.size > 100 * 1024 * 1024) {
-          // 100MB
           return "Audio file size must be less than 100MB";
         }
         const allowedAudioTypes = [
@@ -279,7 +231,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
           return "Please select a valid image file";
         }
         if (file.size > 5 * 1024 * 1024) {
-          // 5MB
           return "Image file size must be less than 5MB";
         }
         const allowedImageTypes = [
@@ -298,15 +249,10 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     []
   );
 
-  /**
-   * Optimized drag handlers with proper event management
-   */
   const createDragHandlers = useCallback((type: "audio" | "cover") => {
     const dragCounter = type === "audio" ? dragCounterAudio : dragCounterCover;
     const stateKey =
       type === "audio" ? "audioIsDragActive" : "coverIsDragActive";
-    const selectHandler =
-      type === "audio" ? handleAudioSelect : handleCoverSelect;
 
     return {
       onDragEnter: (e: React.DragEvent) => {
@@ -337,14 +283,17 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
           const file = e.dataTransfer.files[0];
-          selectHandler(file);
+          if (type === "audio") {
+            handleAudioSelect(file);
+          } else {
+            handleCoverSelect(file);
+          }
           e.dataTransfer.clearData();
         }
       },
     };
   }, []);
 
-  // Audio file selection handler
   const handleAudioSelect = useCallback(
     (file: File) => {
       const error = validateFile(file, "audio");
@@ -362,7 +311,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
 
       setTrackData((prev) => ({ ...prev, audioFile: file }));
 
-      // Clear validation error
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.audioFile;
@@ -372,7 +320,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     [validateFile, showError]
   );
 
-  // Cover image selection handler
   const handleCoverSelect = useCallback(
     (file: File) => {
       const error = validateFile(file, "image");
@@ -394,7 +341,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
 
       setTrackData((prev) => ({ ...prev, coverFile: file }));
 
-      // Clear validation error
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.coverFile;
@@ -404,7 +350,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     [validateFile, showError]
   );
 
-  // Memoized drag handlers
   const audioDragHandlers = useMemo(
     () => createDragHandlers("audio"),
     [createDragHandlers]
@@ -414,7 +359,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     [createDragHandlers]
   );
 
-  // File removal handlers with cleanup
   const removeAudio = useCallback(() => {
     if (fileState.audioPreview) {
       URL.revokeObjectURL(fileState.audioPreview);
@@ -438,12 +382,10 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     if (coverInputRef.current) coverInputRef.current.value = "";
   }, []);
 
-  // Optimized input change handler
   const handleInputChange = useCallback(
     <K extends keyof TrackData>(field: K, value: TrackData[K]) => {
       setTrackData((prev) => ({ ...prev, [field]: value }));
 
-      // Clear validation error
       if (validationErrors[field as keyof ValidationErrors]) {
         setValidationErrors((prev) => {
           const newErrors = { ...prev };
@@ -455,9 +397,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     [validationErrors]
   );
 
-  /**
-   * Enhanced upload handler with better progress tracking and error handling
-   */
   const handleUpload = useCallback(async () => {
     const errors = validateForm();
     setValidationErrors(errors);
@@ -491,7 +430,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
           "🎵 Track uploaded successfully! Converting to HLS format..."
         );
 
-        // Reset form and close modal
         setTimeout(() => {
           handleClose();
         }, 1000);
@@ -499,7 +437,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
         throw new Error(data.message || "Upload failed");
       }
     } catch (error) {
-      console.error("Upload error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to upload track";
       showError(errorMessage);
@@ -517,7 +454,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     showWarning,
   ]);
 
-  // Form reset handler
   const resetForm = useCallback(() => {
     setTrackData({
       name: "",
@@ -541,7 +477,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     setValidationErrors({});
   }, [fileState.audioPreview]);
 
-  // Close handler with confirmation
   const handleClose = useCallback(() => {
     if (isUploading) return;
 
@@ -563,7 +498,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
     onClose();
   }, [isUploading, trackData, fileState, resetForm, onClose]);
 
-  // Form validation check
   const isFormValid = useMemo(() => {
     return (
       trackData.name.trim() &&
@@ -612,9 +546,7 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
           paddingBottom: "40px",
         }}
       >
-        {/* Modal content with responsive padding and proper spacing */}
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Header with improved mobile layout */}
           <div className="flex justify-between items-center pb-4 border-b border-white/10">
             <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold tracking-wider">
               Upload Track
@@ -629,7 +561,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
             </button>
           </div>
 
-          {/* Progress Bar with smooth animations */}
           <AnimatePresence>
             {isUploading && (
               <motion.div
@@ -660,9 +591,7 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
             )}
           </AnimatePresence>
 
-          {/* Form sections with improved responsive layout */}
           <div className="space-y-6">
-            {/* Track Name Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -696,9 +625,7 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
               </AnimatePresence>
             </motion.div>
 
-            {/* File Upload Section - Responsive Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Audio Upload */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -709,14 +636,13 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                 </label>
 
                 {fileState.audioFile ? (
-                  /* Audio File Preview */
                   <GlassCard padding="1rem">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => {
                           if (fileState.audioPreview) {
                             const audio = new Audio(fileState.audioPreview);
-                            audio.play().catch(console.error);
+                            audio.play().catch(() => {});
                           }
                         }}
                         className="p-3 bg-green-500/20 rounded-full hover:bg-green-500/30 transition-colors"
@@ -747,7 +673,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                     </div>
                   </GlassCard>
                 ) : (
-                  /* Audio Upload Zone */
                   <FileUploadZone
                     isDragActive={fileState.audioIsDragActive}
                     hasFile={false}
@@ -796,7 +721,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                 </AnimatePresence>
               </motion.div>
 
-              {/* Cover Upload */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -807,7 +731,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                 </label>
 
                 {fileState.coverFile && fileState.coverPreview ? (
-                  /* Cover Preview */
                   <div className="relative">
                     <img
                       src={fileState.coverPreview}
@@ -830,7 +753,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  /* Cover Upload Zone */
                   <FileUploadZone
                     isDragActive={fileState.coverIsDragActive}
                     hasFile={false}
@@ -880,9 +802,7 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
               </motion.div>
             </div>
 
-            {/* Genre and Tags Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Genre Selection */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -926,7 +846,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
                 </AnimatePresence>
               </motion.div>
 
-              {/* Tags Selection */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -973,7 +892,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
               </motion.div>
             </div>
 
-            {/* Artist Info Section */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -997,7 +915,6 @@ const UploadTrackModal: React.FC<UploadTrackModalProps> = ({
             </motion.div>
           </div>
 
-          {/* Footer with responsive button layout */}
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-white/10">
             <GlassButton
               onClick={handleClose}

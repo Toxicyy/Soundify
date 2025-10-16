@@ -1,3 +1,4 @@
+// Main admin panel dashboard with statistics and action cards
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -78,7 +79,7 @@ const AdminPanel = () => {
     navigate("/");
   };
 
-  // Компонент для отображения статистики
+  // Statistics card component
   const StatCard = ({
     label,
     value,
@@ -112,10 +113,7 @@ const AdminPanel = () => {
   const statsData = [
     { label: "Total Users", value: data?.totalUsers },
     { label: "Active Artists", value: data?.activeArtists },
-    {
-      label: "Platform Playlists",
-      value: data?.platformPlaylists,
-    },
+    { label: "Platform Playlists", value: data?.platformPlaylists },
     { label: "Monthly Streams", value: data?.monthlyStreams },
   ];
 
@@ -155,7 +153,7 @@ const AdminPanel = () => {
           </div>
         </motion.div>
 
-        {/* Error Alert */}
+        {/* Error alert */}
         {error && !loading && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -187,7 +185,7 @@ const AdminPanel = () => {
           </motion.div>
         )}
 
-        {/* Admin Actions Grid */}
+        {/* Action cards grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminActions.map((action, index) => (
             <motion.div
@@ -245,7 +243,7 @@ const AdminPanel = () => {
           ))}
         </div>
 
-        {/* Quick Stats */}
+        {/* Statistics section */}
         <motion.div
           className="mt-12"
           initial={{ opacity: 0, y: 20 }}
@@ -262,7 +260,10 @@ const AdminPanel = () => {
                 icon={<ReloadOutlined />}
                 onClick={refetch}
                 loading={loading}
-                style={{ color: "rgba(255, 255, 255, 0.6)", transition: "color 0.3s" }}
+                style={{
+                  color: "rgba(255, 255, 255, 0.6)",
+                  transition: "color 0.3s",
+                }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "white";
                 }}
@@ -286,7 +287,6 @@ const AdminPanel = () => {
             ))}
           </div>
 
-          {/* Last Updated Info */}
           {data?.lastUpdated && !loading && (
             <div className="mt-4 text-center text-white/40 text-sm">
               Last updated: {new Date(data.lastUpdated).toLocaleString()}

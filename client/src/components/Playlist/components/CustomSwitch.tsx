@@ -1,5 +1,4 @@
-// CustomSwitch.tsx
-import React from "react";
+import { type FC, memo, useCallback } from "react";
 
 interface CustomSwitchProps {
   checked: boolean;
@@ -10,7 +9,11 @@ interface CustomSwitchProps {
   className?: string;
 }
 
-const CustomSwitch: React.FC<CustomSwitchProps> = ({
+/**
+ * Custom switch component with animated labels
+ * Displays different labels based on checked state
+ */
+const CustomSwitch: FC<CustomSwitchProps> = ({
   checked,
   onChange,
   checkedLabel = "On",
@@ -18,18 +21,21 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
   disabled = false,
   className = "",
 }) => {
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (!disabled) {
       onChange(!checked);
     }
-  };
+  }, [disabled, checked, onChange]);
 
-  const handleKeyPress = (event: React.KeyboardEvent) => {
-    if ((event.key === "Enter" || event.key === " ") && !disabled) {
-      event.preventDefault();
-      onChange(!checked);
-    }
-  };
+  const handleKeyPress = useCallback(
+    (event: React.KeyboardEvent) => {
+      if ((event.key === "Enter" || event.key === " ") && !disabled) {
+        event.preventDefault();
+        onChange(!checked);
+      }
+    },
+    [disabled, checked, onChange]
+  );
 
   return (
     <div
@@ -51,7 +57,7 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
       aria-disabled={disabled}
       aria-label={checked ? checkedLabel : uncheckedLabel}
     >
-      {/* Переключатель (круг) */}
+      {/* Toggle circle */}
       <div
         className={`
           absolute w-6 h-6 rounded-full transition-all duration-300 ease-in-out transform
@@ -60,9 +66,8 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
         `}
       />
 
-      {/* Текст */}
+      {/* Labels */}
       <div className="absolute inset-0 flex items-center text-sm font-medium">
-        {/* Текст "Public" слева когда активен */}
         <span
           className={`
             absolute font-semibold tracking-wider left-2 transition-opacity duration-300
@@ -72,7 +77,6 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
           {checkedLabel}
         </span>
 
-        {/* Текст "Private" справа когда неактивен */}
         <span
           className={`
             absolute font-semibold tracking-wider right-2 transition-opacity duration-300
@@ -86,4 +90,4 @@ const CustomSwitch: React.FC<CustomSwitchProps> = ({
   );
 };
 
-export default CustomSwitch;
+export default memo(CustomSwitch);

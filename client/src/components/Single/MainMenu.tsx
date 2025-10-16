@@ -17,20 +17,16 @@ interface SingleMainMenuProps {
 }
 
 /**
- * Single track main menu component with playback controls and track display
- * Features responsive design, loading states, and comprehensive playback management
+ * Main menu for single track page
+ * Handles playback controls and track display
  */
 const SingleMainMenu: FC<SingleMainMenuProps> = ({ track, isLoading }) => {
-  // Redux state
   const { shuffle } = useSelector((state: AppState) => state.queue);
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
   );
   const dispatch = useDispatch<AppDispatch>();
 
-  /**
-   * Determine if current track is playing
-   */
   const isCurrentTrackPlaying = useMemo(() => {
     return (
       track._id === currentTrackState.currentTrack?._id &&
@@ -42,30 +38,22 @@ const SingleMainMenu: FC<SingleMainMenuProps> = ({ track, isLoading }) => {
     currentTrackState.isPlaying,
   ]);
 
-  /**
-   * Handle shuffle toggle
-   */
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
-  /**
-   * Handle play/pause for single track
-   */
   const handlePlaylistPlayPause = useCallback(() => {
     if (isLoading) return;
     dispatch(setIsPlaying(!currentTrackState.isPlaying));
   }, [isLoading, currentTrackState.isPlaying, dispatch]);
 
   /**
-   * Render control panel with play/pause and shuffle buttons
+   * Renders control panel with play/pause and shuffle buttons
    */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-5 px-3">
-        {/* Playback controls */}
         <div className="flex items-center gap-4">
-          {/* Play/Pause button */}
           {isLoading ? (
             <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-white/15 via-white/25 to-white/10 backdrop-blur-md border border-white/25 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
@@ -87,7 +75,6 @@ const SingleMainMenu: FC<SingleMainMenuProps> = ({ track, isLoading }) => {
             </button>
           )}
 
-          {/* Shuffle button */}
           {isLoading ? (
             <div className="w-[42px] h-[42px] bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
@@ -115,7 +102,6 @@ const SingleMainMenu: FC<SingleMainMenuProps> = ({ track, isLoading }) => {
     <main className="pb-8 w-full bg-white/10 rounded-3xl border border-white/20">
       {renderControlPanel()}
 
-      {/* Track display */}
       <div className="px-3">
         <TrackTemplate
           index={0}
@@ -125,7 +111,6 @@ const SingleMainMenu: FC<SingleMainMenuProps> = ({ track, isLoading }) => {
         />
       </div>
 
-      {/* Additional track information for screen readers */}
       {!isLoading && track && (
         <div className="sr-only">
           <h2>Now playing: {track.name}</h2>

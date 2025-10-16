@@ -1,3 +1,4 @@
+// Route guard component for admin-only pages
 import React from "react";
 import { FlagOutlined } from "@ant-design/icons";
 import { useGetUserQuery } from "../../state/UserApi.slice";

@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-// Хук для предзагрузки изображений
+/**
+ * Hook for preloading images with progress tracking
+ * Returns loading state and progress percentage
+ */
 export const useImagePreloader = (imageSrcs: string[]) => {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
   const [allImagesLoaded, setAllImagesLoaded] = useState(false);
@@ -11,13 +14,11 @@ export const useImagePreloader = (imageSrcs: string[]) => {
       return;
     }
 
-    // Сброс состояния при изменении списка изображений
     setLoadedImages(new Set());
     setAllImagesLoaded(false);
 
-    // Создаем промисы для загрузки каждого изображения
     const imagePromises = imageSrcs.map((src) => {
-      return new Promise<string>((resolve, _) => {
+      return new Promise<string>((resolve) => {
         const img = new Image();
 
         img.onload = () => {
@@ -26,8 +27,6 @@ export const useImagePreloader = (imageSrcs: string[]) => {
         };
 
         img.onerror = () => {
-          console.warn(`Ошибка загрузки изображения: ${src}`);
-          // Считаем ошибочные изображения загруженными
           setLoadedImages((prev) => new Set([...prev, src]));
           resolve(src);
         };
@@ -36,7 +35,6 @@ export const useImagePreloader = (imageSrcs: string[]) => {
       });
     });
 
-    // Ждем загрузки всех изображений
     Promise.all(imagePromises).then(() => {
       setAllImagesLoaded(true);
     });

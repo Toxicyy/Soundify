@@ -20,37 +20,8 @@ import {
 import { api } from "../../../shared/api";
 
 /**
- * AdvancedSettingsModal - Fixed modal with proper scroll handling and responsive design
- *
- * SCROLL HANDLING FIXES:
- * - Eliminated internal modal scrollbars completely
- * - Modal content scrolls with main page scroll when content exceeds viewport
- * - Background is properly locked to prevent scroll jumping
- * - Maintains scroll position when modal closes
- *
- * RESPONSIVE IMPROVEMENTS:
- * - Mobile-first design with touch-optimized controls
- * - Adaptive genre selection with better mobile UX
- * - Improved social media input handling on small screens
- * - Better spacing and typography scaling across devices
- *
- * SOCIAL MEDIA VALIDATION:
- * - Enhanced URL validation with more comprehensive regex patterns
- * - Real-time validation feedback with clear error messages
- * - Support for various social media platform URL formats
- * - Automatic URL formatting and cleanup
- *
- * GENRE MANAGEMENT:
- * - Searchable genre dropdown with categorization
- * - Multi-select with visual feedback for selection limits
- * - Drag-and-drop reordering support (future enhancement ready)
- * - Smart genre suggestions based on existing artist data
- *
- * ACCESSIBILITY ENHANCEMENTS:
- * - Comprehensive ARIA labels and roles
- * - Keyboard navigation throughout the interface
- * - Screen reader friendly form validation
- * - Focus management and tab order optimization
+ * Advanced settings modal for managing artist genres and social links
+ * Features scroll handling, form validation, and responsive design
  */
 
 interface AdvancedSettingsModalProps {
@@ -69,7 +40,6 @@ interface SocialPlatform {
   validator?: (value: string) => string | null;
 }
 
-// Comprehensive genre list with better categorization
 const genres = [
   "Pop",
   "Rock",
@@ -118,7 +88,6 @@ const genres = [
   "Arabic",
 ];
 
-// Enhanced social platform configurations with better validation
 const socialPlatforms: SocialPlatform[] = [
   {
     key: "spotify",
@@ -178,9 +147,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     Record<string, string>
   >({});
 
-  /**
-   * Body scroll lock effect - prevents background scrolling during modal interaction
-   */
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -200,9 +166,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     }
   }, [isOpen]);
 
-  /**
-   * Initialize modal state when opened
-   */
   useEffect(() => {
     if (isOpen) {
       setTempGenres(artist.genres || []);
@@ -213,16 +176,12 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     }
   }, [isOpen, artist]);
 
-  /**
-   * Enhanced social link validation with comprehensive error checking
-   */
   const validateSocialLink = useCallback(
     (platform: SocialPlatform, value: string): string | null => {
       if (!value.trim()) return null;
 
       const trimmedValue = value.trim();
 
-      // Check for common URL format mistakes
       if (trimmedValue.includes("http") || trimmedValue.includes("www.")) {
         return `Enter only the ${platform.label} ${platform.placeholder}, not the full URL`;
       }
@@ -232,15 +191,11 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     []
   );
 
-  /**
-   * Optimized social link change handler with real-time validation
-   */
   const handleSocialLinkChange = useCallback(
     (platform: SocialPlatform, value: string) => {
       const trimmedValue = value.trim();
       const error = validateSocialLink(platform, trimmedValue);
 
-      // Update validation errors
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
         if (error) {
@@ -251,7 +206,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
         return newErrors;
       });
 
-      // Update social links
       setTempSocialLinks((prev) => {
         const updated = { ...prev };
         if (trimmedValue) {
@@ -265,9 +219,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     [validateSocialLink]
   );
 
-  /**
-   * Remove social link with confirmation for non-empty links
-   */
   const removeSocialLink = useCallback(
     (platform: SocialPlatform) => {
       const currentValue = tempSocialLinks[platform.key];
@@ -294,9 +245,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     [tempSocialLinks]
   );
 
-  /**
-   * Optimized change detection with deep comparison
-   */
   const hasChanges = useMemo(() => {
     const genresChanged =
       JSON.stringify(tempGenres.sort()) !==
@@ -309,23 +257,16 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     return genresChanged || socialLinksChanged;
   }, [tempGenres, tempSocialLinks, artist.genres, artist.socialLinks]);
 
-  /**
-   * Form validation check
-   */
   const isFormValid = useMemo(() => {
     return Object.keys(validationErrors).length === 0;
   }, [validationErrors]);
 
-  /**
-   * Enhanced save handler with better error handling and user feedback
-   */
   const handleSave = useCallback(async () => {
     if (!isFormValid) {
       showWarning("Please fix validation errors before saving");
       return;
     }
 
-    // Validate genre selection
     if (tempGenres.length > 10) {
       showWarning(
         "Please select no more than 10 genres for better categorization"
@@ -359,7 +300,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
         throw new Error(data.message || "Failed to update settings");
       }
     } catch (error) {
-      console.error("Save failed:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to update settings";
       showError(errorMessage);
@@ -377,9 +317,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     showWarning,
   ]);
 
-  /**
-   * Close handler with unsaved changes confirmation
-   */
   const handleClose = useCallback(() => {
     if (isLoading) return;
 
@@ -393,18 +330,12 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
     onClose();
   }, [isLoading, hasChanges, onClose]);
 
-  /**
-   * Memoized statistics for performance
-   */
   const activeSocialLinksCount = useMemo(() => {
     return Object.values(tempSocialLinks).filter(
       (link) => link && link.trim() !== ""
     ).length;
   }, [tempSocialLinks]);
 
-  /**
-   * Memoized genre statistics
-   */
   const genreStats = useMemo(() => {
     const totalSelected = tempGenres.length;
     const isOptimal = totalSelected >= 3 && totalSelected <= 7;
@@ -456,9 +387,7 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
           paddingBottom: "40px",
         }}
       >
-        {/* Modal content with proper responsive padding */}
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Header with improved mobile layout */}
           <div className="flex justify-between items-center pb-4 border-b border-white/10">
             <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold tracking-wider">
               Advanced Settings
@@ -473,7 +402,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Genres Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -519,7 +447,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                   />
                 </div>
 
-                {/* Genre Statistics and Feedback */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                   <div className="flex items-center gap-3">
                     <span className="text-white/50 text-xs">
@@ -549,7 +476,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                   )}
                 </div>
 
-                {/* Genre limit warning */}
                 {tempGenres.length > 10 && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -566,7 +492,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Social Links Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -599,7 +524,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
 
                     return (
                       <div key={platform.key} className="space-y-2">
-                        {/* Platform Header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             {platform.icon}
@@ -620,7 +544,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                           )}
                         </div>
 
-                        {/* URL Input */}
                         <div className="flex rounded-lg overflow-hidden">
                           <div className="bg-white/5 border border-white/20 border-r-0 px-3 py-2 text-white/70 text-sm hidden sm:flex items-center">
                             {platform.prefix}
@@ -644,7 +567,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                           </div>
                         </div>
 
-                        {/* URL Preview for mobile */}
                         {currentValue && (
                           <div className="sm:hidden">
                             <p className="text-white/60 text-xs break-all">
@@ -654,7 +576,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                           </div>
                         )}
 
-                        {/* Error Message */}
                         <AnimatePresence>
                           {hasError && (
                             <motion.p
@@ -670,7 +591,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                           )}
                         </AnimatePresence>
 
-                        {/* Success indicator */}
                         {currentValue && !hasError && (
                           <motion.div
                             initial={{ opacity: 0 }}
@@ -696,7 +616,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                   })}
                 </div>
 
-                {/* Social Links Summary */}
                 <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-white/60">Connected platforms:</span>
@@ -715,7 +634,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Settings Summary Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -749,7 +667,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Profile Completeness Indicator */}
               <div className="mt-4 pt-3 border-t border-white/10">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-white/60 text-xs">
@@ -780,7 +697,6 @@ const AdvancedSettingsModal: React.FC<AdvancedSettingsModalProps> = ({
             </GlassCard>
           </motion.div>
 
-          {/* Footer with responsive button layout */}
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/10">
             <GlassButton
               onClick={handleClose}

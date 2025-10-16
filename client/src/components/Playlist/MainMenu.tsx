@@ -6,32 +6,18 @@ import TrackSearchLocal from "./components/TrackSearchLocal";
 import { useNotification } from "../../hooks/useNotification";
 
 interface MainMenuProps {
-  /** Current playlist data */
   playlist: Playlist | null;
-  /** Loading state indicator */
   isLoading?: boolean;
-  /** Function to update local playlist state */
   updateLocal: (updates: Partial<Playlist>) => void;
-  /** Whether there are unsaved changes */
   hasUnsavedChanges: boolean;
-  /** Array of tracks to display */
   tracks?: Track[];
-  /** Error message if track loading failed */
   tracksError?: string | null;
-  /** Whether the current user can edit this playlist */
   isEditable?: boolean;
 }
 
 /**
- * Enhanced playlist main menu component with role-based permissions
- *
- * Features:
- * - Role-based access control for editing
- * - Drag & drop tracks with proper permissions
- * - Local track management with notifications
- * - Search functionality with permission checks
- * - Comprehensive error handling
- * - Responsive design with accessibility
+ * Main content area for playlist page
+ * Features drag-and-drop tracks, search, and role-based permissions
  */
 const MainMenu: FC<MainMenuProps> = ({
   playlist,
@@ -44,9 +30,6 @@ const MainMenu: FC<MainMenuProps> = ({
 }) => {
   const notification = useNotification();
 
-  /**
-   * Enhanced local track addition with notifications
-   */
   const handleAddTrackLocal = useCallback(
     (track: Track) => {
       if (!playlist) {
@@ -61,7 +44,6 @@ const MainMenu: FC<MainMenuProps> = ({
         return;
       }
 
-      // Check if track already exists in playlist
       const isAlreadyInPlaylist = tracks.some(
         (existingTrack) => existingTrack._id === track._id
       );
@@ -72,10 +54,8 @@ const MainMenu: FC<MainMenuProps> = ({
       }
 
       try {
-        // Add track to the end of the list
         const newTracks = [...tracks, track];
 
-        // Update local playlist state
         updateLocal({
           tracks: newTracks as Track[] | string[],
           trackCount: newTracks.length,
@@ -85,20 +65,14 @@ const MainMenu: FC<MainMenuProps> = ({
           ),
         });
 
-        // Show success notification
         notification.showSuccess(`"${track.name}" added to playlist`);
-
       } catch (error) {
-        console.error("Error adding track locally:", error);
         notification.showError("Failed to add track to playlist");
       }
     },
     [playlist, tracks, updateLocal, isEditable, notification]
   );
 
-  /**
-   * Enhanced track removal with notifications
-   */
   const handleRemoveTrackLocal = useCallback(
     (trackId: string) => {
       if (!playlist) {
@@ -126,21 +100,15 @@ const MainMenu: FC<MainMenuProps> = ({
           ),
         });
 
-        // Show success notification
         const trackName = trackToRemove?.name || "Track";
         notification.showSuccess(`"${trackName}" removed from playlist`);
-
       } catch (error) {
-        console.error("Error removing track locally:", error);
         notification.showError("Failed to remove track from playlist");
       }
     },
     [playlist, tracks, updateLocal, isEditable, notification]
   );
 
-  /**
-   * Enhanced track reordering with notifications
-   */
   const handleTrackReorder = useCallback(
     (newTracks: Track[]) => {
       if (!playlist) {
@@ -165,23 +133,16 @@ const MainMenu: FC<MainMenuProps> = ({
           ),
         });
 
-        // Show subtle notification for reordering
         notification.showInfo("Track order updated");
-
       } catch (error) {
-        console.error("Error reordering tracks locally:", error);
         notification.showError("Failed to reorder tracks");
       }
     },
     [playlist, updateLocal, isEditable, notification]
   );
 
-  /**
-   * Render unsaved changes indicator with enhanced styling
-   */
   const renderUnsavedChangesIndicator = () => {
-    if (!hasUnsavedChanges) return null;
-    if(!isEditable) return null;
+    if (!hasUnsavedChanges || !isEditable) return null;
 
     return (
       <div className="px-6 py-3 mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg backdrop-blur-sm">
@@ -200,9 +161,6 @@ const MainMenu: FC<MainMenuProps> = ({
     );
   };
 
-  /**
-   * Render permission-based edit notice
-   */
   const renderEditNotice = () => {
     if (isEditable || !playlist) return null;
 
@@ -235,11 +193,9 @@ const MainMenu: FC<MainMenuProps> = ({
 
   return (
     <div className="w-full bg-white/10 rounded-3xl border border-white/20 overflow-hidden backdrop-blur-sm">
-      {/* Status indicators */}
       {renderUnsavedChangesIndicator()}
       {renderEditNotice()}
 
-      {/* Main tracks list with drag & drop */}
       <DraggableTracksList
         tracks={tracks}
         isLoading={isLoading}
@@ -251,7 +207,6 @@ const MainMenu: FC<MainMenuProps> = ({
         onReorderTracks={handleTrackReorder}
       />
 
-      {/* Search and add tracks section (only for editable playlists) */}
       {isEditable && (
         <div className="border-t border-white/10 pt-4 pb-6">
           <TrackSearchLocal
@@ -262,7 +217,6 @@ const MainMenu: FC<MainMenuProps> = ({
         </div>
       )}
 
-      {/* Enhanced playlist info footer */}
       {playlist && (
         <div className="px-6 py-4 border-t border-white/10 bg-white/5">
           <div className="flex items-center justify-between text-sm">

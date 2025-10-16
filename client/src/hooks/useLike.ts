@@ -12,6 +12,10 @@ import {
 } from "../state/LikeUpdate.slice";
 import type { AppDispatch, AppState } from "../store";
 
+/**
+ * Hook for managing track like/unlike with optimistic updates
+ * Automatically rolls back on API errors
+ */
 export const useLike = (trackId: string) => {
   const dispatch = useDispatch<AppDispatch>();
   const { data: user } = useGetUserQuery();
@@ -29,30 +33,23 @@ export const useLike = (trackId: string) => {
     const wasLiked = isLiked;
 
     try {
-      // Оптимистичное обновление UI
       if (wasLiked) {
         dispatch(removeLike(trackId));
       } else {
         dispatch(addLike(trackId));
       }
 
-      // Отправка запроса на сервер через API
       const response = wasLiked
         ? await api.user.unlikeSong(user._id, trackId)
         : await api.user.likeSong(user._id, trackId);
 
       if (response.ok) {
-        // Подтверждаем успешное обновление
         dispatch(confirmLikeUpdate(trackId));
       } else {
-        // Откатываем изменения при ошибке
         dispatch(revertLikeUpdate({ trackId, wasLiked }));
-        console.error("Ошибка при обновлении лайка:", await response.json());
       }
     } catch (error) {
-      // Откатываем изменения при ошибке сети
       dispatch(revertLikeUpdate({ trackId, wasLiked }));
-      console.error("Ошибка сети при обновлении лайка:", error);
     }
   }, [dispatch, user?._id, trackId, isLiked, isPending]);
 

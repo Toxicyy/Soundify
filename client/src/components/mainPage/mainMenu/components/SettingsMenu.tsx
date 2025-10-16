@@ -1,3 +1,6 @@
+import { memo, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CrownOutlined,
@@ -8,10 +11,7 @@ import {
   LockOutlined,
 } from "@ant-design/icons";
 import { userApiSlice, useGetUserQuery } from "../../../../state/UserApi.slice";
-import { useDispatch } from "react-redux";
 import { type AppDispatch } from "../../../../store";
-import { useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
 import UserSettingsModal from "./UserSettingsModal";
 
 interface SettingsMenuProps {
@@ -29,47 +29,46 @@ interface MenuItemProps {
 
 type UserRole = "user" | "artist" | "premium" | "admin";
 
-const MenuItem: React.FC<MenuItemProps> = ({
-  icon,
-  label,
-  onClick,
-  className = "",
-}) => (
-  <motion.div
-    className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 hover:backgrop-blur-md hover:bg-white/10 hover:scale-[1.02] ${className}`}
-    onClick={onClick}
-    whileHover={{ x: 4 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    <div className="text-lg">{icon}</div>
-    <span className="text-white font-medium tracking-wide">{label}</span>
-  </motion.div>
+const MenuItem = memo<MenuItemProps>(
+  ({ icon, label, onClick, className = "" }) => (
+    <motion.div
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 hover:backdrop-blur-md hover:bg-white/10 hover:scale-[1.02] ${className}`}
+      onClick={onClick}
+      whileHover={{ x: 4 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="text-lg">{icon}</div>
+      <span className="text-white font-medium tracking-wide">{label}</span>
+    </motion.div>
+  )
 );
 
-export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
+MenuItem.displayName = "MenuItem";
+
+/**
+ * User settings dropdown menu
+ * Shows role-based menu items (premium, artist, admin options)
+ */
+const SettingsMenu = ({ isOpen, onClose }: SettingsMenuProps) => {
   const { data: user } = useGetUserQuery();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Определяем роли пользователя
   const userRoles = useMemo((): UserRole[] => {
     if (!user) return ["user"];
 
-    const roles: UserRole[] = ["user"]; // базовая роль для всех
+    const roles: UserRole[] = ["user"];
 
-    // Проверяем статус премиум
     if (user.status === "PREMIUM") {
       roles.push("premium");
     }
 
-    // Проверяем статус админа
     if (user.status === "ADMIN") {
       roles.push("admin");
     }
 
-    // Проверяем наличие профиля артиста
     if (user.artistProfile) {
       roles.push("artist");
     }
@@ -77,120 +76,116 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
     return roles;
   }, [user]);
 
-  // Функция для проверки доступа к пункту меню
-  const hasAccess = (accessFor?: MenuItemProps["accessFor"]): boolean => {
-    if (!accessFor || accessFor === "all") return true;
-    return userRoles.includes(accessFor);
-  };
+  const hasAccess = useCallback(
+    (accessFor?: MenuItemProps["accessFor"]): boolean => {
+      if (!accessFor || accessFor === "all") return true;
+      return userRoles.includes(accessFor);
+    },
+    [userRoles]
+  );
 
-  // Функция для открытия модального окна настроек
-  const openSettingsModal = () => {
+  const openSettingsModal = useCallback(() => {
     setIsSettingsModalOpen(true);
-    onClose(); // Закрываем контекстное меню
-  };
+    onClose();
+  }, [onClose]);
 
-  // Функция для закрытия модального окна настроек
-  const closeSettingsModal = () => {
+  const closeSettingsModal = useCallback(() => {
     setIsSettingsModalOpen(false);
-  };
+  }, []);
 
-  const menuItems: MenuItemProps[] = [
-    {
-      icon: <CrownOutlined style={{ color: "#FFD700" }} />,
-      label: "Upgrade to Premium",
-      onClick: () => {
-        navigate("/upgrade-to-premium");
-        onClose();
-      },
-      className:
-        "hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-amber-500/20",
-      accessFor: "user",
-    },
-    {
-      icon: <SettingOutlined style={{ color: "#8B5CF6" }} />,
-      label: "Settings",
-      onClick: openSettingsModal,
-      className:
-        "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20",
-      accessFor: "all",
-    },
-    {
-      icon: <UserAddOutlined style={{ color: "#10B981" }} />,
-      label: "Become an artist",
-      onClick: () => {
-        navigate("/become-an-artist");
-        onClose();
-      },
-      className:
-        "hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20",
-      accessFor: "user",
-    },
-    {
-      icon: <BarChartOutlined style={{ color: "#10B981" }} />,
-      label: "Artist Studio",
-      onClick: () => {
-        navigate("/artist-studio");
-        onClose();
-      },
-      className:
-        "hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20",
-      accessFor: "artist",
-    },
-    {
-      icon: <LockOutlined style={{ color: "#A855F7" }} />,
-      label: "Admin Panel",
-      onClick: () => {
-        navigate("/admin");
-        onClose();
-      },
-      className:
-        "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20 mt-2 pt-4",
-      accessFor: "admin",
-    },
-    {
-      icon: <LogoutOutlined style={{ color: "#EF4444" }} />,
-      label: "Log Out",
-      onClick: () => {
-        logOut();
-        onClose();
-      },
-      className:
-        "hover:bg-gradient-to-r hover:from-red-500/20 hover:to-pink-500/20 border-t border-white/10 mt-2 pt-4",
-      accessFor: "all",
-    },
-  ];
-
-  // Фильтруем пункты меню на основе ролей пользователя
-  const filteredMenuItems = useMemo(() => {
-    return menuItems.filter((item) => {
-      // Особая логика для "Upgrade to Premium"
-      if (item.label === "Upgrade to Premium") {
-        // Скрываем для премиум пользователей и админов
-        return !userRoles.includes("premium") && !userRoles.includes("admin");
-      }
-
-      // Особая логика для "Become an artist"
-      if (item.label === "Become an artist") {
-        // Скрываем если уже артист
-        return !userRoles.includes("artist");
-      }
-
-      // Обычная проверка доступа
-      return hasAccess(item.accessFor);
-    });
-  }, [userRoles]);
-
-  function logOut() {
+  const logOut = useCallback(() => {
     localStorage.removeItem("token");
     dispatch(userApiSlice.util.resetApiState());
     window.location.reload();
-  }
+  }, [dispatch]);
+
+  const menuItems: MenuItemProps[] = useMemo(
+    () => [
+      {
+        icon: <CrownOutlined style={{ color: "#FFD700" }} />,
+        label: "Upgrade to Premium",
+        onClick: () => {
+          navigate("/upgrade-to-premium");
+          onClose();
+        },
+        className:
+          "hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-amber-500/20",
+        accessFor: "user",
+      },
+      {
+        icon: <SettingOutlined style={{ color: "#8B5CF6" }} />,
+        label: "Settings",
+        onClick: openSettingsModal,
+        className:
+          "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20",
+        accessFor: "all",
+      },
+      {
+        icon: <UserAddOutlined style={{ color: "#10B981" }} />,
+        label: "Become an artist",
+        onClick: () => {
+          navigate("/become-an-artist");
+          onClose();
+        },
+        className:
+          "hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20",
+        accessFor: "user",
+      },
+      {
+        icon: <BarChartOutlined style={{ color: "#10B981" }} />,
+        label: "Artist Studio",
+        onClick: () => {
+          navigate("/artist-studio");
+          onClose();
+        },
+        className:
+          "hover:bg-gradient-to-r hover:from-emerald-500/20 hover:to-green-500/20",
+        accessFor: "artist",
+      },
+      {
+        icon: <LockOutlined style={{ color: "#A855F7" }} />,
+        label: "Admin Panel",
+        onClick: () => {
+          navigate("/admin");
+          onClose();
+        },
+        className:
+          "hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-violet-500/20 mt-2 pt-4",
+        accessFor: "admin",
+      },
+      {
+        icon: <LogoutOutlined style={{ color: "#EF4444" }} />,
+        label: "Log Out",
+        onClick: () => {
+          logOut();
+          onClose();
+        },
+        className:
+          "hover:bg-gradient-to-r hover:from-red-500/20 hover:to-pink-500/20 border-t border-white/10 mt-2 pt-4",
+        accessFor: "all",
+      },
+    ],
+    [navigate, onClose, openSettingsModal, logOut]
+  );
+
+  const filteredMenuItems = useMemo(() => {
+    return menuItems.filter((item) => {
+      if (item.label === "Upgrade to Premium") {
+        return !userRoles.includes("premium") && !userRoles.includes("admin");
+      }
+
+      if (item.label === "Become an artist") {
+        return !userRoles.includes("artist");
+      }
+
+      return hasAccess(item.accessFor);
+    });
+  }, [userRoles, menuItems, hasAccess]);
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 z-40"
             initial={{ opacity: 0 }}
@@ -200,7 +195,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
             onClick={onClose}
           />
 
-          {/* Menu */}
           <motion.div
             className="absolute top-full right-0 mt-2 w-64 z-50"
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -213,9 +207,7 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
               duration: 0.2,
             }}
           >
-            {/* Liquid Glass Container */}
             <div className="relative">
-              {/* Animated Glass Background */}
               <motion.div
                 className="absolute inset-0 rounded-2xl border shadow-2xl"
                 initial={{
@@ -235,7 +227,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 transition={{ duration: 0.2, ease: "easeOut" }}
               />
 
-              {/* Liquid Glass Effect */}
               <motion.div
                 className="absolute inset-0 rounded-2xl"
                 initial={{
@@ -253,7 +244,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 transition={{ duration: 0.25, ease: "easeOut" }}
               />
 
-              {/* Shimmer Effect */}
               <motion.div
                 className="absolute inset-0 rounded-2xl overflow-hidden"
                 initial={{ opacity: 0 }}
@@ -273,16 +263,13 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
                 />
               </motion.div>
 
-              {/* Menu Content */}
               <div className="relative p-3">
-                {/* Header */}
                 <div className="px-4 py-2 mb-2">
                   <h3 className="text-white/80 text-sm font-semibold tracking-wider uppercase">
                     Account Menu
                   </h3>
                 </div>
 
-                {/* Menu Items */}
                 <div className="space-y-1">
                   {filteredMenuItems.map((item, index) => (
                     <motion.div
@@ -306,4 +293,6 @@ export default function SettingsMenu({ isOpen, onClose }: SettingsMenuProps) {
       />
     </AnimatePresence>
   );
-}
+};
+
+export default memo(SettingsMenu);

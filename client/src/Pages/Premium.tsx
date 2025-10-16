@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../hooks/useNotification";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,8 +14,8 @@ import {
 } from "@ant-design/icons";
 
 /**
- * Premium upgrade page component
- * Provides premium features overview and payment form
+ * Premium upgrade page
+ * Features: subscription form, payment processing, animated UI
  */
 const Premium = () => {
   const navigate = useNavigate();
@@ -29,133 +29,130 @@ const Premium = () => {
     email: "",
   });
 
-  // Premium features data
-  const premiumFeatures = [
-    {
-      icon: <PlayCircleOutlined className="text-2xl" />,
-      title: "Unlimited Navigation",
-      description: "Navigate through tracks without any restrictions",
-      currentLimit: "Limited skips",
-      premiumFeature: "Unlimited skips",
-    },
-    {
-      icon: <AppstoreOutlined className="text-2xl" />,
-      title: "More Playlists",
-      description: "Create up to 15 custom playlists instead of 5",
-      currentLimit: "5 playlists max",
-      premiumFeature: "15 playlists max",
-    },
-    {
-      icon: <ForwardOutlined className="text-2xl" />,
-      title: "Unlimited Skips",
-      description: "Skip as many tracks as you want without waiting",
-      currentLimit: "Limited skips per hour",
-      premiumFeature: "Unlimited skips",
-    },
-  ];
+  const premiumFeatures = useMemo(
+    () => [
+      {
+        icon: <PlayCircleOutlined className="text-2xl" />,
+        title: "Unlimited Navigation",
+        description: "Navigate through tracks without any restrictions",
+        currentLimit: "Limited skips",
+        premiumFeature: "Unlimited skips",
+      },
+      {
+        icon: <AppstoreOutlined className="text-2xl" />,
+        title: "More Playlists",
+        description: "Create up to 15 custom playlists instead of 5",
+        currentLimit: "5 playlists max",
+        premiumFeature: "15 playlists max",
+      },
+      {
+        icon: <ForwardOutlined className="text-2xl" />,
+        title: "Unlimited Skips",
+        description: "Skip as many tracks as you want without waiting",
+        currentLimit: "Limited skips per hour",
+        premiumFeature: "Unlimited skips",
+      },
+    ],
+    []
+  );
 
-  // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
 
-    // Format card number with spaces
-    if (name === "cardNumber") {
-      const formattedValue = value
-        .replace(/\s/g, "")
-        .replace(/(\d{4})/g, "$1 ")
-        .trim()
-      setFormData((prev) => ({ ...prev, [name]: formattedValue }));
-      return;
-    }
-
-    // Format expiry date with slash
-    if (name === "expiryDate") {
-      const formattedValue = value
-        .replace(/\D/g, "")
-        .replace(/(\d{2})(\d)/, "$1/$2")
-      setFormData((prev) => ({ ...prev, [name]: formattedValue }));
-      return;
-    }
-
-    // Limit CVV to 3 digits
-    if (name === "cvv") {
-      const formattedValue = value.replace(/\D/g, "").substr(0, 3);
-      setFormData((prev) => ({ ...prev, [name]: formattedValue }));
-      return;
-    }
-
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Basic validation
-    if (
-      !formData.cardNumber ||
-      !formData.expiryDate ||
-      !formData.cvv ||
-      !formData.cardholderName ||
-      !formData.email
-    ) {
-      showError("Please fill in all required fields");
-      return;
-    }
-
-    if (formData.cardNumber.replace(/\s/g, "").length !== 16) {
-      showError("Please enter a valid 16-digit card number");
-      return;
-    }
-
-    if (formData.cvv.length !== 3) {
-      showError("Please enter a valid 3-digit CVV");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      showError("Please enter a valid email address");
-      return;
-    }
-
-    setIsProcessing(true);
-    const loadingToast = showLoading("Processing your payment...");
-
-    try {
-      // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Simulate random success/failure for demo
-      const success = Math.random() > 0.3; // 70% success rate
-
-      dismiss(loadingToast);
-
-      if (success) {
-        showSuccess("Welcome to Premium! Your subscription is now active.");
-        // Reset form
-        setFormData({
-          cardNumber: "",
-          expiryDate: "",
-          cvv: "",
-          cardholderName: "",
-          email: "",
-        });
-        // Redirect after success
-        setTimeout(() => navigate("/"), 2000);
-      } else {
-        showError(
-          "Payment failed. Please check your card details and try again."
-        );
+      if (name === "cardNumber") {
+        const formattedValue = value
+          .replace(/\s/g, "")
+          .replace(/(\d{4})/g, "$1 ")
+          .trim();
+        setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+        return;
       }
-    } catch (error) {
-      dismiss(loadingToast);
-      showError(
-        "An error occurred during payment processing. Please try again."
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+
+      if (name === "expiryDate") {
+        const formattedValue = value
+          .replace(/\D/g, "")
+          .replace(/(\d{2})(\d)/, "$1/$2");
+        setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+        return;
+      }
+
+      if (name === "cvv") {
+        const formattedValue = value.replace(/\D/g, "").substr(0, 3);
+        setFormData((prev) => ({ ...prev, [name]: formattedValue }));
+        return;
+      }
+
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    },
+    []
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (
+        !formData.cardNumber ||
+        !formData.expiryDate ||
+        !formData.cvv ||
+        !formData.cardholderName ||
+        !formData.email
+      ) {
+        showError("Please fill in all required fields");
+        return;
+      }
+
+      if (formData.cardNumber.replace(/\s/g, "").length !== 16) {
+        showError("Please enter a valid 16-digit card number");
+        return;
+      }
+
+      if (formData.cvv.length !== 3) {
+        showError("Please enter a valid 3-digit CVV");
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        showError("Please enter a valid email address");
+        return;
+      }
+
+      setIsProcessing(true);
+      const loadingToast = showLoading("Processing your payment...");
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const success = Math.random() > 0.3;
+
+        dismiss(loadingToast);
+
+        if (success) {
+          showSuccess("Welcome to Premium! Your subscription is now active.");
+          setFormData({
+            cardNumber: "",
+            expiryDate: "",
+            cvv: "",
+            cardholderName: "",
+            email: "",
+          });
+          setTimeout(() => navigate("/"), 2000);
+        } else {
+          showError(
+            "Payment failed. Please check your card details and try again."
+          );
+        }
+      } catch (error) {
+        dismiss(loadingToast);
+        showError(
+          "An error occurred during payment processing. Please try again."
+        );
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [formData, showError, showLoading, showSuccess, dismiss, navigate]
+  );
 
   return (
     <motion.main
@@ -164,7 +161,6 @@ const Premium = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      {/* Header */}
       <motion.div
         className="flex items-center gap-4"
         initial={{ opacity: 0, x: -50 }}
@@ -193,7 +189,7 @@ const Premium = () => {
               bounce: 0.6,
             }}
           >
-            <CrownOutlined className="text-2xl" style={{color: "yellow"}} />
+            <CrownOutlined className="text-2xl" style={{ color: "yellow" }} />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -216,7 +212,6 @@ const Premium = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.5 }}
       >
-        {/* Features Section */}
         <motion.div
           className="space-y-6"
           initial={{ opacity: 0, x: -50 }}
@@ -296,7 +291,6 @@ const Premium = () => {
             </div>
           </motion.div>
 
-          {/* Pricing */}
           <motion.div
             className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-lg border border-purple-500/30 rounded-2xl p-6"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -315,17 +309,17 @@ const Premium = () => {
                 transition={{ duration: 0.6, delay: 1.3 }}
               >
                 <motion.div
-                  animate={{
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.1, 1],
-                  }}
+                  animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
                   transition={{
                     duration: 2,
                     repeat: Infinity,
                     repeatType: "reverse",
                   }}
                 >
-                  <CrownOutlined className="text-xl" style={{ color: "yellow" }} />
+                  <CrownOutlined
+                    className="text-xl"
+                    style={{ color: "yellow" }}
+                  />
                 </motion.div>
                 <span className="text-white/70 text-sm uppercase tracking-wide">
                   Premium Plan
@@ -357,7 +351,6 @@ const Premium = () => {
           </motion.div>
         </motion.div>
 
-        {/* Payment Form */}
         <motion.div
           className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6"
           initial={{ opacity: 0, x: 50 }}
@@ -376,7 +369,6 @@ const Premium = () => {
           </motion.h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -397,7 +389,6 @@ const Premium = () => {
               />
             </motion.div>
 
-            {/* Card Number */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -418,7 +409,6 @@ const Premium = () => {
               />
             </motion.div>
 
-            {/* Expiry and CVV */}
             <motion.div
               className="grid grid-cols-2 gap-4"
               initial={{ opacity: 0, y: 20 }}
@@ -457,7 +447,6 @@ const Premium = () => {
               </div>
             </motion.div>
 
-            {/* Cardholder Name */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -478,7 +467,6 @@ const Premium = () => {
               />
             </motion.div>
 
-            {/* Security Notice */}
             <motion.div
               className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -486,9 +474,7 @@ const Premium = () => {
               transition={{ duration: 0.5, delay: 1.2 }}
             >
               <motion.div
-                animate={{
-                  rotate: [0, 5, -5, 0],
-                }}
+                animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{
                   duration: 3,
                   repeat: Infinity,
@@ -507,7 +493,6 @@ const Premium = () => {
               </div>
             </motion.div>
 
-            {/* Submit Button */}
             <motion.button
               type="submit"
               disabled={isProcessing}
@@ -559,7 +544,6 @@ const Premium = () => {
             </motion.button>
           </form>
 
-          {/* Terms */}
           <motion.p
             className="text-white/50 text-xs text-center mt-4"
             initial={{ opacity: 0 }}

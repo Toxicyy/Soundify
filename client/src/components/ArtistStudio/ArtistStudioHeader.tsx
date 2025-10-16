@@ -70,14 +70,13 @@ const ActionButton: FC<ActionButtonProps> = ({
 );
 
 /**
- * ИСПРАВЛЕННОЕ мобильное меню с ВСЕМИ 3 опциями
+ * Mobile actions menu with all 3 options
  */
 const MobileActionsMenu: FC<{
   isOpen: boolean;
   onClose: () => void;
   onAction: (action: string) => void;
 }> = ({ isOpen, onClose, onAction }) => {
-  // Lock body scroll when menu is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -91,7 +90,6 @@ const MobileActionsMenu: FC<{
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -109,7 +107,6 @@ const MobileActionsMenu: FC<{
             onClick={(e) => e.stopPropagation()}
           >
             <div className="py-2 flex flex-col">
-              {/* Edit Profile */}
               <button
                 onClick={() => {
                   onAction("edit");
@@ -126,7 +123,6 @@ const MobileActionsMenu: FC<{
                 </div>
               </button>
 
-              {/* Advanced Settings */}
               <button
                 onClick={() => {
                   onAction("advanced");
@@ -143,7 +139,6 @@ const MobileActionsMenu: FC<{
                 </div>
               </button>
 
-              {/* Create Album */}
               <button
                 onClick={() => {
                   onAction("album");
@@ -167,6 +162,10 @@ const MobileActionsMenu: FC<{
   );
 };
 
+/**
+ * Artist studio header with stats, actions, and modal management
+ * Features welcome message, statistics, and action buttons
+ */
 const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
   artist,
   tracksCount,
@@ -175,7 +174,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Modal state management
   const [modals, setModals] = useState<ModalState>({
     upload: false,
     edit: false,
@@ -183,7 +181,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     mobileMenu: false,
   });
 
-  // Optimized modal toggle handler
   const toggleModal = useCallback(
     (modalName: keyof ModalState, state?: boolean) => {
       setModals((prev) => ({
@@ -194,28 +191,18 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     []
   );
 
-  /**
-   * Navigation handler with proper async handling
-   */
   const handleNavigation = useCallback(
     async (path: string) => {
-      try {
-        if (modals.mobileMenu) {
-          toggleModal("mobileMenu", false);
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        navigate(path, { replace: false });
-      } catch (error) {
-        console.error("Navigation error:", error);
+      if (modals.mobileMenu) {
+        toggleModal("mobileMenu", false);
       }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      navigate(path, { replace: false });
     },
     [navigate, modals.mobileMenu, toggleModal]
   );
 
-  /**
-   * ИСПРАВЛЕННЫЙ Mobile action handler
-   */
   const handleMobileAction = useCallback(
     (action: string) => {
       switch (action) {
@@ -233,7 +220,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     [toggleModal, handleNavigation]
   );
 
-  // Number formatting
   const formatNumber = useMemo(
     () =>
       (num: number): string => {
@@ -248,7 +234,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     []
   );
 
-  // Welcome title with proper left alignment
   const welcomeTitle = useMemo(
     () => (
       <div className="flex flex-col text-left">
@@ -273,11 +258,9 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     [artist.name]
   );
 
-  // Stats and actions layout
   const statsSubtitle = useMemo(
     () => (
       <div className="flex flex-col space-y-3">
-        {/* Stats */}
         <div className="flex flex-wrap gap-3 sm:gap-4">
           <motion.div
             className="flex items-center gap-2"
@@ -330,7 +313,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
           )}
         </div>
 
-        {/* Desktop Actions */}
         <motion.div
           className="hidden md:flex items-center gap-2 lg:gap-3 justify-end"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -371,7 +353,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
           />
         </motion.div>
 
-        {/* Mobile Actions */}
         <motion.div
           className="flex md:hidden items-center gap-2"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -387,7 +368,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
             ariaLabel="Upload new track"
           />
 
-          {/* Mobile menu button */}
           <div className="relative">
             <ActionButton
               icon={<EllipsisOutlined />}
@@ -424,7 +404,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
     ]
   );
 
-  // Image props with correct Tailwind classes
   const imageProps = useMemo(
     () => ({
       src: artist.avatar || "/default-artist-avatar.png",
@@ -458,7 +437,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
 
   return (
     <>
-      {/* Header */}
       <BaseHeader
         isLoading={isLoading}
         className="h-[210px] sm:h-[230px] md:h-[235px] lg:h-[240px] xl:h-[250px]"
@@ -471,7 +449,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
           isLoading={isLoading}
         />
 
-        {/* Enhanced gradient overlay */}
         {!isLoading && (
           <motion.div
             className="absolute inset-0 rounded-3xl pointer-events-none"
@@ -486,7 +463,6 @@ const ArtistStudioHeader: FC<ArtistStudioHeaderProps> = ({
         )}
       </BaseHeader>
 
-      {/* Modals */}
       <AnimatePresence>
         {modals.upload && (
           <UploadTrackModal

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { api } from "../shared/api";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Playlist } from "../types/Playlist";
+import { api } from "../shared/api";
 
 interface Pagination {
   currentPage: number;
@@ -13,7 +13,7 @@ interface Pagination {
 interface UseUserPlaylistsOptions {
   page?: number;
   limit?: number;
-  privacy?: 'public' | 'private' | 'unlisted';
+  privacy?: "public" | "private" | "unlisted";
   autoFetch?: boolean;
 }
 
@@ -29,34 +29,23 @@ interface UseUserPlaylistsReturn {
 }
 
 /**
- * Custom hook for fetching user playlists with pagination and privacy filtering
- * Handles loading states, error management, and data fetching lifecycle
+ * Hook for fetching user playlists with privacy filtering
+ * Supports pagination and auto-fetch configuration
  */
 export const useUserPlaylists = (
   userId: string,
   options: UseUserPlaylistsOptions = {}
 ): UseUserPlaylistsReturn => {
-  const {
-    page = 1,
-    limit = 20,
-    privacy,
-    autoFetch = true,
-  } = options;
+  const { page = 1, limit = 20, privacy, autoFetch = true } = options;
 
-  // State management
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // Refs for cleanup and mount state tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
-  /**
-   * Core data fetching function with comprehensive error handling
-   * Manages request lifecycle, response validation, and state updates
-   */
   const loadUserPlaylists = useCallback(
     async (
       id: string,
@@ -64,14 +53,12 @@ export const useUserPlaylists = (
       limitNum: number = 20,
       privacyFilter?: string
     ) => {
-      // Input validation
       if (!id?.trim()) {
         setError("Invalid user ID");
         setIsLoading(false);
         return;
       }
 
-      // Cancel previous request to prevent race conditions
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
@@ -96,15 +83,12 @@ export const useUserPlaylists = (
 
         const responseData = await response.json();
 
-        // Validate response structure
         if (!responseData || typeof responseData !== "object") {
           throw new Error("Invalid response format");
         }
 
-        // Early return if component unmounted
         if (!isMountedRef.current) return;
 
-        // Extract and validate data
         const playlistsData = responseData.data || [];
         const paginationData = responseData.pagination;
 
@@ -112,25 +96,21 @@ export const useUserPlaylists = (
           throw new Error("Invalid playlists data format");
         }
 
-        // Update state with validated data
         setPlaylists(playlistsData);
         setPagination(paginationData || null);
       } catch (error) {
-        // Ignore abort errors (expected behavior)
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
 
         if (!isMountedRef.current) return;
 
-        // Transform error messages for better UX
         let errorMessage = "Unknown error occurred";
 
         if (error instanceof Error) {
           errorMessage = error.message;
         }
 
-        // Provide user-friendly error messages
         if (
           errorMessage.includes("Failed to fetch") ||
           errorMessage.includes("NetworkError")
@@ -146,7 +126,6 @@ export const useUserPlaylists = (
           errorMessage = "Server error";
         }
 
-        console.error("User playlists loading error:", error);
         setError(errorMessage);
         setPlaylists([]);
         setPagination(null);
@@ -159,37 +138,24 @@ export const useUserPlaylists = (
     []
   );
 
-  /**
-   * Refetch current data with same parameters
-   */
   const refetch = useCallback(() => {
     if (userId) {
       loadUserPlaylists(userId, page, limit, privacy);
     }
   }, [userId, page, limit, privacy, loadUserPlaylists]);
 
-  /**
-   * Load next page of data if available
-   */
   const loadMore = useCallback(() => {
     if (userId && pagination?.hasNextPage) {
-      loadUserPlaylists(
-        userId,
-        pagination.currentPage + 1,
-        limit,
-        privacy
-      );
+      loadUserPlaylists(userId, pagination.currentPage + 1, limit, privacy);
     }
   }, [userId, pagination, limit, privacy, loadUserPlaylists]);
 
-  // Initial data loading effect
   useEffect(() => {
     if (!autoFetch) return;
 
     if (userId) {
       loadUserPlaylists(userId, page, limit, privacy);
     } else {
-      // Reset state when no user ID provided
       setPlaylists([]);
       setIsLoading(false);
       setError("User ID is required");
@@ -201,7 +167,6 @@ export const useUserPlaylists = (
     };
   }, [userId, page, limit, privacy, loadUserPlaylists, autoFetch]);
 
-  // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
 

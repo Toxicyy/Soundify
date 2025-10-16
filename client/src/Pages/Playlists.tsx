@@ -24,23 +24,6 @@ import { playTrackAndQueue } from "../state/Queue.slice";
 import { api } from "../shared/api";
 import { type AppDispatch } from "../store";
 
-/**
- * Playlists Discovery Page
- *
- * Features:
- * - Beautiful authentication required state for non-users
- * - Tabbed interface (Featured, User Playlists, Liked)
- * - Real-time search with debounce
- * - Featured platform playlists showcase
- * - User-created playlists grid
- * - Like/unlike functionality
- * - Privacy indicators
- * - Responsive layout
- * - Skeleton loading states
- * - Error handling with retry
- * - Track play functionality with recommendations
- */
-
 interface PlaylistOwner {
   _id: string;
   name: string;
@@ -54,7 +37,7 @@ interface Playlist {
   description: string;
   coverUrl: string | null;
   owner: PlaylistOwner;
-  tracks: string[]; // Array of track IDs
+  tracks: string[];
   tags: string[];
   category: "user" | "featured" | "curated";
   privacy: "public" | "private" | "unlisted";
@@ -83,9 +66,6 @@ interface PlaylistCardProps {
 
 type TabType = "featured" | "user" | "liked" | "search";
 
-/**
- * Animation configuration constants
- */
 const ANIMATION_CONFIG = {
   pageTransition: { duration: 0.4 },
   itemStagger: 0.05,
@@ -94,7 +74,8 @@ const ANIMATION_CONFIG = {
 } as const;
 
 /**
- * Authentication required state component
+ * Authentication wall component displayed to non-authenticated users
+ * Shows feature highlights and sign in/sign up CTAs
  */
 const AuthRequiredState: React.FC = () => {
   const navigate = useNavigate();
@@ -106,82 +87,79 @@ const AuthRequiredState: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
-      {/* Animated music icons background */}
       <div className="absolute inset-0 overflow-hidden opacity-5">
         <motion.div
           className="absolute top-10 left-10"
-          animate={{ 
+          animate={{
             y: [0, -20, 0],
-            rotate: [0, 10, 0]
+            rotate: [0, 10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 4,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
         >
           <SoundOutlined className="text-6xl text-white" />
         </motion.div>
         <motion.div
           className="absolute top-20 right-20"
-          animate={{ 
+          animate={{
             y: [0, 20, 0],
-            rotate: [0, -15, 0]
+            rotate: [0, -15, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 1,
           }}
         >
           <PlayCircleOutlined className="text-8xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-20 left-20"
-          animate={{ 
+          animate={{
             y: [0, -15, 0],
-            rotate: [0, 20, 0]
+            rotate: [0, 20, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 2
+            delay: 2,
           }}
         >
           <HeartOutlined className="text-5xl text-white" />
         </motion.div>
         <motion.div
           className="absolute bottom-16 right-16"
-          animate={{ 
+          animate={{
             y: [0, 25, 0],
-            rotate: [0, -10, 0]
+            rotate: [0, -10, 0],
           }}
-          transition={{ 
+          transition={{
             duration: 3.5,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 0.5
+            delay: 0.5,
           }}
         >
           <FolderOutlined className="text-7xl text-white" />
         </motion.div>
       </div>
 
-      {/* Main content */}
       <motion.div
         className="relative z-10 text-center max-w-md"
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
-        transition={{ 
+        transition={{
           duration: 0.8,
           type: "spring",
           bounce: 0.4,
-          delay: 0.2
+          delay: 0.2,
         }}
       >
-        {/* Playlist icon with glow effect */}
         <motion.div
           className="relative mb-6 xs:mb-4"
           initial={{ rotate: -180, scale: 0 }}
@@ -190,20 +168,20 @@ const AuthRequiredState: React.FC = () => {
             duration: 1.2,
             type: "spring",
             bounce: 0.6,
-            delay: 0.3
+            delay: 0.3,
           }}
         >
           <div className="relative inline-block">
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-purple-400/30 to-pink-500/30 rounded-full blur-xl scale-150"
-              animate={{ 
+              animate={{
                 opacity: [0.3, 0.7, 0.3],
-                scale: [1.4, 1.6, 1.4]
+                scale: [1.4, 1.6, 1.4],
               }}
               transition={{
                 duration: 3,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
             />
             <div className="relative p-6 xs:p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl border border-purple-500/30">
@@ -212,7 +190,6 @@ const AuthRequiredState: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Title */}
         <motion.h2
           className="text-2xl xs:text-xl font-bold text-white mb-3 xs:mb-2"
           initial={{ opacity: 0, y: 20 }}
@@ -222,17 +199,16 @@ const AuthRequiredState: React.FC = () => {
           Discover Amazing Playlists
         </motion.h2>
 
-        {/* Description */}
         <motion.p
           className="text-white/70 text-base xs:text-sm leading-relaxed mb-8 xs:mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
         >
-          Sign in to explore curated collections, create your own playlists, and connect with the music community
+          Sign in to explore curated collections, create your own playlists, and
+          connect with the music community
         </motion.p>
 
-        {/* Features list */}
         <motion.div
           className="mb-8 xs:mb-6 space-y-3 xs:space-y-2"
           initial={{ opacity: 0, y: 20 }}
@@ -257,7 +233,6 @@ const AuthRequiredState: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Action buttons */}
         <motion.div
           className="flex flex-col xs:flex-row gap-3 xs:gap-2"
           initial={{ opacity: 0, y: 20 }}
@@ -265,7 +240,7 @@ const AuthRequiredState: React.FC = () => {
           transition={{ duration: 0.6, delay: 1.1 }}
         >
           <motion.button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl xs:rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
@@ -273,9 +248,9 @@ const AuthRequiredState: React.FC = () => {
             <LoginOutlined className="text-base xs:text-sm" />
             Sign In
           </motion.button>
-          
+
           <motion.button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate("/signup")}
             className="flex items-center justify-center gap-2 px-6 xs:px-4 py-3 xs:py-2 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl xs:rounded-lg transition-all duration-300 border border-white/20 hover:border-white/30 text-sm xs:text-xs"
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}
@@ -285,7 +260,6 @@ const AuthRequiredState: React.FC = () => {
           </motion.button>
         </motion.div>
 
-        {/* Additional info */}
         <motion.p
           className="text-white/50 text-xs xs:text-[10px] mt-6 xs:mt-4"
           initial={{ opacity: 0 }}
@@ -296,7 +270,6 @@ const AuthRequiredState: React.FC = () => {
         </motion.p>
       </motion.div>
 
-      {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 6 }).map((_, i) => (
           <motion.div
@@ -324,7 +297,8 @@ const AuthRequiredState: React.FC = () => {
 };
 
 /**
- * Playlist card component with multiple variants
+ * Individual playlist card with hover effects and action buttons
+ * Supports multiple variants (default, featured, compact)
  */
 const PlaylistCard: React.FC<PlaylistCardProps> = ({
   playlist,
@@ -363,7 +337,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   };
 
   /**
-   * Handle playlist play with recommendations queue
+   * Plays playlist and adds recommendations to queue
    */
   const handlePlaylistPlay = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -371,21 +345,18 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
     if (!playlist || !user || playlist.tracks.length === 0) return;
 
     try {
-      // Get playlist tracks
       const tracksResponse = await api.playlist.getTracks(playlist._id, {
         limit: 50,
       });
       const tracksData = await tracksResponse.json();
 
       if (!tracksData.success || !tracksData.data?.tracks?.length) {
-        console.error("No tracks found in playlist");
         return;
       }
 
       const playlistTracks = tracksData.data.tracks;
       const firstTrack = playlistTracks[0];
 
-      // Check if first track is currently playing
       const isCurrentTrack = currentTrack.currentTrack?._id === firstTrack._id;
 
       if (isCurrentTrack) {
@@ -394,7 +365,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
       }
 
       try {
-        // Get recommendations to add after playlist
         const recommendationsResponse = await api.recommendations.getForUser(
           user._id
         );
@@ -416,10 +386,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
         setTimeout(() => {
           dispatch(setIsPlaying(true));
         }, 50);
-      } catch (error) {
-        console.error("Error getting recommendations:", error);
-
-        // Fallback: play just the playlist
+      } catch {
         dispatch(
           playTrackAndQueue({
             track: firstTrack,
@@ -432,8 +399,8 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
           dispatch(setIsPlaying(true));
         }, 50);
       }
-    } catch (error) {
-      console.error("Error playing playlist:", error);
+    } catch {
+      // Silent fail
     }
   };
 
@@ -467,7 +434,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
       className={cardClasses[variant]}
       onClick={handlePlaylistClick}
     >
-      {/* Cover and Title Section */}
       <div className="relative mb-4">
         <div className="aspect-square rounded-xl overflow-hidden bg-white/10 relative group/cover">
           {playlist.coverUrl ? (
@@ -484,7 +450,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
             </div>
           )}
 
-          {/* Overlay on hover */}
           <div
             className="absolute inset-0 bg-black/50 opacity-0 group-hover/cover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
             onClick={handlePlaylistPlay}
@@ -492,7 +457,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
             <CaretRightOutlined style={{ color: "white", fontSize: "48px" }} />
           </div>
 
-          {/* Featured badge */}
           {playlist.category === "featured" && (
             <div className="absolute top-2 left-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <StarFilled style={{ fontSize: "10px" }} />
@@ -500,14 +464,12 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
             </div>
           )}
 
-          {/* Privacy indicator */}
           {getPrivacyIcon() && (
             <div className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center">
               {getPrivacyIcon()}
             </div>
           )}
 
-          {/* Like button */}
           <button
             onClick={handleLikeClick}
             className="absolute bottom-2 right-2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
@@ -522,7 +484,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
         </div>
       </div>
 
-      {/* Playlist Info */}
       <div className="space-y-3">
         <div>
           <h3 className="text-white font-semibold text-lg line-clamp-2 group-hover:text-purple-300 transition-colors">
@@ -536,7 +497,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
           )}
         </div>
 
-        {/* Owner info */}
         {showOwner && (
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -561,7 +521,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
           </div>
         )}
 
-        {/* Stats */}
         <div className="flex items-center justify-between text-white/50 text-sm">
           <div className="flex items-center gap-4">
             <span>{playlist.trackCount} tracks</span>
@@ -584,7 +543,6 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
           )}
         </div>
 
-        {/* Tags */}
         {playlist.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {playlist.tags.slice(0, 3).map((tag) => (
@@ -608,7 +566,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
 };
 
 /**
- * Tab navigation component
+ * Tab navigation bar for switching between playlist categories
  */
 const TabNavigation: React.FC<{
   activeTab: TabType;
@@ -672,13 +630,20 @@ const TabNavigation: React.FC<{
 };
 
 /**
- * Main Playlists page component
+ * Main playlists discovery page
+ *
+ * Features:
+ * - Tab-based navigation (Featured, Community, Liked)
+ * - Real-time search with debouncing
+ * - Like/unlike functionality
+ * - Playlist playback with recommendations
+ * - Authentication wall for non-users
+ * - Responsive grid layout
  */
 export default function Playlists() {
   const navigate = useNavigate();
   const { data: user, isLoading: userLoading } = useGetUserQuery();
 
-  // State management
   const [activeTab, setActiveTab] = useState<TabType>("featured");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
@@ -689,7 +654,6 @@ export default function Playlists() {
     new Set()
   );
 
-  // Loading states
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
@@ -698,9 +662,6 @@ export default function Playlists() {
 
   const [hasMore, _setHasMore] = useState(true);
 
-  /**
-   * Initialize liked playlists from user data
-   */
   useEffect(() => {
     if (user?.likedPlaylists) {
       const likedIds = new Set(
@@ -712,9 +673,6 @@ export default function Playlists() {
     }
   }, [user]);
 
-  /**
-   * Fetch featured playlists
-   */
   const fetchFeaturedPlaylists = useCallback(async () => {
     try {
       setIsLoadingFeatured(true);
@@ -728,17 +686,13 @@ export default function Playlists() {
       } else {
         throw new Error("Failed to fetch featured playlists");
       }
-    } catch (error) {
-      console.error("Error fetching featured playlists:", error);
+    } catch {
       setError("Failed to load featured playlists. Please try again.");
     } finally {
       setIsLoadingFeatured(false);
     }
   }, []);
 
-  /**
-   * Fetch user/community playlists
-   */
   const fetchUserPlaylists = useCallback(async () => {
     try {
       setIsLoadingUser(true);
@@ -756,17 +710,13 @@ export default function Playlists() {
       } else {
         throw new Error("Failed to fetch user playlists");
       }
-    } catch (error) {
-      console.error("Error fetching user playlists:", error);
+    } catch {
       setError("Failed to load community playlists. Please try again.");
     } finally {
       setIsLoadingUser(false);
     }
   }, []);
 
-  /**
-   * Fetch liked playlists
-   */
   const fetchLikedPlaylists = useCallback(async () => {
     if (!user) return;
 
@@ -782,8 +732,7 @@ export default function Playlists() {
       } else {
         throw new Error("Failed to fetch liked playlists");
       }
-    } catch (error) {
-      console.error("Error fetching liked playlists:", error);
+    } catch {
       setError("Failed to load liked playlists. Please try again.");
     } finally {
       setIsLoadingLiked(false);
@@ -791,7 +740,7 @@ export default function Playlists() {
   }, [user]);
 
   /**
-   * Debounced search function
+   * Debounced search with 300ms delay
    */
   const debouncedSearch = useMemo(() => {
     let timeoutId: number;
@@ -817,8 +766,7 @@ export default function Playlists() {
           } else {
             throw new Error("Search failed");
           }
-        } catch (error) {
-          console.error("Search error:", error);
+        } catch {
           setError("Search failed. Please try again.");
         } finally {
           setIsSearching(false);
@@ -827,18 +775,12 @@ export default function Playlists() {
     };
   }, []);
 
-  /**
-   * Handle search input changes
-   */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
     debouncedSearch(query);
   };
 
-  /**
-   * Handle playlist like/unlike
-   */
   const handleLikePlaylist = useCallback(
     async (playlistId: string) => {
       if (!user) {
@@ -851,7 +793,6 @@ export default function Playlists() {
 
         if (response.ok) {
           setLikedPlaylistIds((prev) => new Set(prev).add(playlistId));
-          // Update like count in current playlists
           const updatePlaylistLikes = (playlists: Playlist[]) =>
             playlists.map((p) =>
               p._id === playlistId ? { ...p, likeCount: p.likeCount + 1 } : p
@@ -860,8 +801,8 @@ export default function Playlists() {
           setFeaturedPlaylists(updatePlaylistLikes);
           setUserPlaylists(updatePlaylistLikes);
         }
-      } catch (error) {
-        console.error("Error liking playlist:", error);
+      } catch {
+        // Silent fail
       }
     },
     [user, navigate]
@@ -879,7 +820,6 @@ export default function Playlists() {
             return newSet;
           });
 
-          // Update like count in current playlists
           const updatePlaylistLikes = (playlists: Playlist[]) =>
             playlists.map((p) =>
               p._id === playlistId
@@ -890,23 +830,19 @@ export default function Playlists() {
           setFeaturedPlaylists(updatePlaylistLikes);
           setUserPlaylists(updatePlaylistLikes);
 
-          // Remove from liked playlists if currently viewing liked
           if (activeTab === "liked") {
             setLikedPlaylists((prev) =>
               prev.filter((p) => p._id !== playlistId)
             );
           }
         }
-      } catch (error) {
-        console.error("Error unliking playlist:", error);
+      } catch {
+        // Silent fail
       }
     },
     [activeTab]
   );
 
-  /**
-   * Handle tab changes and data fetching
-   */
   const handleTabChange = useCallback(
     (tab: TabType) => {
       setActiveTab(tab);
@@ -914,7 +850,6 @@ export default function Playlists() {
       setSearchResults(null);
       setError(null);
 
-      // Fetch data for the selected tab if not already loaded
       switch (tab) {
         case "featured":
           if (featuredPlaylists.length === 0) {
@@ -944,15 +879,12 @@ export default function Playlists() {
     ]
   );
 
-  /**
-   * Initialize featured playlists on component mount
-   */
   useEffect(() => {
     fetchFeaturedPlaylists();
   }, [fetchFeaturedPlaylists]);
 
   /**
-   * Get current playlists based on active tab or search
+   * Returns playlists for current view (search results or active tab)
    */
   const getCurrentPlaylists = () => {
     if (searchResults) {
@@ -972,7 +904,7 @@ export default function Playlists() {
   };
 
   /**
-   * Get loading state for current tab
+   * Returns loading state for current view
    */
   const getCurrentLoadingState = () => {
     if (isSearching) return true;
@@ -993,7 +925,6 @@ export default function Playlists() {
   const isLoading = getCurrentLoadingState();
   const isSearchMode = Boolean(searchQuery.trim());
 
-  // Show loading state while checking user auth
   if (userLoading) {
     return (
       <motion.main
@@ -1009,7 +940,6 @@ export default function Playlists() {
     );
   }
 
-  // Show auth required state if user is not logged in
   if (!user) {
     return (
       <motion.main
@@ -1018,7 +948,6 @@ export default function Playlists() {
         animate={{ opacity: 1 }}
         transition={ANIMATION_CONFIG.pageTransition}
       >
-        {/* Page Header */}
         <motion.header
           className="flex items-center gap-3 xs:gap-4"
           initial={{ opacity: 0, y: -20 }}
@@ -1054,13 +983,16 @@ export default function Playlists() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <h1 className="text-white text-2xl xs:text-3xl font-bold">Playlists</h1>
-              <p className="text-white/70 text-sm xs:text-lg">Discover music collections</p>
+              <h1 className="text-white text-2xl xs:text-3xl font-bold">
+                Playlists
+              </h1>
+              <p className="text-white/70 text-sm xs:text-lg">
+                Discover music collections
+              </p>
             </motion.div>
           </div>
         </motion.header>
 
-        {/* Auth Required Content */}
         <motion.section
           className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -1073,12 +1005,9 @@ export default function Playlists() {
     );
   }
 
-  // Regular playlists content for authenticated users
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Main content with responsive padding */}
       <div className="px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] py-8 pb-36 xl:pb-8">
-        {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1093,7 +1022,6 @@ export default function Playlists() {
           </p>
         </motion.div>
 
-        {/* Search Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1120,7 +1048,6 @@ export default function Playlists() {
           </div>
         </motion.div>
 
-        {/* Tab Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1133,7 +1060,6 @@ export default function Playlists() {
           />
         </motion.div>
 
-        {/* Error State */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1150,7 +1076,6 @@ export default function Playlists() {
           </motion.div>
         )}
 
-        {/* Results Header */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1177,7 +1102,6 @@ export default function Playlists() {
           </h2>
         </motion.div>
 
-        {/* Playlists Grid */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -1260,21 +1184,18 @@ export default function Playlists() {
           )}
         </AnimatePresence>
 
-        {/* Load More Button */}
         {!isSearchMode && hasMore && currentPlaylists.length >= 20 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center mt-12"
           >
-            <button
-              className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors backdrop-blur-lg border border-white/20"
-            >
+            <button className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium transition-colors backdrop-blur-lg border border-white/20">
               Load More Playlists
             </button>
           </motion.div>
         )}
       </div>
     </div>
-  );
+  )
 }

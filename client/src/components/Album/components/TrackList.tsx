@@ -13,39 +13,30 @@ import { playTrackAndQueue, toggleShuffle } from "../../../state/Queue.slice";
 import { setIsPlaying } from "../../../state/CurrentTrack.slice";
 
 interface TracksListProps {
-  /** Loading state indicator */
   isLoading?: boolean;
-  /** Array of tracks to display */
   tracks?: Track[];
-  /** Error message if track loading failed */
   tracksError?: string | null;
 }
 
 /**
- * Album tracks list component with search, playback controls, and track management
- * Provides comprehensive track interaction and playback functionality
+ * Album tracks list with search, playback controls, and track management
+ * Includes play/pause, shuffle, and search functionality
  */
 const TracksList: FC<TracksListProps> = ({
   isLoading = false,
   tracks = [],
   tracksError = null,
 }) => {
-  // Local state for search functionality
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Redux state selectors
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
   );
   const { shuffle } = useSelector((state: AppState) => state.queue);
   const dispatch = useDispatch<AppDispatch>();
 
-  // Computed values
   const hasData = tracks.length > 0;
 
-  /**
-   * Check if current playing track belongs to this tracklist
-   */
   const isCurrentTrackFromThisPlaylist = useMemo(() => {
     if (!currentTrackState.currentTrack) return false;
 
@@ -54,17 +45,10 @@ const TracksList: FC<TracksListProps> = ({
     );
   }, [currentTrackState.currentTrack, tracks]);
 
-  /**
-   * Determine if this playlist is currently playing
-   */
   const isPlaylistPlaying = useMemo(() => {
     return isCurrentTrackFromThisPlaylist && currentTrackState.isPlaying;
   }, [isCurrentTrackFromThisPlaylist, currentTrackState.isPlaying]);
 
-  /**
-   * Filter tracks based on search query
-   * Searches through track name and artist name
-   */
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) {
       return tracks;
@@ -79,19 +63,10 @@ const TracksList: FC<TracksListProps> = ({
     });
   }, [tracks, searchQuery]);
 
-  // Event handlers
-  /**
-   * Toggle shuffle mode
-   */
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
-  /**
-   * Handle playlist play/pause with smart context switching
-   * If current track is from this playlist - toggle play/pause
-   * Otherwise start playlist from beginning
-   */
   const handlePlaylistPlayPause = useCallback(() => {
     if (isLoading || filteredTracks.length === 0) return;
 
@@ -113,17 +88,10 @@ const TracksList: FC<TracksListProps> = ({
     dispatch,
   ]);
 
-  /**
-   * Clear search query
-   */
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
   }, []);
 
-  // Render functions
-  /**
-   * Render skeleton loaders for loading state
-   */
   const renderSkeletons = () =>
     Array.from({ length: 8 }).map((_, index) => (
       <div key={`skeleton-${index}`} className="animate-pulse">
@@ -136,9 +104,6 @@ const TracksList: FC<TracksListProps> = ({
       </div>
     ));
 
-  /**
-   * Render error state with retry option
-   */
   const renderError = () => (
     <div className="text-center py-8" role="alert">
       <div className="w-16 h-16 mx-auto rounded-full bg-red-500/20 flex items-center justify-center mb-3">
@@ -169,9 +134,6 @@ const TracksList: FC<TracksListProps> = ({
     </div>
   );
 
-  /**
-   * Render empty state with different messages for search vs no data
-   */
   const renderEmptyState = () => {
     const isSearchEmpty = searchQuery.trim() && filteredTracks.length === 0;
 
@@ -218,9 +180,6 @@ const TracksList: FC<TracksListProps> = ({
     );
   };
 
-  /**
-   * Render control panel with play/pause, shuffle, and search
-   */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-row">
@@ -313,9 +272,6 @@ const TracksList: FC<TracksListProps> = ({
     </div>
   );
 
-  /**
-   * Render tracks list with proper loading/error/empty states
-   */
   const renderTracksList = () => (
     <div className="space-y-2 mt-2">
       {isLoading

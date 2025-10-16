@@ -1,6 +1,5 @@
 /**
- * Shared types for album creation system
- * Single source of truth for LocalTrack and related interfaces
+ * Types for album creation system
  */
 
 export interface LocalTrack {
@@ -26,19 +25,16 @@ export interface AlbumData {
   coverPreview: string | null;
 }
 
-// Simplified progress structure matching backend
 export interface SaveProgress {
   sessionId: string;
   status: "processing" | "completed" | "failed";
   phase: "album" | "tracks" | "completed";
   message: string;
   albumName: string;
-
   totalTracks: number;
   currentTrack: number;
   overallProgress: number;
   currentTrackProgress: number;
-
   tracks: Array<{
     tempId: string;
     index: number;
@@ -48,7 +44,6 @@ export interface SaveProgress {
   }>;
 }
 
-// Props interfaces for components
 export interface AlbumTracksListProps {
   tracks: LocalTrack[];
   albumData: AlbumData;

@@ -1,4 +1,4 @@
-import { useState, type FC } from "react";
+import { useState, useMemo, type FC, memo, type JSX } from "react";
 import {
   ApartmentOutlined,
   ClockCircleOutlined,
@@ -17,7 +17,20 @@ interface MainBarProps {
   callback?: () => void;
 }
 
-export const MainBar: FC<MainBarProps> = ({
+const ICON_MAP: Record<string, JSX.Element> = {
+  "Home": <HomeOutlined />,
+  "Playlists": <ApartmentOutlined />,
+  "Artists": <InsertRowRightOutlined />,
+  "Liked Songs": <HeartFilled />,
+  "Recently": <ClockCircleOutlined />,
+  "New Playlist": <FolderOutlined />,
+};
+
+/**
+ * Navigation item for desktop sidebar
+ * Animated link with icon and text label
+ */
+const MainBar: FC<MainBarProps> = ({
   text,
   animationDuration,
   path,
@@ -26,14 +39,9 @@ export const MainBar: FC<MainBarProps> = ({
   const location = useLocation();
   const pathname = location.pathname;
   const [hover, setHover] = useState(false);
-  const icons = {
-    Home: <HomeOutlined />,
-    Playlists: <ApartmentOutlined />,
-    Artists: <InsertRowRightOutlined />,
-    "Liked Songs": <HeartFilled />,
-    Recently: <ClockCircleOutlined />,
-    "New Playlist": <FolderOutlined />,
-  };
+
+  const icon = useMemo(() => ICON_MAP[text], [text]);
+  const isActive = pathname === path && !callback;
 
   return (
     <Link to={path}>
@@ -41,18 +49,15 @@ export const MainBar: FC<MainBarProps> = ({
         initial={{ marginRight: "800px" }}
         animate={{ marginRight: "0px" }}
         transition={{ duration: animationDuration, ease: "easeInOut" }}
-        className={
-          "flex items-center gap-3 w-[13vw] h-[28px] lg:h-[35px] 2xl:h-[35px] rounded-lg pl-4 lg:pl-5 2xl:pl-5 cursor-pointer duration-300 " +
-          (hover || (pathname === path && !callback)
-            ? "bg-gray-100/70"
-            : "glass")
-        }
+        className={`flex items-center gap-3 w-[13vw] h-[28px] lg:h-[35px] 2xl:h-[35px] rounded-lg pl-4 lg:pl-5 2xl:pl-5 cursor-pointer duration-300 ${
+          hover || isActive ? "bg-gray-100/70" : "glass"
+        }`}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onClick={callback ? callback : () => {}}
+        onClick={callback || undefined}
       >
         <div className="text-base lg:text-lg 2xl:text-lg font-semibold">
-          {icons[text as keyof typeof icons]}
+          {icon}
         </div>
         <h1 className="text-sm lg:text-base 2xl:text-base font-semibold tracking-wider truncate">
           {text}
@@ -61,3 +66,6 @@ export const MainBar: FC<MainBarProps> = ({
     </Link>
   );
 };
+
+export default memo(MainBar);
+export { MainBar };

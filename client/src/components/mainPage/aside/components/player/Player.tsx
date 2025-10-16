@@ -13,7 +13,7 @@ import {
   StepForwardOutlined,
   SwapOutlined,
 } from "@ant-design/icons";
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, memo } from "react";
 import {
   handleTrackEnd,
   playNextTrack,
@@ -37,44 +37,135 @@ import Hls from "hls.js";
 import { Link } from "react-router-dom";
 import { Modal } from "antd";
 
-/**
- * Skip data interface
- */
 interface SkipData {
   count: number;
   hourTimestamp: number;
   lastUpdate: number;
 }
 
+const FREE_SKIP_LIMIT = 6;
+const SKIP_SYNC_INTERVAL = 5 * 60 * 1000;
+const HOUR_CHECK_INTERVAL = 60 * 1000;
+const SEEK_THRESHOLD = 3;
+
+const HLS_CONFIG = {
+  debug: false,
+  enableWorker: true,
+  lowLatencyMode: false,
+  maxBufferLength: 30,
+  maxMaxBufferLength: 60,
+  maxBufferSize: 60 * 1000 * 1000,
+  maxBufferHole: 0.5,
+  startLevel: -1,
+  autoStartLoad: true,
+  startPosition: -1,
+  maxLoadingDelay: 4,
+} as const;
+
 /**
- * Main audio player component with HLS streaming support and skip limit logic
+ * Main desktop audio player with HLS streaming and skip limit logic
+ * Features premium/free user controls, like functionality, and queue management
  */
-export const Player = () => {
-  // UI states
+const Player = () => {
   const [likeHover, setLikeHover] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-
-  // Skip limit states
   const [skipCount, setSkipCount] = useState(0);
   const [skipBlocked, setSkipBlocked] = useState(false);
   const [_blockMessage, setBlockMessage] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  // Audio states
   const [volume, setVolume] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [bufferProgress, setBufferProgress] = useState(0);
 
-  // Redux state
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
   const queueState = useSelector((state: AppState) => state.queue);
   const { data: user, isFetching } = useGetUserQuery();
-  // Custom skip limit notification
+
+  const { showWarning, showError, showSuccess } = useNotification();
+  const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
+
+  const currentTrackId = currentTrack.currentTrack?._id || "";
+  const {
+    isLiked,
+    isPending: likePending,
+    toggleLike,
+  } = useLike(currentTrackId);
+
+  useEffect(() => {
+    if (!isFetching && user?.likedSongs) {
+      dispatch(initializeLikes(user.likedSongs));
+    }
+  }, [isFetching, user?.likedSongs, dispatch]);
+
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const loadedTrackIdRef = useRef<string | number | null>(null);
+  const isInitializingRef = useRef(false);
+  const isStoppingAtEndRef = useRef(false);
+
+  const currentStr = useFormatTime(currentTime);
+  const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
+
+  const canSeek = user?.status === "PREMIUM" || user?.status === "ADMIN";
+  const canGoBack = user?.status === "PREMIUM" || user?.status === "ADMIN";
+  const isPremium = user?.status === "PREMIUM" || user?.status === "ADMIN";
+
+  const getCurrentHourTimestamp = useCallback(() => {
+    const now = new Date();
+    const hourStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      now.getHours(),
+      0,
+      0,
+      0
+    );
+    return hourStart.getTime();
+  }, []);
+
+  const getSkipData = useCallback((): SkipData => {
+    try {
+      const data = localStorage.getItem("skipData");
+      if (!data) {
+        return {
+          count: 0,
+          hourTimestamp: getCurrentHourTimestamp(),
+          lastUpdate: Date.now(),
+        };
+      }
+      return JSON.parse(data);
+    } catch (error) {
+      return {
+        count: 0,
+        hourTimestamp: getCurrentHourTimestamp(),
+        lastUpdate: Date.now(),
+      };
+    }
+  }, [getCurrentHourTimestamp]);
+
+  const saveSkipData = useCallback(
+    (count: number) => {
+      try {
+        const data: SkipData = {
+          count,
+          hourTimestamp: getCurrentHourTimestamp(),
+          lastUpdate: Date.now(),
+        };
+        localStorage.setItem("skipData", JSON.stringify(data));
+        setSkipCount(count);
+      } catch (error) {
+        console.error("Failed to save skip data");
+      }
+    },
+    [getCurrentHourTimestamp]
+  );
+
   const showSkipLimitNotification = useCallback((remainingSkips: number) => {
-    const { showCustom} = useNotification();
+    const { showCustom } = useNotification();
 
     return showCustom(
       <div className="max-w-md w-full bg-yellow-500/10 backdrop-blur-lg border border-yellow-500/30 shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-yellow-500/20">
@@ -126,106 +217,18 @@ export const Player = () => {
     );
   }, []);
 
-  const { showWarning, showError, showSuccess } = useNotification();
-  const { isOpen: isQueueOpen, shuffle, repeat, queue } = queueState;
-
-  // Like functionality
-  const currentTrackId = currentTrack.currentTrack?._id || "";
-  const {
-    isLiked,
-    isPending: likePending,
-    toggleLike,
-  } = useLike(currentTrackId);
-
-  // Initialize likes when user data is available
-  useEffect(() => {
-    if (!isFetching && user?.likedSongs) {
-      dispatch(initializeLikes(user.likedSongs));
-    }
-  }, [isFetching, user?.likedSongs, dispatch]);
-
-  // Refs
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
-  const loadedTrackIdRef = useRef<string | number | null>(null);
-  const isInitializingRef = useRef(false);
-  const isStoppingAtEndRef = useRef(false);
-
-  // Formatted time strings
-  const currentStr = useFormatTime(currentTime);
-  const totalStr = useFormatTime(currentTrack.currentTrack?.duration || 0);
-
-  const canSeek = user?.status === "PREMIUM" || user?.status === "ADMIN";
-  const canGoBack = user?.status === "PREMIUM" || user?.status === "ADMIN";
-  const isPremium = user?.status === "PREMIUM" || user?.status === "ADMIN";
-
-  // Skip utility functions
-  const getCurrentHourTimestamp = useCallback(() => {
-    const now = new Date();
-    const hourStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      now.getHours(),
-      0,
-      0,
-      0
-    );
-    return hourStart.getTime();
-  }, []);
-
-  const getSkipData = useCallback((): SkipData => {
-    try {
-      const data = localStorage.getItem("skipData");
-      if (!data) {
-        return {
-          count: 0,
-          hourTimestamp: getCurrentHourTimestamp(),
-          lastUpdate: Date.now(),
-        };
-      }
-      return JSON.parse(data);
-    } catch (error) {
-      console.error("Error reading skip data:", error);
-      return {
-        count: 0,
-        hourTimestamp: getCurrentHourTimestamp(),
-        lastUpdate: Date.now(),
-      };
-    }
-  }, [getCurrentHourTimestamp]);
-
-  const saveSkipData = useCallback(
-    (count: number) => {
-      try {
-        const data: SkipData = {
-          count,
-          hourTimestamp: getCurrentHourTimestamp(),
-          lastUpdate: Date.now(),
-        };
-        localStorage.setItem("skipData", JSON.stringify(data));
-        setSkipCount(count);
-      } catch (error) {
-        console.error("Error saving skip data:", error);
-      }
-    },
-    [getCurrentHourTimestamp]
-  );
-
-  // Initialize skip count from localStorage
   useEffect(() => {
     if (!isPremium) {
       const skipData = getSkipData();
       const currentHour = getCurrentHourTimestamp();
 
-      // Reset if new hour
       if (skipData.hourTimestamp < currentHour) {
         setSkipCount(0);
         setSkipBlocked(false);
         saveSkipData(0);
       } else {
         setSkipCount(skipData.count);
-        if (skipData.count >= 6) {
+        if (skipData.count >= FREE_SKIP_LIMIT) {
           setSkipBlocked(true);
           setBlockMessage(
             "Skip limit reached. Try again next hour or upgrade to Premium!"
@@ -238,7 +241,6 @@ export const Player = () => {
     }
   }, [isPremium, getSkipData, getCurrentHourTimestamp, saveSkipData]);
 
-  // Sync with server every 5 minutes
   useEffect(() => {
     if (isPremium) return;
 
@@ -262,9 +264,8 @@ export const Player = () => {
             }
           } else if (result.data.success) {
             setSkipBlocked(false);
-            // Update local count if server suggests different value
             if (result.data.remainingSkips !== undefined) {
-              const serverCount = 6 - result.data.remainingSkips;
+              const serverCount = FREE_SKIP_LIMIT - result.data.remainingSkips;
               if (serverCount !== skipData.count) {
                 saveSkipData(serverCount);
               }
@@ -272,21 +273,16 @@ export const Player = () => {
           }
         }
       } catch (error) {
-        console.warn("Skip sync failed, continuing with offline mode:", error);
-        // Continue with offline mode - don't block user
+        console.warn("Skip sync failed, continuing with offline mode");
       }
     };
 
-    // Initial sync
     syncSkipData();
-
-    // Setup interval for periodic sync
-    const syncInterval = setInterval(syncSkipData, 5 * 60 * 1000); // 5 minutes
+    const syncInterval = setInterval(syncSkipData, SKIP_SYNC_INTERVAL);
 
     return () => clearInterval(syncInterval);
-  }, [isPremium, getSkipData, saveSkipData]);
+  }, [isPremium, getSkipData, saveSkipData, showError, showWarning]);
 
-  // Check for hour reset every minute
   useEffect(() => {
     if (isPremium) return;
 
@@ -295,7 +291,6 @@ export const Player = () => {
       const currentHour = getCurrentHourTimestamp();
 
       if (skipData.hourTimestamp < currentHour) {
-        // New hour - reset counter
         setSkipCount(0);
         setSkipBlocked(false);
         setBlockMessage("");
@@ -303,13 +298,10 @@ export const Player = () => {
       }
     };
 
-    // Check every minute
-    const resetInterval = setInterval(checkHourReset, 60 * 1000);
-
+    const resetInterval = setInterval(checkHourReset, HOUR_CHECK_INTERVAL);
     return () => clearInterval(resetInterval);
   }, [isPremium, getSkipData, getCurrentHourTimestamp, saveSkipData]);
 
-  // Generate streaming URL for current track
   const streamUrl = useMemo(() => {
     if (!currentTrack.currentTrack) return null;
 
@@ -325,7 +317,6 @@ export const Player = () => {
     };
   }, [currentTrack.currentTrack]);
 
-  // Event handlers
   const togglePlayPause = useCallback(() => {
     if (!audioRef.current || isLoading) return;
     dispatch(setIsPlaying(!currentTrack.isPlaying));
@@ -358,13 +349,11 @@ export const Player = () => {
 
   const showUpgradePrompt = useCallback(() => {
     setShowUpgradeModal(true);
-    const remainingSkips = Math.max(0, 6 - skipCount);
+    const remainingSkips = Math.max(0, FREE_SKIP_LIMIT - skipCount);
     showSkipLimitNotification(remainingSkips);
   }, [showSkipLimitNotification, skipCount]);
 
-  // Modified handleNext with skip limit logic
   const handleNext = useCallback(() => {
-    // Check skip limit for free users
     if (!isPremium) {
       if (skipBlocked) {
         showUpgradePrompt();
@@ -372,7 +361,6 @@ export const Player = () => {
       }
 
       const skipData = getSkipData();
-      const FREE_SKIP_LIMIT = 6;
 
       if (skipData.count >= FREE_SKIP_LIMIT) {
         setSkipBlocked(true);
@@ -383,7 +371,6 @@ export const Player = () => {
         return;
       }
 
-      // Increment skip count
       const newCount = skipData.count + 1;
       saveSkipData(newCount);
 
@@ -394,15 +381,12 @@ export const Player = () => {
         );
         showSkipLimitNotification(0);
       } else if (newCount >= 4) {
-        // Show warning when approaching limit (at 4th and 5th skip)
         const remaining = FREE_SKIP_LIMIT - newCount;
         showSkipLimitNotification(remaining);
       }
     }
 
-    // Original next track logic
     if (queue.length === 0 && audioRef.current) {
-
       if (repeat === "one" || repeat === "all") {
         audioRef.current.currentTime = 0;
         setCurrentTime(0);
@@ -433,6 +417,7 @@ export const Player = () => {
     queue.length,
     repeat,
     currentTrack.isPlaying,
+    showSkipLimitNotification,
   ]);
 
   const handleShareClick = useCallback(async () => {
@@ -440,10 +425,11 @@ export const Player = () => {
       if (!currentTrack.currentTrack) return;
       const url = `${window.location.origin}/track/${currentTrack.currentTrack._id}`;
 
-      // Проверяем поддержку Web Share API (для мобильных устройств)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
-          typeof currentTrack.currentTrack.artist === "string" ? currentTrack.currentTrack.artist : currentTrack.currentTrack.artist?.name;
+          typeof currentTrack.currentTrack.artist === "string"
+            ? currentTrack.currentTrack.artist
+            : currentTrack.currentTrack.artist?.name;
 
         await navigator.share({
           title: `${currentTrack.currentTrack.name} - ${artistName}`,
@@ -457,12 +443,9 @@ export const Player = () => {
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Обработка ошибок
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!currentTrack.currentTrack) return;
@@ -476,8 +459,7 @@ export const Player = () => {
   }, [currentTrack.currentTrack, showSuccess, showError]);
 
   const handlePrevious = useCallback(() => {
-    if (audioRef.current && audioRef.current.currentTime > 3) {
-      // If more than 3 seconds played, restart current track
+    if (audioRef.current && audioRef.current.currentTime > SEEK_THRESHOLD) {
       audioRef.current.currentTime = 0;
       setCurrentTime(0);
     } else {
@@ -493,7 +475,6 @@ export const Player = () => {
     dispatch(toggleRepeat());
   }, [dispatch]);
 
-  // Get repeat icon color based on current repeat mode
   const getRepeatColor = useCallback(() => {
     switch (repeat) {
       case "one":
@@ -504,7 +485,6 @@ export const Player = () => {
     }
   }, [repeat]);
 
-  // Cleanup function for HLS
   const cleanupHLS = useCallback(() => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -512,21 +492,17 @@ export const Player = () => {
     }
   }, []);
 
-  // Initialize track loading
   const initializeTrack = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio || !streamUrl || !currentTrack.currentTrack) return;
 
     const trackId = currentTrack.currentTrack._id;
 
-    // Prevent multiple simultaneous initializations
     if (isInitializingRef.current) {
       return;
     }
 
-    // Skip if same track is already loaded
     if (loadedTrackIdRef.current === trackId) {
-      // Just update play state if needed
       if (currentTrack.isPlaying && audio.paused) {
         audio.play().catch(() => dispatch(setIsPlaying(false)));
       } else if (!currentTrack.isPlaying && !audio.paused) {
@@ -540,51 +516,32 @@ export const Player = () => {
     setCurrentTime(0);
     setBufferProgress(0);
 
-    // Cleanup previous track
     cleanupHLS();
     audio.pause();
-
     audio.src = "";
     audio.load();
 
     try {
       if (streamUrl.isHLS) {
-        // HLS track handling
         if (Hls.isSupported()) {
-          const hls = new Hls({
-            debug: false,
-            enableWorker: true,
-            lowLatencyMode: false,
-            maxBufferLength: 30,
-            maxMaxBufferLength: 60,
-            maxBufferSize: 60 * 1000 * 1000,
-            maxBufferHole: 0.5,
-            startLevel: -1,
-            autoStartLoad: true,
-            startPosition: -1,
-            maxLoadingDelay: 4,
-          });
+          const hls = new Hls(HLS_CONFIG);
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setIsLoading(false);
             loadedTrackIdRef.current = trackId;
 
-            // Auto-play if needed
             if (currentTrack.isPlaying) {
               audio.play().catch(() => dispatch(setIsPlaying(false)));
             }
           });
 
           hls.on(Hls.Events.ERROR, (_, data) => {
-            console.error("HLS error:", data);
             if (data.fatal) {
               switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.error("Network error");
                   hls.startLoad();
                   break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
-                  console.error("Media error");
                   hls.recoverMediaError();
                   break;
                 default:
@@ -608,7 +565,6 @@ export const Player = () => {
           hls.attachMedia(audio);
           hlsRef.current = hls;
         } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
-          // Safari native HLS support
           audio.src = streamUrl.url;
 
           const handleCanPlay = () => {
@@ -625,7 +581,6 @@ export const Player = () => {
           });
         }
       } else {
-        // Regular MP3 track
         audio.src = streamUrl.url;
 
         const handleCanPlay = () => {
@@ -640,7 +595,6 @@ export const Player = () => {
         audio.addEventListener("canplaythrough", handleCanPlay, { once: true });
       }
     } catch (error) {
-      console.error("Track initialization error:", error);
       setIsLoading(false);
       dispatch(setIsPlaying(false));
     } finally {
@@ -654,9 +608,7 @@ export const Player = () => {
     cleanupHLS,
   ]);
 
-  // Синхронизация currentTrack между слайсами
   useEffect(() => {
-    // Автоматически обновляем currentTrack в queue при изменении currentTrack в currentTrack slice
     if (
       currentTrack.currentTrack &&
       currentTrack.currentTrack !== queueState.currentTrack
@@ -665,18 +617,15 @@ export const Player = () => {
     }
   }, [currentTrack.currentTrack, queueState.currentTrack, dispatch]);
 
-  // Main effect for track changes
   useEffect(() => {
     if (!currentTrack.currentTrack || !streamUrl) {
       return;
     }
 
-    // Skip initialization if we're just stopping at the end
     if (isStoppingAtEndRef.current) {
       return;
     }
 
-    // Check if this is actually a new track
     const trackId = currentTrack.currentTrack._id;
     if (loadedTrackIdRef.current === trackId && !currentTrack.isPlaying) {
       return;
@@ -684,18 +633,15 @@ export const Player = () => {
 
     initializeTrack();
 
-    // Cleanup on unmount or track change
     return () => {
       isInitializingRef.current = false;
     };
   }, [currentTrack.currentTrack?._id, initializeTrack, streamUrl]);
 
-  // FIXED - Separate effect for play/pause control
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Skip if we're in the middle of loading
     if (isLoading || isInitializingRef.current) {
       return;
     }
@@ -703,17 +649,15 @@ export const Player = () => {
     const currentTrackId = currentTrack.currentTrack?._id;
     const isTrackLoaded = loadedTrackIdRef.current === currentTrackId;
 
-    // Only handle play/pause for already loaded tracks
     if (isTrackLoaded && currentTrackId) {
       if (currentTrack.isPlaying && audio.paused) {
-        audio.play().catch((_err) => {
+        audio.play().catch(() => {
           dispatch(setIsPlaying(false));
         });
       } else if (!currentTrack.isPlaying && !audio.paused) {
         audio.pause();
       }
     }
-    // If track is not loaded and should be playing, it will be handled by track change effect
   }, [
     currentTrack.isPlaying,
     currentTrack.currentTrack?._id,
@@ -721,7 +665,6 @@ export const Player = () => {
     dispatch,
   ]);
 
-  // Progress update effect
   useEffect(() => {
     if (!currentTrack.isPlaying || !audioRef.current) return;
 
@@ -729,7 +672,6 @@ export const Player = () => {
       if (audioRef.current && !audioRef.current.paused) {
         setCurrentTime(audioRef.current.currentTime);
 
-        // Update buffer progress for non-HLS tracks
         if (!streamUrl?.isHLS && audioRef.current.buffered.length > 0) {
           const bufferedEnd = audioRef.current.buffered.end(
             audioRef.current.buffered.length - 1
@@ -743,20 +685,14 @@ export const Player = () => {
     return () => clearInterval(interval);
   }, [currentTrack.isPlaying, streamUrl?.isHLS]);
 
-  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleEnded = () => {
-
-      // Important: Reset time immediately in UI
       setCurrentTime(0);
-
-      // Reset audio element time to 0
       audio.currentTime = 0;
 
-      // Mark that we might be stopping at the end
       if (repeat === "off" && queue.length === 0) {
         isStoppingAtEndRef.current = true;
         setTimeout(() => {
@@ -764,12 +700,10 @@ export const Player = () => {
         }, 100);
       }
 
-      // Dispatch Redux action for state management
       dispatch(handleTrackEnd());
     };
 
-    const handleError = (e: Event) => {
-      console.error("Audio error:", e);
+    const handleError = () => {
       setIsLoading(false);
       dispatch(setIsPlaying(false));
     };
@@ -785,8 +719,6 @@ export const Player = () => {
     };
 
     const handleWaiting = () => {
-
-      // Не показываем загрузку если мы остановились в конце
       if (!isStoppingAtEndRef.current && currentTrack.isPlaying) {
         setIsLoading(true);
       }
@@ -796,7 +728,6 @@ export const Player = () => {
       setIsLoading(false);
     };
 
-    // Добавляем все обработчики
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
     audio.addEventListener("loadstart", handleLoadStart);
@@ -805,7 +736,6 @@ export const Player = () => {
     audio.addEventListener("playing", handlePlaying);
 
     return () => {
-      // Убираем все обработчики
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
       audio.removeEventListener("loadstart", handleLoadStart);
@@ -813,16 +743,14 @@ export const Player = () => {
       audio.removeEventListener("waiting", handleWaiting);
       audio.removeEventListener("playing", handlePlaying);
     };
-  }, [dispatch, repeat]);
+  }, [dispatch, repeat, queue.length, currentTrack.isPlaying]);
 
-  // Volume control effect
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cleanupHLS();
@@ -834,7 +762,6 @@ export const Player = () => {
     };
   }, [cleanupHLS]);
 
-  // No track selected state
   if (!currentTrack.currentTrack) {
     return (
       <motion.div
@@ -852,13 +779,11 @@ export const Player = () => {
   }
 
   const currentTrackData = currentTrack.currentTrack;
+
   return (
     <div className="flex flex-col">
       <audio ref={audioRef} preload="metadata" crossOrigin="anonymous" />
 
-      {/* Skip limit notification - now using toast notifications instead */}
-
-      {/* Upgrade Modal */}
       <AnimatePresence>
         <Modal
           open={showUpgradeModal}
@@ -882,7 +807,6 @@ export const Player = () => {
           }}
         >
           <div className="p-6 text-center">
-            {/* Icon */}
             <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
               <svg
                 className="w-8 h-8 text-white"
@@ -905,7 +829,6 @@ export const Player = () => {
               for unlimited skips, high quality audio, and ad-free experience!
             </p>
 
-            {/* Features list */}
             <div className="mb-6 text-left">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -1004,7 +927,6 @@ export const Player = () => {
         </Modal>
       </AnimatePresence>
 
-      {/* Album cover */}
       <motion.div
         initial={{ opacity: 0, marginRight: "1000px" }}
         animate={{ opacity: 1, marginRight: 0 }}
@@ -1024,7 +946,6 @@ export const Player = () => {
         )}
       </motion.div>
 
-      {/* Track information */}
       <motion.div
         initial={{ opacity: 0, y: 1000 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1064,14 +985,13 @@ export const Player = () => {
         <h2 className="text-white/60 mb-2 truncate">
           <Link
             to={`/artist/${currentTrackData.artist?._id}`}
-            className=" hover:underline cursor-pointer"
+            className="hover:underline cursor-pointer"
           >
             {currentTrackData.artist?.name || "Unknown Artist"}
           </Link>
         </h2>
       </motion.div>
 
-      {/* Progress bar */}
       <motion.div
         initial={{ opacity: 0, y: 1000 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1079,16 +999,13 @@ export const Player = () => {
         className="w-full max-w-xs mx-auto rounded-xl flex flex-col items-stretch"
       >
         <div className="flex flex-col w-full relative">
-          {/* Background track */}
           <div className="absolute left-0 top-[2px] -translate-y-1/2 w-full h-[3px] rounded-lg bg-white/40 pointer-events-none" />
 
-          {/* Buffer progress */}
           <div
             className="absolute left-0 top-[2px] -translate-y-1/2 h-[3px] rounded-lg bg-white/20 pointer-events-none transition-all duration-300"
             style={{ width: `${bufferProgress}%` }}
           />
 
-          {/* Play progress */}
           <div
             className="absolute left-0 top-[2px] -translate-y-1/2 h-[3px] rounded-lg bg-white pointer-events-none transition-all duration-100"
             style={{
@@ -1120,7 +1037,6 @@ export const Player = () => {
         </div>
       </motion.div>
 
-      {/* Main controls */}
       <motion.div
         initial={{ opacity: 0, y: 1000 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1187,7 +1103,6 @@ export const Player = () => {
         />
       </motion.div>
 
-      {/* Additional controls */}
       <motion.div
         initial={{ opacity: 0, y: 1000 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1248,3 +1163,6 @@ export const Player = () => {
     </div>
   );
 };
+
+export default memo(Player);
+export { Player };

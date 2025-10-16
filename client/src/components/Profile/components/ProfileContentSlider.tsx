@@ -1,26 +1,9 @@
-// ProfileContentSlider.tsx - Enhanced with responsive improvements
 import { useState, useRef, type FC, useEffect, useCallback, memo } from "react";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useUserPlaylists } from "../../../hooks/useUserPlaylists";
 import { useUserLikedPlaylists } from "../../../hooks/useUserLikedPlaylists";
 import ProfilePlaylistTemplate from "./ProfilePlaylistTemplate";
-
-/**
- * Profile Content Slider - Enhanced responsive design
- *
- * RESPONSIVE IMPROVEMENTS:
- * - Better mobile tab navigation with overflow handling
- * - Adaptive scroll distances based on screen size
- * - Improved touch interactions for mobile devices
- * - Responsive arrow button sizing and positioning
- *
- * ACCESSIBILITY ENHANCEMENTS:
- * - Proper ARIA labels and keyboard navigation
- * - Screen reader friendly tab announcements
- * - Focus management for better UX
- * - High contrast focus indicators
- */
 
 interface ProfileContentSliderProps {
   userId: string;
@@ -30,20 +13,20 @@ interface ProfileContentSliderProps {
 
 type TabType = "playlists" | "liked-playlists";
 
+/**
+ * Tabbed horizontal scrollable list of user's playlists
+ * Includes owned playlists and liked playlists tabs
+ */
 const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
   userId,
   isLoading = false,
   hasAccess = false,
 }) => {
-  // State management
   const [currentTab, setCurrentTab] = useState<TabType>("playlists");
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-
-  // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Hooks for data fetching
   const userPlaylistsResult = useUserPlaylists(userId, {
     limit: 12,
     autoFetch: currentTab === "playlists",
@@ -55,7 +38,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
     autoFetch: currentTab === "liked-playlists",
   });
 
-  // Choose current data based on active tab
   const currentResult =
     currentTab === "playlists" ? userPlaylistsResult : likedPlaylistsResult;
   const currentItems = currentResult.playlists;
@@ -63,9 +45,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
   const isCurrentLoading = currentResult.isLoading;
   const currentError = currentResult.error;
 
-  /**
-   * Handle scroll event with responsive arrow visibility
-   */
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -78,19 +57,13 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
     setShowRightArrow(canScroll && scrollLeft < maxScrollLeft - 10);
   }, []);
 
-  /**
-   * Responsive scroll distances based on screen size
-   */
   const getScrollDistance = useCallback(() => {
     const width = window.innerWidth;
-    if (width < 640) return 200; // Mobile
-    if (width < 1024) return 300; // Tablet
-    return 400; // Desktop
+    if (width < 640) return 200;
+    if (width < 1024) return 300;
+    return 400;
   }, []);
 
-  /**
-   * Scroll functions with responsive distances
-   */
   const scrollLeft = useCallback(() => {
     scrollContainerRef.current?.scrollBy({
       left: -getScrollDistance(),
@@ -105,29 +78,22 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
     });
   }, [getScrollDistance]);
 
-  /**
-   * Handle tab change with improved accessibility
-   */
   const handleTabChange = useCallback((tab: TabType) => {
     setCurrentTab(tab);
     scrollContainerRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   }, []);
 
-  // Effects
   useEffect(() => {
     handleScroll();
     window.addEventListener("resize", handleScroll);
     return () => window.removeEventListener("resize", handleScroll);
   }, [currentItems, handleScroll]);
 
-  // Loading state
   if (isLoading || isCurrentLoading) {
     return (
       <div className="overflow-hidden">
-        {/* Title skeleton */}
         <div className="h-6 sm:h-8 w-32 sm:w-40 bg-gradient-to-r from-white/15 via-white/25 to-white/15 rounded-lg mb-4 animate-pulse" />
 
-        {/* Tab skeletons */}
         <div className="flex gap-2 sm:gap-3 mb-6 overflow-x-auto pb-2">
           {Array.from({ length: 2 }).map((_, index) => (
             <div
@@ -137,7 +103,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
           ))}
         </div>
 
-        {/* Content skeletons */}
         <div className="flex gap-3 sm:gap-5 overflow-x-auto pb-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
@@ -149,7 +114,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
     );
   }
 
-  // Get counts for tab labels
   const playlistsCount =
     userPlaylistsResult.pagination?.totalPlaylists ||
     userPlaylistsResult.playlists.length;
@@ -162,7 +126,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
       className="overflow-hidden"
       aria-labelledby="playlists-section-title"
     >
-      {/* Header with responsive layout */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h2
           id="playlists-section-title"
@@ -171,7 +134,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
           Playlists
         </h2>
 
-        {/* View All button - responsive positioning */}
         {hasContent && (
           <Link
             to={`/profile/${userId}/${currentTab}`}
@@ -182,7 +144,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
         )}
       </div>
 
-      {/* Responsive tab navigation */}
       <div className="overflow-x-auto pb-2 mb-6" role="tablist">
         <div className="flex gap-2 sm:gap-3 min-w-max">
           <button
@@ -215,7 +176,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
         </div>
       </div>
 
-      {/* Error state */}
       {currentError && (
         <div className="bg-red-50/10 border border-red-200/20 rounded-lg p-4 mb-4">
           <div className="flex items-start gap-3">
@@ -243,9 +203,7 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
         </div>
       )}
 
-      {/* Content area with responsive scrolling */}
       <div className="relative group">
-        {/* Navigation arrows with responsive sizing */}
         {showLeftArrow && hasContent && (
           <button
             onClick={scrollLeft}
@@ -266,7 +224,6 @@ const ProfileContentSlider: FC<ProfileContentSliderProps> = ({
           </button>
         )}
 
-        {/* Scrollable content container */}
         <div
           ref={scrollContainerRef}
           className="albums-scroll-light overflow-x-auto pb-4 scroll-smooth"

@@ -1,19 +1,16 @@
-import { type FC, memo } from "react";
+import { type FC, memo, useMemo } from "react";
 import type { Track } from "../../../types/TrackData";
 import TrackTemplate from "./TrackTemplate";
 
 interface TracksListProps {
-  /** Loading state indicator */
   isLoading?: boolean;
-  /** Array of tracks to display */
   tracks?: Track[];
-  /** Error message if track loading failed */
   tracksError?: string | null;
 }
 
 /**
- * Artist tracks list component with simple track display and loading states
- * Streamlined version for artist page without search/controls (handled by parent)
+ * Artist tracks list component displaying popular tracks
+ * Sorted by listen count with loading and error states
  */
 const TracksList: FC<TracksListProps> = ({
   isLoading = false,
@@ -21,12 +18,12 @@ const TracksList: FC<TracksListProps> = ({
   tracksError = null,
 }) => {
   const hasData = tracks.length > 0;
-  const sortedTracks = [...tracks].sort(
-    (a, b) => b.listenCount - a.listenCount
+
+  const sortedTracks = useMemo(
+    () => [...tracks].sort((a, b) => b.listenCount - a.listenCount),
+    [tracks]
   );
-  /**
-   * Render skeleton loaders for loading state
-   */
+
   const renderSkeletons = () =>
     Array.from({ length: 8 }).map((_, index) => (
       <div key={`skeleton-${index}`} className="animate-pulse">
@@ -39,9 +36,6 @@ const TracksList: FC<TracksListProps> = ({
       </div>
     ));
 
-  /**
-   * Render error state with retry option
-   */
   const renderError = () => (
     <div className="text-center py-8" role="alert">
       <div className="w-16 h-16 mx-auto rounded-full bg-red-500/20 flex items-center justify-center mb-3">
@@ -72,9 +66,6 @@ const TracksList: FC<TracksListProps> = ({
     </div>
   );
 
-  /**
-   * Render empty state when no tracks available
-   */
   const renderEmptyState = () => (
     <div className="text-center py-8" role="status">
       <div className="w-16 h-16 mx-auto rounded-full bg-white/10 flex items-center justify-center mb-3">
@@ -102,7 +93,6 @@ const TracksList: FC<TracksListProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Section title */}
       {isLoading ? (
         <div className="mb-6 flex-shrink-0">
           <div className="h-6 sm:h-8 w-48 sm:w-64 bg-gradient-to-r from-white/15 via-white/25 to-white/15  border border-white/25 rounded-lg relative overflow-hidden">
@@ -115,13 +105,10 @@ const TracksList: FC<TracksListProps> = ({
         </h2>
       )}
 
-      {/* Tracks container with scroll */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full tracks-scroll-light pr-2">
-          {/* Top divider */}
           <div className="h-[2px] w-full bg-white/20 mb-2"></div>
 
-          {/* Tracks content */}
           <div className="space-y-2">
             {isLoading
               ? renderSkeletons()
@@ -140,12 +127,10 @@ const TracksList: FC<TracksListProps> = ({
                 ))}
           </div>
 
-          {/* Bottom divider */}
           <div className="h-[2px] w-full bg-white/20 mt-2"></div>
         </div>
       </div>
 
-      {/* Additional context for screen readers */}
       {!isLoading && hasData && (
         <div className="sr-only">
           <p>

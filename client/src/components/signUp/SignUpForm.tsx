@@ -9,21 +9,11 @@ import SignUpValid, {
 import { api } from "../../shared/api";
 
 /**
- * Desktop registration form with purple redesign
- * Includes validation, API error handling and animations
- *
- * Features:
- * - Purple color scheme with gradients
- * - Real-time form validation
- * - Registration API error handling
- * - Custom checkbox with animations
- * - Smooth animations and hover effects
- * - Password visibility toggle
+ * Registration form with validation and API integration
  */
 export const SignUpModal: React.FC = () => {
   const navigate = useNavigate();
 
-  // Состояния формы
   const [formData, setFormData] = useState<SignUpFormData>({
     name: "",
     email: "",
@@ -45,15 +35,13 @@ export const SignUpModal: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const getErrorMessage = (errorMessage: string, status: number) => {
-    // Обработка русских сообщений с бекенда
-    if (errorMessage.includes("Пользователь с таким email уже существует")) {
+    if (errorMessage.includes("email") && errorMessage.includes("exists")) {
       return "User with this email already exists";
     }
-    if (errorMessage.includes("Пользователь с таким username уже существует")) {
+    if (errorMessage.includes("username") && errorMessage.includes("exists")) {
       return "User with this username already exists";
     }
 
-    // Обработка по статус кодам
     switch (status) {
       case 409:
         if (errorMessage.toLowerCase().includes("email")) {
@@ -74,17 +62,11 @@ export const SignUpModal: React.FC = () => {
     }
   };
 
-  /**
-   * Form validation on data change
-   */
   useEffect(() => {
     const errorCheck = SignUpValid(formData);
     setErrors(errorCheck);
   }, [formData, apiError]);
 
-  /**
-   * Form submit handler with API error handling
-   */
   const handleSignUp = async () => {
     if (isFormValid()) {
       setIsLoading(true);
@@ -109,7 +91,6 @@ export const SignUpModal: React.FC = () => {
           setApiError(errorMessage);
         }
       } catch (error) {
-        console.error("Signup error:", error);
         setApiError("Network error. Please check your connection");
       } finally {
         setIsLoading(false);
@@ -117,9 +98,6 @@ export const SignUpModal: React.FC = () => {
     }
   };
 
-  /**
-   * Checks if form is valid
-   */
   const isFormValid = () => {
     return (
       errors.name.length === 0 &&
@@ -135,9 +113,6 @@ export const SignUpModal: React.FC = () => {
     );
   };
 
-  /**
-   * Render input field with animations
-   */
   const renderInputField = (
     id: keyof SignUpFormData,
     label: string,
@@ -251,7 +226,6 @@ export const SignUpModal: React.FC = () => {
         transition={{ duration: 0.8, type: "spring", damping: 20 }}
         className="relative w-[900px] bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 flex overflow-hidden"
       >
-        {/* Левая часть - Форма */}
         <div className="flex-1 p-10">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -267,7 +241,6 @@ export const SignUpModal: React.FC = () => {
           </motion.div>
 
           <form className="space-y-4">
-            {/* API Error Display */}
             {apiError && (
               <motion.div
                 initial={{ opacity: 0, height: 0, scale: 0.95 }}
@@ -295,7 +268,6 @@ export const SignUpModal: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Form Fields */}
             {renderInputField(
               "name",
               "Full Name",
@@ -328,7 +300,6 @@ export const SignUpModal: React.FC = () => {
           </form>
         </div>
 
-        {/* Правая часть - Декоративная секция с чекбоксом и кнопкой */}
         <div className="relative w-[46%] flex flex-col justify-center items-center bg-gradient-to-br from-purple-600/30 to-violet-700/30 backdrop-blur-sm">
           <motion.div
             className="relative z-10 flex flex-col items-start pl-8 pr-6"
@@ -336,7 +307,6 @@ export const SignUpModal: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.6 }}
           >
-            {/* Terms Checkbox */}
             <div className="flex items-start mb-6">
               <CustomCheckbox
                 checked={formData.check}
@@ -371,7 +341,6 @@ export const SignUpModal: React.FC = () => {
               </motion.p>
             )}
 
-            {/* Submit Button */}
             <motion.button
               onClick={handleSignUp}
               disabled={!isFormValid() || isLoading}
@@ -396,7 +365,6 @@ export const SignUpModal: React.FC = () => {
               )}
             </motion.button>
 
-            {/* Login Link */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -417,7 +385,6 @@ export const SignUpModal: React.FC = () => {
             </motion.div>
           </motion.div>
 
-          {/* Close Button */}
           <motion.button
             onClick={() => navigate("/")}
             className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300 flex items-center justify-center group disabled:opacity-50"

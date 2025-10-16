@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 
 interface TagsSelectorProps {
@@ -36,6 +36,10 @@ const AVAILABLE_TAGS = [
   "driving",
 ];
 
+/**
+ * Tags selector with dropdown for adding tags
+ * Displays selected tags and allows adding/removing
+ */
 const TagsSelector: React.FC<TagsSelectorProps> = ({
   selectedTags,
   onTagsChange,
@@ -60,8 +64,9 @@ const TagsSelector: React.FC<TagsSelectorProps> = ({
     [selectedTags, onTagsChange]
   );
 
-  const availableTagsToAdd = AVAILABLE_TAGS.filter(
-    (tag) => !selectedTags.includes(tag)
+  const availableTagsToAdd = useMemo(
+    () => AVAILABLE_TAGS.filter((tag) => !selectedTags.includes(tag)),
+    [selectedTags]
   );
 
   if (!isEditing) {
@@ -164,4 +169,4 @@ const TagsSelector: React.FC<TagsSelectorProps> = ({
   );
 };
 
-export default TagsSelector;
+export default memo(TagsSelector);

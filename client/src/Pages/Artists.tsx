@@ -20,7 +20,7 @@ import type { Track } from "../types/TrackData";
 
 /**
  * Artists Discovery Page
- * Complex parts: Real-time search, track playback with recommendations, like functionality
+ * Features: search, track playback with recommendations, like functionality
  */
 
 interface Artist {
@@ -68,9 +68,6 @@ interface ArtistCardProps {
   isLoadingTracks: boolean;
 }
 
-/**
- * Artist card component with tracks preview and interactions
- */
 const ArtistCard: React.FC<ArtistCardProps> = ({
   artist,
   onLike,
@@ -84,86 +81,83 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
   const { data: user } = useGetUserQuery();
   const currentTrack = useSelector((state: any) => state.currentTrack);
 
-  const formatNumber = (num: number): string => {
+  const formatNumber = useCallback((num: number): string => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
-  };
+  }, []);
 
-  const formatDuration = (seconds: number): string => {
+  const formatDuration = useCallback((seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  }, []);
 
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isLiked) {
-      onUnlike(artist._id);
-    } else {
-      onLike(artist._id);
-    }
-  };
-
-  const handleArtistClick = () => {
-    navigate(`/artist/${artist._id}`);
-  };
-
-  /**
-   * Handle track play with recommendations queue
-   */
-  const handleTrackPlay = async (track: SimpleTrack, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!track || !user) return;
-
-    const isCurrentTrack = currentTrack.currentTrack?._id === track._id;
-
-    // If this is the current track, just toggle play/pause
-    if (isCurrentTrack) {
-      dispatch(setIsPlaying(!currentTrack.isPlaying));
-      return;
-    }
-
-    try {
-      // Get recommendations for the user
-      const response = await api.recommendations.getForUser(user._id);
-      const data = await response.json();
-
-      if (data.success) {
-        const recommendations: Track[] = data.data || [];
-        // Convert SimpleTrack to Track for Redux
-        const fullTrack: Track = track as any;
-        const playQueue = [fullTrack, ...recommendations];
-
-        await dispatch(
-          playTrackAndQueue({
-            track: fullTrack,
-            contextTracks: playQueue,
-            startIndex: 0,
-          })
-        );
-
-        setTimeout(() => {
-          dispatch(setIsPlaying(true));
-        }, 50);
+  const handleLikeClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isLiked) {
+        onUnlike(artist._id);
       } else {
-        // Fallback: play just the track
+        onLike(artist._id);
+      }
+    },
+    [isLiked, onLike, onUnlike, artist._id]
+  );
+
+  const handleArtistClick = useCallback(() => {
+    navigate(`/artist/${artist._id}`);
+  }, [navigate, artist._id]);
+
+  const handleTrackPlay = useCallback(
+    async (track: SimpleTrack, e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      if (!track || !user) return;
+
+      const isCurrentTrack = currentTrack.currentTrack?._id === track._id;
+
+      if (isCurrentTrack) {
+        dispatch(setIsPlaying(!currentTrack.isPlaying));
+        return;
+      }
+
+      try {
+        const response = await api.recommendations.getForUser(user._id);
+        const data = await response.json();
+
+        if (data.success) {
+          const recommendations: Track[] = data.data || [];
+          const fullTrack: Track = track as any;
+          const playQueue = [fullTrack, ...recommendations];
+
+          await dispatch(
+            playTrackAndQueue({
+              track: fullTrack,
+              contextTracks: playQueue,
+              startIndex: 0,
+            })
+          );
+
+          setTimeout(() => {
+            dispatch(setIsPlaying(true));
+          }, 50);
+        } else {
+          dispatch(setCurrentTrack(track as any));
+          setTimeout(() => {
+            dispatch(setIsPlaying(true));
+          }, 50);
+        }
+      } catch (error) {
+        console.error("Error getting recommendations:", error);
         dispatch(setCurrentTrack(track as any));
         setTimeout(() => {
           dispatch(setIsPlaying(true));
         }, 50);
       }
-    } catch (error) {
-      console.error("Error getting recommendations:", error);
-
-      // Fallback: play just the track
-      dispatch(setCurrentTrack(track as any));
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
-    }
-  };
+    },
+    [user, currentTrack, dispatch]
+  );
 
   return (
     <motion.div
@@ -175,7 +169,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
       className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300 cursor-pointer group"
       onClick={handleArtistClick}
     >
-      {/* Artist Header */}
       <div className="flex items-start gap-4 mb-4">
         <div className="relative">
           <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
@@ -241,12 +234,10 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
         </div>
       </div>
 
-      {/* Bio */}
       {artist.bio && (
         <p className="text-white/70 text-sm mb-4 line-clamp-2">{artist.bio}</p>
       )}
 
-      {/* Popular Tracks */}
       <div className="space-y-2">
         <h4 className="text-white/80 text-sm font-medium mb-2">
           Popular Tracks
@@ -330,7 +321,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
         )}
       </div>
 
-      {/* View More Link */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -344,14 +334,10 @@ const ArtistCard: React.FC<ArtistCardProps> = ({
   );
 };
 
-/**
- * Main Artists page component
- */
 export default function Artists() {
   const navigate = useNavigate();
   const { data: user } = useGetUserQuery();
 
-  // State management
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [popularArtists, setPopularArtists] = useState<Artist[]>([]);
@@ -360,7 +346,6 @@ export default function Artists() {
   }>({});
   const [likedArtists, setLikedArtists] = useState<Set<string>>(new Set());
 
-  // Loading states
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingPopular, setIsLoadingPopular] = useState(true);
   const [loadingTracks, setLoadingTracks] = useState<Set<string>>(new Set());
@@ -368,9 +353,6 @@ export default function Artists() {
 
   const [hasMore, _setHasMore] = useState(true);
 
-  /**
-   * Initialize liked artists from user data
-   */
   useEffect(() => {
     if (user?.likedArtists) {
       const likedIds = new Set(
@@ -382,9 +364,6 @@ export default function Artists() {
     }
   }, [user]);
 
-  /**
-   * Fetch popular artists on component mount
-   */
   const fetchPopularArtists = useCallback(async () => {
     try {
       setIsLoadingPopular(true);
@@ -406,13 +385,10 @@ export default function Artists() {
     }
   }, []);
 
-  /**
-   * Fetch artist tracks with caching
-   */
   const fetchArtistTracks = useCallback(
     async (artistId: string) => {
       if (artistTracks[artistId] || loadingTracks.has(artistId)) {
-        return; // Already loaded or loading
+        return;
       }
 
       try {
@@ -440,9 +416,6 @@ export default function Artists() {
     [artistTracks, loadingTracks]
   );
 
-  /**
-   * Debounced search function
-   */
   const debouncedSearch = useMemo(() => {
     let timeoutId: number;
 
@@ -477,18 +450,15 @@ export default function Artists() {
     };
   }, []);
 
-  /**
-   * Handle search input changes
-   */
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    debouncedSearch(query);
-  };
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const query = e.target.value;
+      setSearchQuery(query);
+      debouncedSearch(query);
+    },
+    [debouncedSearch]
+  );
 
-  /**
-   * Handle artist like/unlike
-   */
   const handleLikeArtist = useCallback(
     async (artistId: string) => {
       if (!user) {
@@ -525,9 +495,6 @@ export default function Artists() {
     }
   }, []);
 
-  /**
-   * Load tracks for visible artists
-   */
   useEffect(() => {
     const artistsToLoad = searchResults?.artists || popularArtists;
     artistsToLoad.forEach((artist) => {
@@ -535,24 +502,16 @@ export default function Artists() {
     });
   }, [searchResults, popularArtists, fetchArtistTracks]);
 
-  /**
-   * Initialize popular artists
-   */
   useEffect(() => {
     fetchPopularArtists();
   }, [fetchPopularArtists]);
 
-  /**
-   * Current artists to display
-   */
   const currentArtists = searchResults?.artists || popularArtists;
   const isSearchMode = Boolean(searchQuery.trim());
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Main content with responsive padding */}
       <div className="px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] py-8 pb-36 xl:pb-8">
-        {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -567,7 +526,6 @@ export default function Artists() {
           </p>
         </motion.div>
 
-        {/* Search Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -594,7 +552,6 @@ export default function Artists() {
           </div>
         </motion.div>
 
-        {/* Error State */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -611,7 +568,6 @@ export default function Artists() {
           </motion.div>
         )}
 
-        {/* Results Header */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -634,7 +590,6 @@ export default function Artists() {
           </h2>
         </motion.div>
 
-        {/* Artists Grid */}
         <AnimatePresence mode="wait">
           {isLoadingPopular && !isSearchMode ? (
             <motion.div
@@ -709,7 +664,6 @@ export default function Artists() {
           ) : null}
         </AnimatePresence>
 
-        {/* Load More Button */}
         {!isSearchMode && hasMore && currentArtists.length >= 12 && (
           <motion.div
             initial={{ opacity: 0 }}

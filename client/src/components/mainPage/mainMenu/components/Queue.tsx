@@ -1,3 +1,7 @@
+import { memo, useState, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import {
   CustomerServiceOutlined,
   PlayCircleOutlined,
@@ -5,16 +9,20 @@ import {
   HeartOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { PanInfo } from "framer-motion";
-import { QueueTemplate } from "./QueueTemplate";
-import { CurrentTrackTemplate } from "./CurrentTrackTemplate";
-import { useSelector, useDispatch } from "react-redux";
 import type { AppState, AppDispatch } from "../../../../store";
 import { setQueueOpen } from "../../../../state/Queue.slice";
+import CurrentTrackTemplate from "./CurrentTrackTemplate";
+import QueueTemplate from "./QueueTemplate";
 
-export default function Queue({ queueOpen }: { queueOpen: boolean }) {
+interface QueueProps {
+  queueOpen: boolean;
+}
+
+/**
+ * Queue sidebar component displaying current track and upcoming tracks
+ * Features friend activity tab and responsive mobile/desktop layouts
+ */
+const Queue = ({ queueOpen }: QueueProps) => {
   const [active, setActive] = useState("Queue");
   const [isDesktop, setIsDesktop] = useState(false);
   const queueState = useSelector((state: AppState) => state.queue);
@@ -33,15 +41,18 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
     return () => window.removeEventListener("resize", checkDesktop);
   }, []);
 
-  const closeQueue = () => {
+  const closeQueue = useCallback(() => {
     dispatch(setQueueOpen(false));
-  };
+  }, [dispatch]);
 
-  const handleDragEnd = (_event: any, info: PanInfo) => {
-    if (info.offset.x > 100 || info.velocity.x > 500) {
-      closeQueue();
-    }
-  };
+  const handleDragEnd = useCallback(
+    (_event: any, info: PanInfo) => {
+      if (info.offset.x > 100 || info.velocity.x > 500) {
+        closeQueue();
+      }
+    },
+    [closeQueue]
+  );
 
   useEffect(() => {
     if (queueOpen && !isDesktop) {
@@ -69,7 +80,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
         );
 
         const queueTopFromDocument = rect.top + window.scrollY;
-
         const heightToBottom = realSiteHeight - queueTopFromDocument;
 
         document.documentElement.style.setProperty(
@@ -118,7 +128,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               Queue
             </h1>
             {active === "Queue" && (
-              <div className="w-15 bg-white/60 h-1 mt-[-5px]"></div>
+              <div className="w-15 bg-white/60 h-1 mt-[-5px]" />
             )}
           </div>
           <div className="flex flex-col items-center gap-2">
@@ -132,7 +142,7 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
               Friend Activity
             </h1>
             {active === "Friend Activity" && (
-              <div className="w-35 bg-white/60 h-1 mt-[-5px]"></div>
+              <div className="w-35 bg-white/60 h-1 mt-[-5px]" />
             )}
           </div>
         </div>
@@ -597,4 +607,6 @@ export default function Queue({ queueOpen }: { queueOpen: boolean }) {
       )}
     </AnimatePresence>
   );
-}
+};
+
+export default memo(Queue);

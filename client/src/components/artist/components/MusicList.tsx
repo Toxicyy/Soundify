@@ -14,46 +14,35 @@ interface MusicListProps {
 type TabType = "singles" | "albums";
 
 /**
- * Music list component displaying singles and albums in tabbed interface
- * Features horizontal scrolling with navigation arrows and responsive design
+ * Tabbed music list component displaying singles and albums
+ * Features horizontal scrolling with navigation arrows
  */
 const MusicList: FC<MusicListProps> = ({
   tracks,
   albums = [],
   isLoading = false,
 }) => {
-  // State management
   const [currentTab, setCurrentTab] = useState<TabType>("singles");
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Computed values
   const currentItems = currentTab === "singles" ? tracks : albums;
   const hasContent = currentItems.length > 0;
 
-  /**
-   * Handle scroll event to update arrow visibility
-   * Shows/hides navigation arrows based on scroll position
-   */
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
     const maxScrollLeft = scrollWidth - clientWidth;
-
-    // Show arrows only if content overflows and scrolling is possible
     const canScroll = maxScrollLeft > 0;
+
     setShowLeftArrow(canScroll && scrollLeft > 10);
     setShowRightArrow(canScroll && scrollLeft < maxScrollLeft - 10);
   }, []);
 
-  /**
-   * Scroll container to the left
-   */
   const scrollLeft = useCallback(() => {
     scrollContainerRef.current?.scrollBy({
       left: -300,
@@ -61,9 +50,6 @@ const MusicList: FC<MusicListProps> = ({
     });
   }, []);
 
-  /**
-   * Scroll container to the right
-   */
   const scrollRight = useCallback(() => {
     scrollContainerRef.current?.scrollBy({
       left: 300,
@@ -71,21 +57,15 @@ const MusicList: FC<MusicListProps> = ({
     });
   }, []);
 
-  /**
-   * Handle tab change with accessibility
-   */
   const handleTabChange = useCallback((tab: TabType) => {
     setCurrentTab(tab);
-    // Reset scroll position when changing tabs
     scrollContainerRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   }, []);
 
-  // Effects
   useEffect(() => {
     handleScroll();
   }, [currentItems, handleScroll]);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="overflow-hidden">
@@ -93,7 +73,6 @@ const MusicList: FC<MusicListProps> = ({
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
-        {/* Tab skeletons */}
         <div className="flex gap-3 mb-6 px-2">
           {Array.from({ length: 2 }).map((_, index) => (
             <div
@@ -105,7 +84,6 @@ const MusicList: FC<MusicListProps> = ({
           ))}
         </div>
 
-        {/* Content skeletons */}
         <div className="flex gap-5 px-2">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
@@ -134,7 +112,6 @@ const MusicList: FC<MusicListProps> = ({
         Music
       </h2>
 
-      {/* Tab navigation */}
       <div className="flex gap-3 mb-6 px-2 flex-wrap" role="tablist">
         <button
           role="tab"
@@ -165,9 +142,7 @@ const MusicList: FC<MusicListProps> = ({
         </button>
       </div>
 
-      {/* Content area with horizontal scrolling */}
       <div className="relative group">
-        {/* Left navigation arrow */}
         {showLeftArrow && hasContent && (
           <button
             onClick={scrollLeft}
@@ -178,7 +153,6 @@ const MusicList: FC<MusicListProps> = ({
           </button>
         )}
 
-        {/* Right navigation arrow */}
         {showRightArrow && hasContent && (
           <button
             onClick={scrollRight}
@@ -189,7 +163,6 @@ const MusicList: FC<MusicListProps> = ({
           </button>
         )}
 
-        {/* Scrollable content container */}
         <div
           ref={scrollContainerRef}
           className="albums-scroll-light overflow-x-auto pb-4 py-2"

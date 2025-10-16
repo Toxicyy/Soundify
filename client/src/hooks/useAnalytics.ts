@@ -1,4 +1,3 @@
-// hooks/useAnalytics.ts
 import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 import { api } from "../shared/api";
@@ -20,15 +19,18 @@ interface StatsState<T> {
 
 interface UseAnalyticsOptions {
   autoRefresh?: boolean;
-  refreshInterval?: number; // в миллисекундах
+  refreshInterval?: number;
   showError?: boolean;
 }
 
-// Основной хук для статистики дашборда
+/**
+ * Hook for fetching dashboard statistics
+ * Supports auto-refresh and custom error handling
+ */
 export const useDashboardStats = (options: UseAnalyticsOptions = {}) => {
   const {
     autoRefresh = true,
-    refreshInterval = 5 * 60 * 1000, // 5 минут по умолчанию
+    refreshInterval = 5 * 60 * 1000,
     showError = true,
   } = options;
 
@@ -85,7 +87,6 @@ export const useDashboardStats = (options: UseAnalyticsOptions = {}) => {
   return state;
 };
 
-// Хук для статистики пользователей с фильтрами
 interface UserStatsParams {
   startDate?: string;
   endDate?: string;
@@ -97,6 +98,9 @@ interface UserStats {
   growth: number;
 }
 
+/**
+ * Hook for fetching user statistics with date filters
+ */
 export const useUserStats = (
   params: UserStatsParams = {},
   options: UseAnalyticsOptions = {}
@@ -153,7 +157,6 @@ export const useUserStats = (
   return state;
 };
 
-// Хук для статистики прослушиваний
 type StreamsPeriod = "day" | "week" | "month" | "year";
 
 interface StreamStats {
@@ -166,6 +169,9 @@ interface StreamStats {
   total: number;
 }
 
+/**
+ * Hook for fetching stream statistics by period
+ */
 export const useStreamStats = (
   period: StreamsPeriod = "month",
   options: UseAnalyticsOptions = {}
@@ -218,7 +224,10 @@ export const useStreamStats = (
   return state;
 };
 
-// Комбинированный хук для всей аналитики
+/**
+ * Combined hook for all analytics data
+ * Provides unified loading and error states
+ */
 export const useAnalyticsSummary = (options: UseAnalyticsOptions = {}) => {
   const dashboard = useDashboardStats(options);
   const users = useUserStats({}, { ...options, autoRefresh: false });

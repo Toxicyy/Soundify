@@ -1,23 +1,32 @@
+import { memo, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { RightOutlined } from "@ant-design/icons";
 import ArtistCard from "./ArtistCard";
 import type { Track } from "../../../../types/TrackData";
 import type { Artist } from "../../../../types/ArtistData";
-import { useNavigate } from "react-router-dom";
 
 interface ArtistModuleProps {
   dailyTracks: { artist: Artist; tracks: Track[] }[];
   isLoading?: boolean;
 }
 
-export default function ArtistModule({
+/**
+ * Module displaying featured artists with navigation to full list
+ * Shows top 2 artists with their tracks
+ */
+const ArtistModule = ({
   dailyTracks,
   isLoading = false,
-}: ArtistModuleProps) {
+}: ArtistModuleProps) => {
   const navigate = useNavigate();
+
+  const iconSize = useMemo(
+    () => (window.innerWidth < 768 ? "10px" : "12px"),
+    []
+  );
 
   return (
     <div className="w-full">
-      {/* Header */}
       <div className="flex items-center mt-2 md:mt-3 justify-between mb-3 md:mb-4 xl:mb-[15px] px-2 md:px-0">
         <h1 className="text-xl md:text-2xl xl:text-3xl font-bold text-white tracking-wider">
           Artists
@@ -35,17 +44,15 @@ export default function ArtistModule({
           </h1>
           <RightOutlined
             className="mt-[1px] md:mt-[2.5px]"
-            style={{ 
-              color: "rgba(255, 255, 255, 0.5)", 
-              fontSize: window.innerWidth < 768 ? "10px" : "12px" 
+            style={{
+              color: "rgba(255, 255, 255, 0.5)",
+              fontSize: iconSize,
             }}
           />
         </div>
       </div>
 
-      {/* Artists Grid */}
       <div className="flex flex-col gap-3 md:gap-4">
-        {/* Mobile: Stack artists vertically */}
         <div className="block md:hidden space-y-4">
           <ArtistCard
             artist={isLoading ? null : dailyTracks[0] || null}
@@ -59,7 +66,6 @@ export default function ArtistModule({
           />
         </div>
 
-        {/* Tablet and Desktop: Original layout */}
         <div className="hidden md:flex md:flex-col md:gap-4">
           <ArtistCard
             artist={isLoading ? null : dailyTracks[0] || null}
@@ -75,4 +81,6 @@ export default function ArtistModule({
       </div>
     </div>
   );
-}
+};
+
+export default memo(ArtistModule);

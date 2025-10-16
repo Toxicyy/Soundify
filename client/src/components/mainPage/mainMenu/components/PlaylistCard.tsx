@@ -1,22 +1,27 @@
-import {
-  CaretRightOutlined,
-  PauseOutlined,
-} from "@ant-design/icons";
-import { useState } from "react";
+import { memo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { CaretRightOutlined, PauseOutlined } from "@ant-design/icons";
 import type { Playlist } from "../../../../types/Playlist";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
-import { useNavigate } from "react-router-dom";
 
-export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
+interface PlaylistCardProps {
+  playlist: Playlist;
+}
+
+/**
+ * Card component for playlist display
+ * Shows different layouts for mobile/tablet/desktop
+ */
+const PlaylistCard = ({ playlist }: PlaylistCardProps) => {
   const [hover, setHover] = useState(false);
   const [playHover, setPlayHover] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const navigate = useNavigate();
 
-  function formatTimeString(timeStr: string) {
+  const formatTimeString = useCallback((timeStr: string) => {
     const parts = timeStr.split(":");
-    let result = [];
+    const result = [];
 
     if (parts.length === 2) {
       const [minutes] = parts;
@@ -34,19 +39,26 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
     }
 
     return result.join(" ") || "0 mins";
-  }
+  }, []);
 
-  // Mobile layout (below md)
+  const handleNavigate = useCallback(() => {
+    if (!playHover) {
+      navigate(`/playlist/${playlist._id}`);
+    }
+  }, [playHover, navigate, playlist._id]);
+
+  const handlePlayToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPlaying((prev) => !prev);
+  }, []);
+
   const MobileCard = () => (
     <div
       className="w-full h-48 rounded-2xl relative overflow-hidden cursor-pointer group"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={
-        playHover ? () => {} : () => navigate(`/playlist/${playlist._id}`)
-      }
+      onClick={handleNavigate}
     >
-      {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
         style={{
@@ -54,10 +66,8 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
         }}
       />
 
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-      {/* Content */}
       <div className="absolute inset-0 flex flex-col justify-end p-4">
         <div className="flex items-end justify-between">
           <div className="flex-1">
@@ -73,13 +83,9 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
             </div>
           </div>
 
-          {/* Play Button */}
           <motion.button
             className="w-12 h-12 bg-[#5cec8c] rounded-full flex items-center justify-center shadow-lg ml-4"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsPlaying(!isPlaying);
-            }}
+            onClick={handlePlayToggle}
             onMouseEnter={() => setPlayHover(true)}
             onMouseLeave={() => setPlayHover(false)}
             whileHover={{ scale: 1.05 }}
@@ -102,7 +108,6 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
     </div>
   );
 
-  // Tablet layout (md to xl)
   const TabletCard = () => (
     <div
       className="w-full h-56 rounded-3xl relative overflow-hidden cursor-pointer transition-all duration-300"
@@ -113,11 +118,8 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={
-        playHover ? () => {} : () => navigate(`/playlist/${playlist._id}`)
-      }
+      onClick={handleNavigate}
     >
-      {/* Glass overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 backdrop-blur-[1px]" />
 
       <div className="absolute inset-0 flex items-end justify-between p-6">
@@ -127,7 +129,7 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
           </h1>
           <div className="flex items-center text-gray-300 text-lg">
             <span>{playlist.trackCount} songs</span>
-            <span className="mx-2">⋅</span>
+            <span className="mx-2">·</span>
             <span>
               {formatTimeString(useFormatTime(playlist.totalDuration))}
             </span>
@@ -143,10 +145,7 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
           >
             <button
               className="w-14 h-14 bg-black rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-all duration-200 hover:scale-105"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPlaying(!isPlaying);
-              }}
+              onClick={handlePlayToggle}
               onMouseEnter={() => setPlayHover(true)}
               onMouseLeave={() => setPlayHover(false)}
             >
@@ -165,7 +164,6 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
     </div>
   );
 
-  // Desktop layout (xl and up) - original design
   const DesktopCard = () => (
     <div
       className={
@@ -179,9 +177,7 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={
-        playHover ? () => {} : () => navigate(`/playlist/${playlist._id}`)
-      }
+      onClick={handleNavigate}
     >
       <div className="flex flex-col gap-2">
         <h1 className="text-white text-4xl font-bold tracking-wider">
@@ -189,7 +185,7 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
         </h1>
         <div className="flex">
           <h1 className="text-gray-400 text-xl tracking-wide">
-            {playlist.trackCount} songs ⋅{" "}
+            {playlist.trackCount} songs ·{" "}
             {formatTimeString(useFormatTime(playlist.totalDuration))}
           </h1>
         </div>
@@ -199,20 +195,19 @@ export default function PlaylistCard({ playlist }: { playlist: Playlist }) {
 
   return (
     <>
-      {/* Mobile version */}
       <div className="block md:hidden">
         <MobileCard />
       </div>
 
-      {/* Tablet version */}
       <div className="hidden md:block xl:hidden">
         <TabletCard />
       </div>
 
-      {/* Desktop version */}
       <div className="hidden xl:block">
         <DesktopCard />
       </div>
     </>
   );
-}
+};
+
+export default memo(PlaylistCard);

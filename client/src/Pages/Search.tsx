@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "../hooks/useDebounce";
@@ -18,23 +18,18 @@ import {
 } from "@ant-design/icons";
 
 /**
- * Props for individual search item component
+ * Search page with responsive design
+ * Features: real-time search, multi-type results (tracks/artists/albums), playback
  */
+
 interface SearchItemProps {
   item: any;
   type: string;
   onClick: () => void;
 }
 
-/**
- * Individual search result item component
- * Features responsive design with proper text scaling and overflow handling
- */
 const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
-  /**
-   * Get appropriate icon based on item type
-   */
-  const getIcon = () => {
+  const getIcon = useCallback(() => {
     const iconSize = window.innerWidth < 640 ? "12px" : "14px";
     const iconProps = {
       className: "text-white/70 flex-shrink-0",
@@ -53,12 +48,9 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
       default:
         return null;
     }
-  };
+  }, [type]);
 
-  /**
-   * Get secondary text based on item type
-   */
-  const getSecondaryText = () => {
+  const getSecondaryText = useCallback(() => {
     switch (type) {
       case "track":
         return item.artist?.name || "Unknown artist";
@@ -71,7 +63,7 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
       default:
         return "";
     }
-  };
+  }, [type, item]);
 
   return (
     <motion.div
@@ -82,7 +74,6 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
       onClick={onClick}
       className="p-2 sm:p-3 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-2 sm:gap-3 hover:bg-white/5 bg-white/2 border border-white/5 group"
     >
-      {/* Image/Icon */}
       <div className="relative flex-shrink-0">
         {item.coverUrl || item.avatar ? (
           <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-md sm:rounded-lg overflow-hidden bg-white/10">
@@ -106,7 +97,6 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
           </div>
         )}
 
-        {/* Play button overlay for tracks */}
         {type === "track" && (
           <div className="absolute inset-0 bg-black/50 rounded-md sm:rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <PlayCircleOutlined
@@ -117,7 +107,6 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0 overflow-hidden">
         <h3 className="font-semibold text-white text-xs sm:text-sm md:text-base truncate mb-0.5 sm:mb-1 leading-tight">
           {item.name}
@@ -133,7 +122,6 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
         )}
       </div>
 
-      {/* Type badge */}
       <div className="flex-shrink-0">
         <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white/10 rounded-md sm:rounded-lg text-white/60 text-[8px] sm:text-[10px] md:text-xs uppercase font-medium">
           {type}
@@ -143,11 +131,6 @@ const SearchItem: React.FC<SearchItemProps> = ({ item, type, onClick }) => {
   );
 };
 
-/**
- * Main Search Component
- * Features responsive design with proper breakpoints and text scaling
- * Maintains your original purple theme and layout structure
- */
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -159,31 +142,28 @@ const Search = () => {
   const debouncedQuery = useDebounce(query, 300);
   const { searchResults, isLoading, searchGlobal } = useGlobalSearch();
 
-  /**
-   * Navigation tabs configuration with responsive design
-   */
-  const tabs = [
-    { id: "all", label: "All", count: searchResults?.totalResults || 0 },
-    {
-      id: "tracks",
-      label: "Songs", // Shortened for mobile
-      count: searchResults?.tracks?.length || 0,
-    },
-    {
-      id: "artists",
-      label: "Artists",
-      count: searchResults?.artists?.length || 0,
-    },
-    {
-      id: "albums",
-      label: "Albums",
-      count: searchResults?.albums?.length || 0,
-    },
-  ];
+  const tabs = useMemo(
+    () => [
+      { id: "all", label: "All", count: searchResults?.totalResults || 0 },
+      {
+        id: "tracks",
+        label: "Songs",
+        count: searchResults?.tracks?.length || 0,
+      },
+      {
+        id: "artists",
+        label: "Artists",
+        count: searchResults?.artists?.length || 0,
+      },
+      {
+        id: "albums",
+        label: "Albums",
+        count: searchResults?.albums?.length || 0,
+      },
+    ],
+    [searchResults]
+  );
 
-  /**
-   * Search effect with debouncing
-   */
   useEffect(() => {
     if (debouncedQuery.length >= 2) {
       searchGlobal(debouncedQuery, { limit: 50 });
@@ -191,40 +171,53 @@ const Search = () => {
     }
   }, [debouncedQuery, searchGlobal, setSearchParams]);
 
-  /**
-   * Handle track play functionality
-   */
-  const togglePlayPause = (item: Track) => {
-    dispatch(setCurrentTrack(item));
-    setTimeout(() => {
-      dispatch(setIsPlaying(true));
-    }, 50);
-  };
+  const togglePlayPause = useCallback(
+    (item: Track) => {
+      dispatch(setCurrentTrack(item));
+      setTimeout(() => {
+        dispatch(setIsPlaying(true));
+      }, 50);
+    },
+    [dispatch]
+  );
 
-  /**
-   * Handle navigation to different item types
-   */
-  const handleItemClick = (item: any, type: string) => {
-    switch (type) {
-      case "track":
-        togglePlayPause(item);
-        break;
-      case "artist":
-        navigate(`/artist/${item._id}`);
-        break;
-      case "album":
-        navigate(`/album/${item._id}`);
-        break;
-      case "playlist":
-        navigate(`/playlist/${item._id}`);
-        break;
-    }
-  };
+  const handleItemClick = useCallback(
+    (item: any, type: string) => {
+      switch (type) {
+        case "track":
+          togglePlayPause(item);
+          break;
+        case "artist":
+          navigate(`/artist/${item._id}`);
+          break;
+        case "album":
+          navigate(`/album/${item._id}`);
+          break;
+        case "playlist":
+          navigate(`/playlist/${item._id}`);
+          break;
+      }
+    },
+    [togglePlayPause, navigate]
+  );
 
-  /**
-   * Render search results content based on state
-   */
-  const renderContent = () => {
+  const renderItems = useCallback(
+    (items: any[], type: string) => (
+      <div className="grid gap-1 sm:gap-2">
+        {items.map((item) => (
+          <SearchItem
+            key={item._id}
+            item={item}
+            type={type}
+            onClick={() => handleItemClick(item, type)}
+          />
+        ))}
+      </div>
+    ),
+    [handleItemClick]
+  );
+
+  const renderContent = useCallback(() => {
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center py-12 sm:py-16">
@@ -252,22 +245,6 @@ const Search = () => {
         </div>
       );
     }
-
-    /**
-     * Render items in a responsive grid
-     */
-    const renderItems = (items: any[], type: string) => (
-      <div className="grid gap-1 sm:gap-2">
-        {items.map((item) => (
-          <SearchItem
-            key={item._id}
-            item={item}
-            type={type}
-            onClick={() => handleItemClick(item, type)}
-          />
-        ))}
-      </div>
-    );
 
     switch (activeTab) {
       case "tracks":
@@ -339,7 +316,6 @@ const Search = () => {
       default:
         return (
           <div className="space-y-4 sm:space-y-6">
-            {/* Top Results */}
             {searchResults.tracks && searchResults.tracks.length > 0 && (
               <motion.section
                 initial={{ opacity: 0, y: 20 }}
@@ -361,7 +337,6 @@ const Search = () => {
               </motion.section>
             )}
 
-            {/* Tracks */}
             {searchResults.tracks && searchResults.tracks.length > 1 && (
               <motion.section
                 initial={{ opacity: 0, y: 20 }}
@@ -385,7 +360,6 @@ const Search = () => {
               </motion.section>
             )}
 
-            {/* Artists */}
             {searchResults.artists && searchResults.artists.length > 0 && (
               <motion.section
                 initial={{ opacity: 0, y: 20 }}
@@ -409,7 +383,6 @@ const Search = () => {
               </motion.section>
             )}
 
-            {/* Albums */}
             {searchResults.albums && searchResults.albums.length > 0 && (
               <motion.section
                 initial={{ opacity: 0, y: 20 }}
@@ -435,7 +408,14 @@ const Search = () => {
           </div>
         );
     }
-  };
+  }, [
+    isLoading,
+    searchResults,
+    activeTab,
+    query,
+    renderItems,
+    handleItemClick,
+  ]);
 
   return (
     <motion.main
@@ -444,7 +424,6 @@ const Search = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Header */}
       <motion.div
         className="flex items-center gap-2 sm:gap-3"
         initial={{ opacity: 0, y: -20 }}
@@ -476,7 +455,6 @@ const Search = () => {
         </div>
       </motion.div>
 
-      {/* Search Input */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -498,7 +476,6 @@ const Search = () => {
         </div>
       </motion.div>
 
-      {/* Tabs - Responsive: 2x2 grid on small screens, 4 in row on normal screens */}
       {searchResults && searchResults.totalResults > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -530,7 +507,6 @@ const Search = () => {
         </motion.div>
       )}
 
-      {/* Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

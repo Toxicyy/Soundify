@@ -12,7 +12,7 @@ interface VerifiedBadgeProps {
 }
 
 /**
- * Verified badge component displaying verification status with customizable styling
+ * Verified badge component displaying verification status
  * Features responsive sizing, color themes, and accessibility support
  */
 const VerifiedBadge: FC<VerifiedBadgeProps> = ({
@@ -63,7 +63,6 @@ const VerifiedBadge: FC<VerifiedBadgeProps> = ({
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-sm"
       >
-        {/* Star/shield background with gradient effect */}
         <defs>
           <linearGradient
             id={`gradient-${size}`}
@@ -77,7 +76,6 @@ const VerifiedBadge: FC<VerifiedBadgeProps> = ({
           </linearGradient>
         </defs>
 
-        {/* Main star shape */}
         <path
           d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z"
           fill={`url(#gradient-${size})`}
@@ -85,7 +83,6 @@ const VerifiedBadge: FC<VerifiedBadgeProps> = ({
           strokeWidth="0.5"
         />
 
-        {/* Checkmark */}
         <path
           d="M8.5 12.5L10.5 14.5L15.5 9.5"
           stroke={colors.check}

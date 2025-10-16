@@ -19,8 +19,8 @@ interface UsePlaylistTrackManagerReturn {
 }
 
 /**
- * Хук для управления треками в плейлисте
- * Обрабатывает добавление, удаление и изменение порядка треков
+ * Hook for managing playlist tracks
+ * Handles adding, removing, and reordering tracks
  */
 export const usePlaylistTrackManager = ({
   playlistId,
@@ -33,7 +33,7 @@ export const usePlaylistTrackManager = ({
   const [isReordering, setIsReordering] = useState(false);
 
   /**
-   * Обработка ошибок API
+   * Handles API errors with specific status codes
    */
   const handleApiError = useCallback((response: Response, errorData: any) => {
     if (response.status === 401) {
@@ -57,7 +57,7 @@ export const usePlaylistTrackManager = ({
   }, []);
 
   /**
-   * Добавление трека в плейлист
+   * Adds track to playlist
    */
   const addTrack = useCallback(
     async (track: Track) => {
@@ -85,7 +85,6 @@ export const usePlaylistTrackManager = ({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Error adding track:", error);
         onError?.(errorMessage);
         throw error;
       } finally {
@@ -96,7 +95,7 @@ export const usePlaylistTrackManager = ({
   );
 
   /**
-   * Удаление трека из плейлиста
+   * Removes track from playlist
    */
   const removeTrack = useCallback(
     async (trackId: string) => {
@@ -124,7 +123,6 @@ export const usePlaylistTrackManager = ({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Error removing track:", error);
         onError?.(errorMessage);
         throw error;
       } finally {
@@ -135,7 +133,7 @@ export const usePlaylistTrackManager = ({
   );
 
   /**
-   * Изменение порядка треков в плейлисте
+   * Updates track order in playlist
    */
   const updateTrackOrder = useCallback(
     async (trackIds: string[]) => {
@@ -158,14 +156,12 @@ export const usePlaylistTrackManager = ({
 
         const data = await response.json();
 
-        if (data.success) {
-        } else {
+        if (!data.success) {
           throw new Error(data.message || "Failed to update track order");
         }
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Error updating track order:", error);
         onError?.(errorMessage);
         throw error;
       } finally {

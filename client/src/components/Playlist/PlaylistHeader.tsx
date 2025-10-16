@@ -1,4 +1,4 @@
-import { type FC, memo, useState, useRef } from "react";
+import { type FC, memo, useState, useRef, useCallback, useMemo } from "react";
 import { BaseHeader, HeaderContent } from "../../shared/BaseHeader";
 import type { Playlist, PlaylistUpdate } from "../../types/Playlist";
 import PlayListDefaultImage from "../../images/Playlist/playlistDef.png";
@@ -11,17 +11,11 @@ import { useLikePlaylist } from "../../hooks/useLikePlaylist";
 import { useNotification } from "../../hooks/useNotification";
 
 interface PlaylistHeaderProps {
-  /** Current playlist data */
   playlist: Playlist | null;
-  /** Loading state indicator */
   isLoading: boolean;
-  /** Function to update local playlist state (no auto-save) */
   updateLocal: (updates: Partial<Playlist>) => void;
-  /** Whether current user can edit this playlist */
   canEdit: boolean;
-  /** Function to fetch playlist data */
   fetchPlaylist: (id: string) => Promise<void>;
-  /** Callback for when cover file is selected */
   onCoverFileSelect?: (file: File | null) => void;
 }
 
@@ -65,14 +59,8 @@ const StyledTextArea = styled(TextArea)`
 `;
 
 /**
- * Enhanced playlist header component with like functionality and batch editing
- *
- * Features:
- * - Like/unlike playlist functionality
- * - Batch editing modal (no auto-save)
- * - Role-based edit permissions
- * - Responsive design
- * - Accessibility support
+ * Playlist header component
+ * Features batch editing modal and like functionality
  */
 const PlaylistHeader: FC<PlaylistHeaderProps> = ({
   playlist,
@@ -83,14 +71,12 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
 }) => {
   const notification = useNotification();
 
-  // Modal and form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [localChanges, setLocalChanges] = useState<PlaylistUpdate>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Like functionality hook
   const {
     isLiked,
     isLoading: likeLoading,
@@ -98,33 +84,24 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
     likeCount,
   } = useLikePlaylist(playlist?._id || "", playlist?.likeCount || 0);
 
-  /**
-   * Handle playlist like/unlike
-   */
-  const handleLikeClick = async () => {
+  const handleLikeClick = useCallback(async () => {
     if (!playlist) return;
 
     try {
       await toggleLike();
-
-      // Show success notification
       const action = isLiked ? "unliked" : "liked";
       notification.showSuccess(`Playlist ${action}!`);
-
-      // Optionally refresh playlist data to get updated like count
-      // await fetchPlaylist(playlist._id);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to update like status";
       notification.showError(errorMessage);
     }
-  };
+  }, [playlist, toggleLike, isLiked, notification]);
 
-  /**
-   * Generate subtitle with playlist metadata and like button
-   */
-  const subtitle =
-    !isLoading && playlist?.owner ? (
+  const subtitle = useMemo(() => {
+    if (isLoading || !playlist?.owner) return null;
+
+    return (
       <div className="flex flex-col gap-2">
         {playlist.description && (
           <span
@@ -149,7 +126,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
           </span>
         )}
 
-        {/* Playlist metadata and like button row */}
         <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
           <span className="text-white text-base sm:text-lg">
             {typeof playlist.owner === "string"
@@ -162,7 +138,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
             {playlist.trackCount === 1 ? "track" : "tracks"}
           </span>
 
-          {/* Like button */}
           <div className="w-[5px] h-[5px] rounded-full bg-white/60" />
           <button
             onClick={handleLikeClick}
@@ -183,70 +158,69 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
           </button>
         </div>
       </div>
-    ) : null;
+    );
+  }, [
+    isLoading,
+    playlist,
+    canEdit,
+    likeLoading,
+    isLiked,
+    likeCount,
+    handleLikeClick,
+  ]);
 
-  /**
-   * Handle image selection for cover upload
-   */
-  const handleImageClick = () => {
+  const handleImageClick = useCallback(() => {
     if (!canEdit) return;
     fileInputRef.current?.click();
-  };
+  }, [canEdit]);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    // Validate file type and size
-    if (!file.type.startsWith("image/")) {
-      notification.showError("Please select a valid image file");
-      return;
-    }
+      if (!file.type.startsWith("image/")) {
+        notification.showError("Please select a valid image file");
+        return;
+      }
 
-    if (file.size > 5 * 1024 * 1024) {
-      notification.showError("Image size must be less than 5MB");
-      return;
-    }
+      if (file.size > 5 * 1024 * 1024) {
+        notification.showError("Image size must be less than 5MB");
+        return;
+      }
 
-    setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setSelectedImage(e.target?.result as string);
-    reader.readAsDataURL(file);
-  };
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setSelectedImage(e.target?.result as string);
+      reader.readAsDataURL(file);
+    },
+    [notification]
+  );
 
-  /**
-   * Handle input changes in modal (local state only)
-   */
-  const handleInputChange = (field: keyof PlaylistUpdate, value: string) => {
-    setLocalChanges((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleInputChange = useCallback(
+    (field: keyof PlaylistUpdate, value: string) => {
+      setLocalChanges((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
-  /**
-   * Handle privacy switch change
-   */
-  const handleSwitchChange = (isPublic: boolean) => {
+  const handleSwitchChange = useCallback((isPublic: boolean) => {
     const privacy = isPublic ? "public" : "private";
     setLocalChanges((prev) => ({ ...prev, privacy }));
-  };
+  }, []);
 
-  /**
-   * Apply changes to local state (no server save)
-   */
-  const handleApplyChanges = () => {
+  const handleApplyChanges = useCallback(() => {
     if (!playlist) return;
 
     try {
-      // Apply changes to local playlist state
       const changes: Partial<Playlist> = { ...localChanges };
 
-      // If there's a selected image, update the coverUrl in local state for immediate preview
       if (selectedImage) {
-        changes.coverUrl = selectedImage; // Use the preview URL for immediate display
+        changes.coverUrl = selectedImage;
       }
 
       updateLocal(changes);
 
-      // Notify parent component about the selected file for batch save
       if (onCoverFileSelect && selectedFile) {
         onCoverFileSelect(selectedFile);
       }
@@ -259,43 +233,37 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
         `Changes applied locally${hasFileChange}. Click 'Save Changes' to persist.`
       );
     } catch (error) {
-      console.error("Failed to apply local changes:", error);
       notification.showError("Failed to apply changes");
     }
-  };
+  }, [
+    playlist,
+    localChanges,
+    selectedImage,
+    selectedFile,
+    updateLocal,
+    onCoverFileSelect,
+    notification,
+  ]);
 
-  /**
-   * Cancel modal and reset changes
-   */
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setIsModalOpen(false);
     resetModal();
-  };
+  }, []);
 
-  /**
-   * Reset modal state
-   */
-  const resetModal = () => {
+  const resetModal = useCallback(() => {
     setLocalChanges({});
     setSelectedImage(null);
     setSelectedFile(null);
-  };
+  }, []);
 
-  /**
-   * Get display image (local preview or current cover)
-   */
-  const getDisplayImage = () => {
-    // Priority: selected preview > updated cover from local state > original cover > default
+  const getDisplayImage = useCallback(() => {
     if (selectedImage) return selectedImage;
     if (playlist?.coverUrl) return playlist.coverUrl;
     return PlayListDefaultImage;
-  };
+  }, [selectedImage, playlist?.coverUrl]);
 
   const displayImage = getDisplayImage();
 
-  /**
-   * Get current privacy state
-   */
   const currentPrivacy = localChanges.privacy || playlist?.privacy || "public";
   const isPublic = currentPrivacy === "public";
 
@@ -304,7 +272,7 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
       <BaseHeader isLoading={isLoading}>
         <HeaderContent
           image={{
-            src: getDisplayImage(), // Use the same logic as modal
+            src: displayImage,
             alt: playlist?.name || "Playlist cover",
             className: `w-[120px] h-[120px] sm:w-[8vw] sm:h-[8vw] lg:w-[10vw] lg:h-[10vw] rounded-2xl mx-auto sm:mx-0 ${
               canEdit
@@ -325,7 +293,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
         />
       </BaseHeader>
 
-      {/* Enhanced edit modal with batch editing */}
       {canEdit && (
         <Modal
           open={isModalOpen}
@@ -364,7 +331,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
           </div>
 
           <div className="flex gap-5">
-            {/* Cover image selection */}
             <div className="relative w-full max-w-[180px] h-[180px] hover:scale-105 transition-all duration-200 cursor-pointer">
               <img
                 src={displayImage}
@@ -390,7 +356,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
               className="hidden"
             />
 
-            {/* Playlist info inputs */}
             <div className="w-full">
               <StyledInput
                 defaultValue={playlist?.name}
@@ -408,7 +373,6 @@ const PlaylistHeader: FC<PlaylistHeaderProps> = ({
             </div>
           </div>
 
-          {/* Privacy switch */}
           <div className="mt-5 flex items-center justify-between">
             <div className="text-white text-base font-medium">
               Playlist privacy

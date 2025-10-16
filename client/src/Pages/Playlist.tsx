@@ -22,7 +22,8 @@ import type { Track } from "../types/TrackData";
 import { api } from "../shared/api";
 
 /**
- * Authentication required state component
+ * Authentication wall component displayed to non-authenticated users
+ * Features animated icons, feature list, and CTAs to sign in/sign up
  */
 const AuthRequiredState: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +35,6 @@ const AuthRequiredState: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
-      {/* Animated music icons background */}
       <div className="absolute inset-0 overflow-hidden opacity-5">
         <motion.div
           className="absolute top-10 left-10"
@@ -97,7 +97,6 @@ const AuthRequiredState: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Main content */}
       <motion.div
         className="relative z-10 text-center max-w-md"
         initial={{ scale: 0.8 }}
@@ -109,7 +108,6 @@ const AuthRequiredState: React.FC = () => {
           delay: 0.2,
         }}
       >
-        {/* Playlist icon with glow effect */}
         <motion.div
           className="relative mb-6 xs:mb-4"
           initial={{ rotate: -180, scale: 0 }}
@@ -140,7 +138,6 @@ const AuthRequiredState: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Title */}
         <motion.h2
           className="text-2xl xs:text-xl font-bold text-white mb-3 xs:mb-2"
           initial={{ opacity: 0, y: 20 }}
@@ -150,7 +147,6 @@ const AuthRequiredState: React.FC = () => {
           Access This Playlist
         </motion.h2>
 
-        {/* Description */}
         <motion.p
           className="text-white/70 text-base xs:text-sm leading-relaxed mb-8 xs:mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -161,7 +157,6 @@ const AuthRequiredState: React.FC = () => {
           collections, and enjoy full music experience
         </motion.p>
 
-        {/* Features list */}
         <motion.div
           className="mb-8 xs:mb-6 space-y-3 xs:space-y-2"
           initial={{ opacity: 0, y: 20 }}
@@ -186,7 +181,6 @@ const AuthRequiredState: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Action buttons */}
         <motion.div
           className="flex flex-col xs:flex-row gap-3 xs:gap-2"
           initial={{ opacity: 0, y: 20 }}
@@ -214,7 +208,6 @@ const AuthRequiredState: React.FC = () => {
           </motion.button>
         </motion.div>
 
-        {/* Additional info */}
         <motion.p
           className="text-white/50 text-xs xs:text-[10px] mt-6 xs:mt-4"
           initial={{ opacity: 0 }}
@@ -225,7 +218,6 @@ const AuthRequiredState: React.FC = () => {
         </motion.p>
       </motion.div>
 
-      {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 6 }).map((_, i) => (
           <motion.div
@@ -253,15 +245,16 @@ const AuthRequiredState: React.FC = () => {
 };
 
 /**
- * Main playlist page component with enhanced security and batch saving
+ * Main playlist page component
  *
  * Features:
- * - Beautiful authentication required state for non-users
+ * - Authentication wall for non-authenticated users
  * - Role-based access control (admin + owner only)
- * - Batch saving for all changes
- * - Comprehensive error handling
- * - Responsive design with adjusted spacing for small screens
- * - Real-time notifications
+ * - Batch saving for playlist changes
+ * - Track order management with drag-and-drop
+ * - Cover image upload
+ * - Real-time unsaved changes tracking
+ * - Optimized re-renders with memoization
  */
 export default function Playlist() {
   const { id } = useParams<{ id: string }>();
@@ -269,14 +262,11 @@ export default function Playlist() {
   const navigate = useNavigate();
   const { data: user, isLoading: userLoading } = useGetUserQuery();
 
-  // Refs to prevent cyclic updates and manage sync state
   const isSyncingRef = useRef(false);
   const lastSyncDataRef = useRef<string>("");
 
-  // State for cover file selected in header
   const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
 
-  // Main playlist management hook - only for authenticated users
   const {
     playlist,
     hasUnsavedChanges,
@@ -287,7 +277,6 @@ export default function Playlist() {
     switchUnsavedChangesToFalse,
   } = usePlaylist(user ? id : undefined);
 
-  // Playlist tracks management hook - only for authenticated users
   const {
     tracks,
     isLoading: tracksLoading,
@@ -300,10 +289,8 @@ export default function Playlist() {
     sortOrder: 1,
   });
 
-  // Playlist save operations hook - only for authenticated users
   const { saveChanges, saving } = usePlaylistSave(user && id ? id : "");
 
-  // Memoized loading and error states - only for authenticated users
   const isLoading = useMemo(
     () => (user ? playlistLoading || tracksLoading : false),
     [user, playlistLoading, tracksLoading]
@@ -315,13 +302,12 @@ export default function Playlist() {
   );
 
   /**
-   * Check if current user has edit permissions for this playlist
-   * Only owner or admin can edit
+   * Checks if current user can edit the playlist
+   * Returns true for admins or playlist owners
    */
   const canEditPlaylist = useMemo(() => {
     if (!playlist || !user) return false;
 
-    // Get current user from localStorage or context
     const token = localStorage.getItem("token");
     if (!token) return false;
 
@@ -330,10 +316,8 @@ export default function Playlist() {
       const currentUserId = payload.id || payload.userId;
       const userStatus = payload.status;
 
-      // Admin can edit any playlist
       if (userStatus === "ADMIN") return true;
 
-      // Owner can edit their own playlist
       const ownerId =
         typeof playlist.owner === "string"
           ? playlist.owner
@@ -341,20 +325,16 @@ export default function Playlist() {
 
       return currentUserId === ownerId;
     } catch (error) {
-      console.error("Error checking playlist permissions:", error);
       return false;
     }
   }, [playlist, user]);
 
   /**
-   * Get current tracks as Track[] array
-   * Priority: local changes > API tracks
-   * Only for authenticated users
+   * Returns current tracks array prioritizing local changes over API data
    */
   const getTracksAsArray = useCallback((): Track[] => {
     if (!user) return [];
 
-    // If there are local changes in playlist with tracks
     if (playlist?.tracks && hasUnsavedChanges) {
       if (Array.isArray(playlist.tracks) && playlist.tracks.length > 0) {
         const firstItem = playlist.tracks[0];
@@ -368,39 +348,29 @@ export default function Playlist() {
       }
     }
 
-    // Use tracks from API
     return tracks;
   }, [playlist?.tracks, tracks, hasUnsavedChanges, user]);
 
-  /**
-   * Memoized current tracks
-   */
   const currentTracks = useMemo(() => getTracksAsArray(), [getTracksAsArray]);
 
   /**
-   * Optimized synchronization without cyclic updates
-   * Only for authenticated users
+   * Synchronizes track data from API into local playlist state
+   * Prevents cyclic updates with ref-based guards
    */
   const syncTracksWithPlaylist = useCallback(() => {
-    // Only sync for authenticated users
     if (!user) return;
-    // Prevent cyclic calls
     if (isSyncingRef.current) return;
 
-    // Check data availability
     if (!tracks.length || !playlist || hasUnsavedChanges) return;
 
-    // Create hash of current state for comparison
     const currentDataHash = JSON.stringify({
       tracksLength: tracks.length,
       playlistTracksLength: playlist.tracks?.length || 0,
       playlistTrackCount: playlist.trackCount || 0,
     });
 
-    // Skip sync if data hasn't changed
     if (lastSyncDataRef.current === currentDataHash) return;
 
-    // Check if sync is needed
     const needsSync =
       !playlist.tracks ||
       playlist.tracks.length !== tracks.length ||
@@ -408,11 +378,9 @@ export default function Playlist() {
 
     if (!needsSync) return;
 
-
     isSyncingRef.current = true;
     lastSyncDataRef.current = currentDataHash;
 
-    // Update local state
     updateLocal({
       tracks: tracks,
       trackCount: tracks.length,
@@ -422,16 +390,11 @@ export default function Playlist() {
       ),
     });
 
-    // Reset sync flag
     setTimeout(() => {
       isSyncingRef.current = false;
     }, 100);
   }, [tracks, playlist, hasUnsavedChanges, updateLocal, user]);
 
-  /**
-   * Sync effect with cycle protection
-   * Only for authenticated users
-   */
   useEffect(() => {
     if (!user) return;
 
@@ -449,8 +412,8 @@ export default function Playlist() {
   ]);
 
   /**
-   * Comprehensive batch save handler
-   * Saves all changes at once with proper error handling
+   * Saves all playlist changes in a single batch operation
+   * Updates metadata, cover image, and track order atomically
    */
   const handleSavePlaylist = useCallback(async () => {
     if (!playlist || !hasUnsavedChanges) {
@@ -464,29 +427,23 @@ export default function Playlist() {
     }
 
     try {
-
-      // Show loading notification
       const loadingToast = notification.showLoading(
         "Saving playlist changes..."
       );
 
-      // Get current tracks for saving
       const tracksToSave = getTracksAsArray();
 
-      // Prepare update data (only basic fields)
       const updateData = {
         name: playlist.name,
         description: playlist.description,
         privacy: playlist.privacy,
         category: playlist.category,
         tags: playlist.tags,
-        cover: selectedCoverFile, // Include cover file if selected
+        cover: selectedCoverFile,
       };
 
-      // Save basic playlist data with cover
       await saveChanges(updateData);
 
-      // Save track order if tracks exist
       if (tracksToSave && tracksToSave.length > 0) {
         const trackIds = tracksToSave.map((track) => track._id);
 
@@ -500,23 +457,16 @@ export default function Playlist() {
         if (!response.ok) {
           throw new Error(`Failed to save track order: ${response.status}`);
         }
-
       }
 
-      // Reset unsaved changes flag and cover file
       switchUnsavedChangesToFalse();
       setSelectedCoverFile(null);
 
-      // Refresh data from API
       await Promise.all([fetchPlaylist(id!), refetchTracks()]);
 
-      // Dismiss loading and show success
       notification.dismiss(loadingToast);
       notification.showSuccess("Playlist saved successfully!");
-
     } catch (error) {
-      console.error("Error saving playlist:", error);
-
       const errorMessage =
         error instanceof Error ? error.message : "Failed to save playlist";
 
@@ -537,7 +487,7 @@ export default function Playlist() {
   ]);
 
   /**
-   * Memoized data refresh handler
+   * Refetches playlist data from server and resets local state
    */
   const handleRefetch = useCallback(() => {
     if (!id) return;
@@ -548,22 +498,20 @@ export default function Playlist() {
 
     Promise.all([fetchPlaylist(id), refetchTracks()])
       .then(() => {
-        // Reset sync state
         isSyncingRef.current = false;
         lastSyncDataRef.current = "";
 
         notification.dismiss(loadingToast);
         notification.showSuccess("Playlist data refreshed");
       })
-      .catch((error) => {
+      .catch(() => {
         notification.dismiss(loadingToast);
         notification.showError("Failed to refresh playlist data");
-        console.error("Failed to refresh playlist data:", error);
       });
   }, [id, fetchPlaylist, refetchTracks, notification]);
 
   /**
-   * Handle discard changes with confirmation
+   * Discards all unsaved changes with confirmation dialog
    */
   const handleDiscardChanges = useCallback(() => {
     if (!hasUnsavedChanges && !selectedCoverFile) return;
@@ -573,13 +521,12 @@ export default function Playlist() {
     );
 
     if (confirmDiscard) {
-      setSelectedCoverFile(null); // Reset selected cover file
+      setSelectedCoverFile(null);
       handleRefetch();
       notification.showInfo("All changes have been discarded");
     }
   }, [hasUnsavedChanges, selectedCoverFile, handleRefetch, notification]);
 
-  // Show loading state while checking user auth
   if (userLoading) {
     return (
       <motion.div
@@ -595,7 +542,6 @@ export default function Playlist() {
     );
   }
 
-  // Show auth required state if user is not logged in - FIRST PRIORITY
   if (!user) {
     return (
       <motion.div
@@ -604,7 +550,6 @@ export default function Playlist() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Page Header */}
         <motion.header
           className="flex items-center gap-3 xs:gap-4"
           initial={{ opacity: 0, y: -20 }}
@@ -650,7 +595,6 @@ export default function Playlist() {
           </div>
         </motion.header>
 
-        {/* Auth Required Content */}
         <motion.section
           className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -663,7 +607,6 @@ export default function Playlist() {
     );
   }
 
-  // Memoized components for performance optimization - only for authenticated users
   const headerComponent = useMemo(
     () =>
       user ? (
@@ -705,7 +648,6 @@ export default function Playlist() {
     ]
   );
 
-  // Error state rendering - ONLY for authenticated users with backend errors
   if (error && user) {
     return (
       <div className="h-screen w-full mainMenu mb-35 xl:mb-5 pl-4 xl:pl-[22vw] pr-[2vw] flex items-center justify-center">
@@ -746,7 +688,6 @@ export default function Playlist() {
       {headerComponent}
       {mainMenuComponent}
 
-      {/* Enhanced save/discard controls with better UX and adjusted spacing for small screens */}
       {(hasUnsavedChanges || selectedCoverFile) && canEditPlaylist && (
         <div className="fixed bottom-8 right-8 z-50">
           <div className="flex items-center gap-3 p-4 bg-black/80 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl">
@@ -803,7 +744,6 @@ export default function Playlist() {
         </div>
       )}
 
-      {/* Permission denied message for non-editors */}
       {!canEditPlaylist && playlist && (
         <div className="fixed bottom-8 right-8 z-40">
           <div className="flex items-center gap-2 p-3 bg-blue-500/20 backdrop-blur-lg border border-blue-500/30 rounded-lg text-blue-400 text-sm">

@@ -1,21 +1,25 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { SearchOutlined } from "@ant-design/icons";
 import { useDebounce } from "../../../../hooks/useDebounce";
 import { useGlobalSearch } from "../../../../hooks/useGlobalSearch";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
 import SearchResultItem from "./SearchResultItem";
-import { useDispatch, useSelector } from "react-redux";
 import { type AppDispatch, type AppState } from "../../../../store";
 import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
-import type { Track } from "../../../../types/TrackData";
-import { SearchOutlined } from "@ant-design/icons";
 import { clearQueue, setQueue } from "../../../../state/Queue.slice";
-import { useGetUserQuery } from "../../../../state/UserApi.slice";
+import type { Track } from "../../../../types/TrackData";
 import { api } from "../../../../shared/api";
 
+/**
+ * Global search input component with autocomplete
+ * Displays popular content by default and search results while typing
+ */
 const SearchInput = () => {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -26,12 +30,11 @@ const SearchInput = () => {
   const { data: user } = useGetUserQuery();
 
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
+  const dispatch = useDispatch<AppDispatch>();
 
   const debouncedQuery = useDebounce(query, 300);
   const { searchResults, isLoading, searchGlobal, getPopularContent } =
     useGlobalSearch();
-
-  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     if (debouncedQuery.length >= 2) {
@@ -59,79 +62,80 @@ const SearchInput = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const togglePlayPauseWithRecommendations = async (item: Track) => {
-    // Если это текущий трек и он уже играет - просто ставим на паузу
-    if (
-      currentTrack?.currentTrack?._id === item._id &&
-      currentTrack.isPlaying
-    ) {
-      dispatch(setIsPlaying(false));
-      return;
-    }
+  const togglePlayPauseWithRecommendations = useCallback(
+    async (item: Track) => {
+      if (
+        currentTrack?.currentTrack?._id === item._id &&
+        currentTrack.isPlaying
+      ) {
+        dispatch(setIsPlaying(false));
+        return;
+      }
 
-    try {
-      // 1. Устанавливаем текущий трек
-      dispatch(setCurrentTrack(item));
+      try {
+        dispatch(setCurrentTrack(item));
 
-      if(!user?._id) return
+        if (!user?._id) return;
 
-      const response = await api.recommendations.getForUser(user?._id);
-      const recommendations = await response.json();
+        const response = await api.recommendations.getForUser(user._id);
+        const recommendations = await response.json();
 
-      const filteredRecs = recommendations.filter(
-        (track: Track) => track._id !== item._id
-      );
+        const filteredRecs = recommendations.filter(
+          (track: Track) => track._id !== item._id
+        );
 
-      // 4. Обновляем очередь в Redux
-      dispatch(
-        setQueue({
-          tracks: filteredRecs,
-          startIndex: 0,
-        })
-      );
+        dispatch(
+          setQueue({
+            tracks: filteredRecs,
+            startIndex: 0,
+          })
+        );
 
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
-    } catch (error) {
-      console.error("Ошибка при получении рекомендаций:", error);
+        setTimeout(() => {
+          dispatch(setIsPlaying(true));
+        }, 50);
+      } catch (error) {
+        dispatch(setCurrentTrack(item));
+        dispatch(clearQueue());
+        setTimeout(() => {
+          dispatch(setIsPlaying(true));
+        }, 50);
+      }
+    },
+    [currentTrack, dispatch, user]
+  );
 
-      dispatch(setCurrentTrack(item));
-      dispatch(clearQueue());
-      setTimeout(() => {
-        dispatch(setIsPlaying(true));
-      }, 50);
-    }
-  };
+  const handleItemClick = useCallback(
+    (item: any) => {
+      setQuery(item.name);
+      setIsOpen(false);
+      setIsFocused(false);
 
-  const handleItemClick = (item: any) => {
-    setQuery(item.name);
-    setIsOpen(false);
-    setIsFocused(false);
+      switch (item.type) {
+        case "track":
+          togglePlayPauseWithRecommendations(item);
+          break;
+        case "artist":
+          navigate(`/artist/${item._id}`);
+          break;
+        case "album":
+          navigate(`/album/${item._id}`);
+          break;
+        case "playlist":
+          navigate(`/playlist/${item._id}`);
+          break;
+      }
+    },
+    [navigate, togglePlayPauseWithRecommendations]
+  );
 
-    switch (item.type) {
-      case "track":
-        togglePlayPauseWithRecommendations(item);
-        break;
-      case "artist":
-        navigate(`/artist/${item._id}`);
-        break;
-      case "album":
-        navigate(`/album/${item._id}`);
-        break;
-      case "playlist":
-        navigate(`/playlist/${item._id}`);
-        break;
-    }
-  };
-
-  const handleShowMore = () => {
+  const handleShowMore = useCallback(() => {
     setIsOpen(false);
     setIsFocused(false);
     navigate(`/search?q=${encodeURIComponent(query)}`);
-  };
+  }, [navigate, query]);
 
-  const handleFocus = () => {
+  const handleFocus = useCallback(() => {
     setIsFocused(true);
     if (query.length === 0) {
       getPopularContent();
@@ -139,13 +143,43 @@ const SearchInput = () => {
     } else if (query.length >= 2) {
       setIsOpen(true);
     }
-  };
+  }, [query.length, getPopularContent]);
+
+  const { allResults, hasMoreResults } = useMemo(() => {
+    const mobile = window.innerWidth < 768;
+    const MAX_ITEMS = mobile ? 3 : 5;
+    const tracksLimit = mobile ? 2 : 3;
+    const artistsLimit = mobile ? 1 : 2;
+    const albumsLimit = mobile ? 1 : 2;
+
+    if (!searchResults) {
+      return { allResults: [], hasMoreResults: false, isMobile: mobile };
+    }
+
+    const results = [
+      ...searchResults.tracks
+        .slice(0, tracksLimit)
+        .map((track) => ({ ...track, type: "track" })),
+      ...searchResults.artists
+        .slice(0, artistsLimit)
+        .map((artist) => ({ ...artist, type: "artist" })),
+      ...searchResults.albums
+        .slice(0, albumsLimit)
+        .map((album) => ({ ...album, type: "album" })),
+    ].slice(0, MAX_ITEMS);
+
+    return {
+      allResults: results,
+      hasMoreResults: searchResults.totalResults > MAX_ITEMS,
+      isMobile: mobile,
+    };
+  }, [searchResults]);
 
   const renderResults = () => {
     if (isLoading) {
       return (
         <div className="px-4 py-6 md:py-8 text-center">
-          <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-white mx-auto"></div>
+          <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-white mx-auto" />
           <p className="text-white/70 mt-2 text-sm md:text-base">
             Searching...
           </p>
@@ -162,27 +196,6 @@ const SearchInput = () => {
         </div>
       );
     }
-
-    // Different limits for mobile vs desktop
-    const isMobile = window.innerWidth < 768;
-    const MAX_ITEMS = isMobile ? 3 : 5;
-    const tracksLimit = isMobile ? 2 : 3;
-    const artistsLimit = isMobile ? 1 : 2;
-    const albumsLimit = isMobile ? 1 : 2;
-
-    const allResults = [
-      ...searchResults.tracks
-        .slice(0, tracksLimit)
-        .map((track) => ({ ...track, type: "track" })),
-      ...searchResults.artists
-        .slice(0, artistsLimit)
-        .map((artist) => ({ ...artist, type: "artist" })),
-      ...searchResults.albums
-        .slice(0, albumsLimit)
-        .map((album) => ({ ...album, type: "album" })),
-    ].slice(0, MAX_ITEMS);
-
-    const hasMoreResults = searchResults.totalResults > MAX_ITEMS;
 
     return (
       <div className="max-h-80 md:max-h-106 overflow-hidden">
@@ -219,7 +232,6 @@ const SearchInput = () => {
 
   return (
     <div ref={containerRef} className="relative w-full max-w-md xl:max-w-lg">
-      {/* Search Input */}
       <div
         className={`flex items-center w-full bg-white/70 backdrop-blur-sm rounded-full px-4 md:px-6 xl:px-9 py-2 md:py-2.5 shadow-lg gap-2 transition-all duration-300 hover:bg-white/80 ${
           isFocused ? "bg-white/90 ring-2 ring-white/30" : ""
@@ -250,7 +262,6 @@ const SearchInput = () => {
         />
       </div>
 
-      {/* Search Results Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -268,4 +279,4 @@ const SearchInput = () => {
   );
 };
 
-export default SearchInput;
+export default memo(SearchInput);

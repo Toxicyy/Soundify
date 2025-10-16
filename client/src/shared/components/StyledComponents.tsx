@@ -3,7 +3,6 @@ import styled from "styled-components";
 import { motion } from "framer-motion";
 import TextArea from "antd/es/input/TextArea";
 
-// === INPUT COMPONENTS ===
 export const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -75,7 +74,6 @@ export const StyledTextArea = styled(TextArea)`
   }
 `;
 
-// === SELECT COMPONENTS ===
 export const StyledSelect = styled(Select<string>)`
   .ant-select-selector {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -177,7 +175,6 @@ export const StyledMultiSelect = styled(Select<string[]>)`
   }
 `;
 
-// === BUTTON COMPONENTS ===
 export const GlassButton = styled(motion.button)<{
   variant?: "primary" | "secondary" | "danger";
   size?: "xs" | "sm" | "md" | "lg";
@@ -281,7 +278,6 @@ export const GlassButton = styled(motion.button)<{
   }
 `;
 
-// === MODAL COMPONENTS ===
 export const ModalContainer = styled.div`
   .ant-modal-content {
     background-color: rgba(40, 40, 40, 0.95) !important;
@@ -301,7 +297,6 @@ export const ModalContainer = styled.div`
   }
 `;
 
-// === CARD COMPONENTS ===
 export const GlassCard = styled(motion.div)<{ padding?: string }>`
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(15px);
@@ -324,7 +319,6 @@ export const GlassCard = styled(motion.div)<{ padding?: string }>`
   }
 `;
 
-// === SKELETON COMPONENTS ===
 export const SkeletonCard = styled.div`
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(15px);
@@ -359,7 +353,6 @@ export const SkeletonCard = styled.div`
   }
 `;
 
-// === UTILITY COMPONENTS ===
 export const GradientText = styled.span<{ colors?: string }>`
   background: ${({ colors = "linear-gradient(135deg, #1db954, #1ed760)" }) =>
     colors};
@@ -388,7 +381,6 @@ export const StatusDot = styled.div<{ color: string }>`
   }
 `;
 
-// === RESPONSIVE LAYOUT ===
 export const ResponsiveContainer = styled.div<{
   desktop?: string;
   mobile?: string;
@@ -421,7 +413,6 @@ export const ResponsiveContainer = styled.div<{
   }
 `;
 
-// === FILE UPLOAD COMPONENTS ===
 export const FileUploadZone = styled.div<{
   isDragActive?: boolean;
   hasFile?: boolean;
@@ -463,7 +454,6 @@ export const FileUploadZone = styled.div<{
   }
 `;
 
-// === PROGRESS COMPONENTS ===
 export const ProgressBar = styled.div<{ progress: number }>`
   width: 100%;
   height: 8px;

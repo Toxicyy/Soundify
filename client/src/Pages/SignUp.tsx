@@ -7,11 +7,9 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store.ts";
 
 /**
- * Адаптивная страница регистрации
- * Desktop (xl+): классический дизайн с волной
- * Mobile (<xl): современный card-based дизайн с анимациями
- *
- * @returns JSX.Element - Страница регистрации с адаптивным дизайном
+ * Responsive sign up page
+ * Desktop (xl+): Classic design with wave
+ * Mobile (<xl): Modern card-based design with animations
  */
 export default function SignUp() {
   const { data: user } = useGetUserQuery();
@@ -23,16 +21,15 @@ export default function SignUp() {
     dispatch(userApiSlice.util.resetApiState());
     window.location.reload();
   }
+
   return (
     <>
-      {/* Desktop версия (xl и выше) */}
       {!user && (
         <div className="hidden xl:block">
           <SignUpForm />
         </div>
       )}
 
-      {/* Mobile версия (меньше xl) */}
       {!user && (
         <div className="block xl:hidden">
           <MobileAuthForm initialMode="signup" />
@@ -53,7 +50,6 @@ export default function SignUp() {
             transition={{ duration: 0.6, type: "spring" }}
             className="relative w-[800px] bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 p-12 text-center"
           >
-            {/* Animated Background Elements */}
             <motion.div
               className="absolute inset-0 rounded-3xl overflow-hidden"
               initial={{ opacity: 0 }}
@@ -71,7 +67,6 @@ export default function SignUp() {
               />
             </motion.div>
 
-            {/* Content */}
             <div className="relative z-10">
               <motion.div
                 initial={{ y: -20, opacity: 0 }}

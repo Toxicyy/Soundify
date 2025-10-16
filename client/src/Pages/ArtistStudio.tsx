@@ -9,8 +9,8 @@ import { type Artist } from "../types/ArtistData";
 import { api } from "../shared/api";
 
 /**
- * Artist Studio - main page for artists
- * Complex parts: Access control, stats loading, error handling, responsive layout
+ * Artist Studio - main dashboard for artists
+ * Features: access control, stats loading, profile management
  */
 
 interface DashboardStats {
@@ -36,7 +36,6 @@ export default function ArtistStudio() {
     error: userError,
   } = useGetUserQuery();
 
-  // State management
   const [artistData, setArtistData] = useState<Artist | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     totalTracks: 0,
@@ -46,7 +45,6 @@ export default function ArtistStudio() {
   const [error, setError] = useState<ArtistStudioError | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
 
-  // Get artist data based on user's artistProfile
   const {
     data: artist,
     loading: artistLoading,
@@ -54,12 +52,10 @@ export default function ArtistStudio() {
     refetch: refetchArtist,
   } = useArtistData(user?.artistProfile || "");
 
-  // Memoized access check
   const hasArtistAccess = useMemo(() => {
     return !isUserLoading && user && user.artistProfile;
   }, [isUserLoading, user]);
 
-  // Error handling with typing
   const handleError = useCallback(
     (
       errorType: ArtistStudioError["type"],
@@ -84,7 +80,6 @@ export default function ArtistStudio() {
     [showWarning, showError]
   );
 
-  // Access check - only artists can visit this page
   useEffect(() => {
     if (!isUserLoading && user && !user.artistProfile) {
       handleError(
@@ -101,7 +96,6 @@ export default function ArtistStudio() {
     }
   }, [user, isUserLoading, userError, navigate, handleError]);
 
-  // Load artist stats
   const loadArtistStats = useCallback(
     async (artistId: string) => {
       if (!artistId || isStatsLoading) return;
@@ -134,47 +128,41 @@ export default function ArtistStudio() {
     [isStatsLoading]
   );
 
-  // Update local artist data when receiving data from server
   useEffect(() => {
     if (artist && artist._id) {
       const hasArtistChanged = !artistData || artistData._id !== artist._id;
 
-      setArtistData(artist);
-      setDashboardStats((prev) => ({
-        ...prev,
-        totalFollowers: artist.followerCount || 0,
-        isVerified: artist.isVerified || false,
-      }));
-
       if (hasArtistChanged) {
+        setArtistData(artist);
+        setDashboardStats((prev) => ({
+          ...prev,
+          totalFollowers: artist.followerCount || 0,
+          isVerified: artist.isVerified || false,
+        }));
         loadArtistStats(artist._id);
+        setError(null);
       }
-
-      setError(null);
     }
 
     if (artistError) {
       handleError("artist_not_found", artistError, true);
     }
-  }, [artist, artistError, loadArtistStats, artistData]);
+  }, [artist, artistError, loadArtistStats, artistData?._id, handleError]);
 
-  // Artist update handler
   const handleArtistUpdate = useCallback((updatedFields: Partial<Artist>) => {
     setArtistData((prev) => (prev ? { ...prev, ...updatedFields } : null));
   }, []);
 
-  // Retry function
   const handleRetry = useCallback(() => {
     setError(null);
     refetchArtist();
   }, [refetchArtist]);
 
-  // Error component
   const ErrorComponent = useMemo(() => {
     if (!error) return null;
 
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center px-4 xl:pl-[22vw] xl:pr-[2vw]">
+      <div className="min-h-screen w-full mainMenu flex items-center justify-center px-4 xl:pl-[22vw] xl:pr-[2vw]">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -249,11 +237,9 @@ export default function ArtistStudio() {
     );
   }, [error, handleRetry, navigate]);
 
-  // Loading component
   const LoadingComponent = useMemo(
     () => (
-      <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900">
-        {/* Header */}
+      <div className="min-h-screen w-full mainMenu">
         <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] py-5">
           <ArtistStudioHeader
             artist={{
@@ -275,10 +261,8 @@ export default function ArtistStudio() {
           />
         </div>
 
-        {/* Content */}
         <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] pb-36 xl:pb-8">
           <div className="space-y-6">
-            {/* Dashboard Overview Skeleton */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6">
               <div className="space-y-4">
                 <div className="h-6 bg-white/20 rounded-lg w-48 animate-pulse"></div>
@@ -287,7 +271,6 @@ export default function ArtistStudio() {
               </div>
             </div>
 
-            {/* Stats Grid Skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <div
@@ -303,7 +286,6 @@ export default function ArtistStudio() {
               ))}
             </div>
 
-            {/* Activity Sections Skeleton */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {[1, 2].map((i) => (
                 <div
@@ -326,7 +308,6 @@ export default function ArtistStudio() {
     []
   );
 
-  // Dashboard content
   const DashboardContent = useMemo(() => {
     if (!artistData) return null;
 
@@ -338,7 +319,6 @@ export default function ArtistStudio() {
 
     return (
       <div className="space-y-6">
-        {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -356,9 +336,7 @@ export default function ArtistStudio() {
             analytics, and update your profile.
           </p>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Total Tracks */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all duration-200"
@@ -381,7 +359,6 @@ export default function ArtistStudio() {
               <p className="text-xs text-white/50">Tracks uploaded</p>
             </motion.div>
 
-            {/* Followers */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all duration-200"
@@ -402,7 +379,6 @@ export default function ArtistStudio() {
               <p className="text-xs text-white/50">People following you</p>
             </motion.div>
 
-            {/* Status */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all duration-200"
@@ -449,9 +425,7 @@ export default function ArtistStudio() {
           </div>
         </motion.div>
 
-        {/* Activity Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -513,7 +487,6 @@ export default function ArtistStudio() {
             </div>
           </motion.div>
 
-          {/* Quick Stats */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -563,13 +536,12 @@ export default function ArtistStudio() {
     );
   }, [artistData, dashboardStats]);
 
-  // Handle loading and error states
   if (error) return ErrorComponent;
   if (isUserLoading || artistLoading || !artistData) return LoadingComponent;
   if (!hasArtistAccess) return null;
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900">
+    <div className="min-h-screen w-full mainMenu">
       <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] py-5">
         <ArtistStudioHeader
           artist={artistData}
@@ -579,7 +551,6 @@ export default function ArtistStudio() {
         />
       </div>
 
-      {/* Main content */}
       <div className="w-full px-4 xl:px-0 xl:pl-[22vw] xl:pr-[2vw] pb-36 xl:pb-8">
         <AnimatePresence mode="wait">{DashboardContent}</AnimatePresence>
       </div>

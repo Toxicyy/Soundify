@@ -10,11 +10,10 @@ interface AlbumHeaderProps {
 }
 
 /**
- * Album header component displaying album artwork, title, artist, and track count
- * Uses base header components for consistent styling and loading states
+ * Album header with cover, title, artist, and track count
+ * Uses base header components for consistent styling
  */
 const AlbumHeader: FC<AlbumHeaderProps> = ({ tracks, album, isLoading }) => {
-  // Generate subtitle with artist and track count information
   const subtitle =
     !isLoading && album.artist ? (
       <div className="flex items-center gap-2 flex-wrap sm:justify-start">
@@ -40,7 +39,7 @@ const AlbumHeader: FC<AlbumHeaderProps> = ({ tracks, album, isLoading }) => {
           className:
             "w-[120px] h-[120px] lg:w-[12vw] lg:h-[12vw] xl:w-[10vw] xl:h-[10vw] rounded-xl mx-auto sm:mx-0",
         }}
-        title={{ text: album.name || "Unknown Album"}}
+        title={{ text: album.name || "Unknown Album" }}
         subtitle={subtitle}
         isLoading={isLoading}
       />

@@ -1,31 +1,18 @@
-// Header.tsx - Responsive Profile Header
-import type { FC } from "react";
+import { type FC, memo } from "react";
 import { BaseHeader, HeaderContent } from "../../shared/BaseHeader";
 
-/**
- * Profile Header Component - Responsive design with optimized layout
- * 
- * RESPONSIVE FEATURES:
- * - Avatar sizes adapt to screen size and available space
- * - Typography scales appropriately across devices
- * - Improved mobile layout with better spacing
- * - Centered avatar on mobile, left-aligned on larger screens
- * 
- * DESIGN IMPROVEMENTS:
- * - Better use of Tailwind responsive prefixes
- * - Optimized image loading with proper aspect ratios
- * - Enhanced accessibility with proper alt texts
- * - Smooth transitions for all interactive elements
- */
-
-type ProfileHeaderProps = {
+interface ProfileHeaderProps {
   imageSrc: string;
   username: string;
   isLoading: boolean;
   playlists: string[];
   likedArtists: string[];
-};
+}
 
+/**
+ * Profile header component
+ * Displays user avatar, username, and profile statistics
+ */
 const Header: FC<ProfileHeaderProps> = ({
   imageSrc,
   username,
@@ -33,8 +20,14 @@ const Header: FC<ProfileHeaderProps> = ({
   playlists,
   likedArtists,
 }) => {
+  const subtitle = `${playlists.length} ${
+    playlists.length === 1 ? "playlist" : "playlists"
+  } • ${likedArtists.length} followed ${
+    likedArtists.length === 1 ? "artist" : "artists"
+  }`;
+
   return (
-    <BaseHeader 
+    <BaseHeader
       isLoading={isLoading}
       className="h-[140px] sm:h-[200px] lg:h-[230px] xl:h-[240px]"
     >
@@ -53,24 +46,20 @@ const Header: FC<ProfileHeaderProps> = ({
             transition-all duration-300
           `,
         }}
-        badge={{ 
-          show: true, 
-          text: "Profile", 
-          showVerified: false 
+        badge={{
+          show: true,
+          text: "Profile",
+          showVerified: false,
         }}
-        title={{ 
+        title={{
           text: username,
-          className: "text-center sm:text-left"
+          className: "text-center sm:text-left",
         }}
-        subtitle={`${playlists.length} ${
-          playlists.length === 1 ? "playlist" : "playlists"
-        } • ${likedArtists.length} followed ${
-          likedArtists.length === 1 ? "artist" : "artists"
-        }`}
+        subtitle={subtitle}
         isLoading={isLoading}
       />
     </BaseHeader>
   );
 };
 
-export default Header;
+export default memo(Header);

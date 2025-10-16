@@ -26,10 +26,6 @@ interface EditTrackModalProps {
   totalTracks: number;
 }
 
-/**
- * Styled components with responsive design
- * Maintained original styling but added responsive breakpoints
- */
 const StyledInput = styled(Input)`
   &.ant-input {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -136,7 +132,6 @@ const StyledMultiSelect = styled(Select<string[]>)`
   }
 `;
 
-// Genre and tags data
 const genres = [
   "Pop",
   "Rock",
@@ -209,8 +204,8 @@ const predefinedTags = [
 ];
 
 /**
- * Edit Track Modal Component
- * Enhanced with responsive design while maintaining original functionality
+ * Track metadata editor modal
+ * Edit name, genre, and tags with validation
  */
 const EditTrackModal: React.FC<EditTrackModalProps> = ({
   isOpen,
@@ -228,7 +223,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
     tags: [] as string[],
   });
 
-  // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen && track) {
       setEditedData({
@@ -239,7 +233,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
     }
   }, [isOpen, track]);
 
-  // Handle save
   const handleSave = useCallback(() => {
     if (!editedData.name.trim()) {
       return;
@@ -266,7 +259,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
     onClose();
   }, [editedData, track.metadata, onSave, showSuccess, onClose]);
 
-  // Handle cancel
   const handleCancel = useCallback(() => {
     setEditedData({
       name: track.metadata.name,
@@ -276,7 +268,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
     onClose();
   }, [track.metadata, onClose]);
 
-  // Check if form has changes
   const hasChanges =
     editedData.name !== track.metadata.name ||
     editedData.genre !== track.metadata.genre ||
@@ -310,7 +301,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
       maskClosable={false}
     >
       <div className="space-y-4 lg:space-y-6">
-        {/* Header - Responsive layout */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 lg:gap-3">
             <EditOutlined className="text-white text-lg lg:text-xl" />
@@ -330,7 +320,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
           />
         </div>
 
-        {/* Track Preview - Responsive layout */}
         <div className="bg-white/5 rounded-lg p-3 lg:p-4 border border-white/10">
           <div className="flex items-center gap-2 lg:gap-3">
             <img
@@ -359,7 +348,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
         </div>
 
         <div className="space-y-3 lg:space-y-4">
-          {/* Track Name */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Track Name *
@@ -374,7 +362,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             />
           </div>
 
-          {/* Genre */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Genre *
@@ -396,7 +383,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             />
           </div>
 
-          {/* Tags */}
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">
               Tags (Optional) - Max 5
@@ -428,7 +414,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             </span>
           </div>
 
-          {/* Changes Summary */}
           {hasChanges && (
             <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
               <h4 className="text-yellow-400 font-medium mb-2 flex items-center gap-2 text-sm lg:text-base">
@@ -465,7 +450,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
             </div>
           )}
 
-          {/* Current vs New Comparison - Responsive grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             <div className="bg-white/5 rounded-lg p-3 border border-white/10">
               <h4 className="text-white/80 font-medium mb-2 text-sm">
@@ -546,7 +530,6 @@ const EditTrackModal: React.FC<EditTrackModalProps> = ({
           </div>
         </div>
 
-        {/* Footer - Responsive button layout */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
           <button
             onClick={handleCancel}

@@ -1,3 +1,4 @@
+import { memo, useState, useRef, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   HeartOutlined,
@@ -9,7 +10,6 @@ import {
   ShareAltOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, useEffect } from "react";
 
 interface ContextMenuProps {
   isOpen: boolean;
@@ -23,7 +23,11 @@ interface ContextMenuProps {
   showRemoveFromPlaylist?: boolean;
 }
 
-export default function ContextMenu({
+/**
+ * Context menu component with mobile and desktop layouts
+ * Provides track actions: like, queue, artist, album, details, share
+ */
+const ContextMenu = ({
   isOpen,
   onClose,
   onMenuItemClick,
@@ -33,76 +37,76 @@ export default function ContextMenu({
   isPending = false,
   usePortal = true,
   showRemoveFromPlaylist = false,
-}: ContextMenuProps) {
+}: ContextMenuProps) => {
   const [hoveredMenuItem, setHoveredMenuItem] = useState<number | null>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Check if device is mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Base menu items
-  const baseMenuItems = [
-    {
-      icon: isPending ? (
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-      ) : isLiked ? (
-        <HeartFilled />
-      ) : (
-        <HeartOutlined />
-      ),
-      label: isLiked ? "Remove from liked tracks" : "Add to liked tracks",
-      disabled: isPending,
-    },
-    {
-      icon: <UnorderedListOutlined />,
-      label: "Add to queue",
-      disabled: false,
-    },
-    {
-      icon: <UserOutlined />,
-      label: "Go to artist",
-      disabled: false,
-    },
-    {
-      icon: <PlaySquareOutlined />,
-      label: "Go to album",
-      disabled: false,
-    },
-    {
-      icon: <InfoCircleOutlined />,
-      label: "View details",
-      disabled: false,
-    },
-    {
-      icon: <ShareAltOutlined />,
-      label: "Share",
-      disabled: false,
-    },
-  ];
+  const baseMenuItems = useMemo(
+    () => [
+      {
+        icon: isPending ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+        ) : isLiked ? (
+          <HeartFilled />
+        ) : (
+          <HeartOutlined />
+        ),
+        label: isLiked ? "Remove from liked tracks" : "Add to liked tracks",
+        disabled: isPending,
+      },
+      {
+        icon: <UnorderedListOutlined />,
+        label: "Add to queue",
+        disabled: false,
+      },
+      {
+        icon: <UserOutlined />,
+        label: "Go to artist",
+        disabled: false,
+      },
+      {
+        icon: <PlaySquareOutlined />,
+        label: "Go to album",
+        disabled: false,
+      },
+      {
+        icon: <InfoCircleOutlined />,
+        label: "View details",
+        disabled: false,
+      },
+      {
+        icon: <ShareAltOutlined />,
+        label: "Share",
+        disabled: false,
+      },
+    ],
+    [isPending, isLiked]
+  );
 
-  // Add remove from playlist option if needed
-  const menuItems = showRemoveFromPlaylist
-    ? [
-        ...baseMenuItems,
-        {
-          icon: <DeleteOutlined />,
-          label: "Remove from playlist",
-          disabled: false,
-        },
-      ]
-    : baseMenuItems;
+  const menuItems = useMemo(
+    () =>
+      showRemoveFromPlaylist
+        ? [
+            ...baseMenuItems,
+            {
+              icon: <DeleteOutlined />,
+              label: "Remove from playlist",
+              disabled: false,
+            },
+          ]
+        : baseMenuItems,
+    [baseMenuItems, showRemoveFromPlaylist]
+  );
 
-  // Calculate menu position (only for portal)
   useEffect(() => {
     if (isOpen && usePortal && anchorRef.current && !isMobile) {
       const visibleItems = menuItems.filter(
@@ -128,17 +132,8 @@ export default function ContextMenu({
 
       setPosition({ top, left });
     }
-  }, [
-    isOpen,
-    usePortal,
-    anchorRef,
-    isPlaying,
-    showRemoveFromPlaylist,
-    isMobile,
-    menuItems,
-  ]);
+  }, [isOpen, usePortal, anchorRef, isPlaying, isMobile, menuItems]);
 
-  // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -188,32 +183,27 @@ export default function ContextMenu({
 
   if (!isOpen) return null;
 
-  // Mobile Modal Layout
   if (isMobile) {
     const content = (
       <div className="fixed inset-0 z-[9999] flex items-end">
-        {/* Backdrop */}
         <div
           className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        {/* Menu Panel */}
         <div
           ref={menuRef}
           className="relative w-full bg-black/50 backdrop-blur-xl border-t border-white/20 rounded-t-3xl overflow-hidden animate-slide-up"
         >
-          {/* Handle bar */}
           <div className="flex justify-center py-3">
             <div className="w-12 h-1 bg-white/30 rounded-full" />
           </div>
 
-          {/* Menu Items */}
           <div className="px-4 pb-8">
             {menuItems
               .map((item, originalIndex) => ({ ...item, originalIndex }))
               .filter((item) => !isPlaying || item.label !== "Add to queue")
-              .map((item, _filteredIndex) => {
+              .map((item) => {
                 const isDeleteItem = item.label === "Remove from playlist";
 
                 return (
@@ -259,7 +249,6 @@ export default function ContextMenu({
     return usePortal ? createPortal(content, document.body) : content;
   }
 
-  // Desktop Menu Layout
   const content = (
     <div
       ref={menuRef}
@@ -335,4 +324,6 @@ export default function ContextMenu({
   );
 
   return usePortal ? createPortal(content, document.body) : content;
-}
+};
+
+export default memo(ContextMenu);

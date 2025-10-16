@@ -1,22 +1,23 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { LoginErrors, LoginFormData } from "../../validation/LoginValid";
 import LoginValid from "../../validation/LoginValid";
 import { api } from "../../shared/api";
 
+const ERROR_MESSAGES: Record<number, string> = {
+  401: "Invalid email or password",
+  404: "User not found",
+  409: "User with this email already exists",
+  429: "Too many attempts. Please try again later",
+  400: "Invalid data provided",
+};
+
 /**
- * Desktop login form with purple redesign
- * Includes validation, API error handling and animations
- *
- * Features:
- * - Purple color scheme with gradients
- * - Real-time form validation
- * - API authentication error handling
- * - Smooth animations and hover effects
- * - Password visibility toggle
+ * Desktop login form with validation and error handling
+ * Features animated transitions and password visibility toggle
  */
-export const LoginForm: React.FC = () => {
+const LoginForm = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<LoginFormData>({
@@ -36,20 +37,9 @@ export const LoginForm: React.FC = () => {
   useEffect(() => {
     const errorCheck = LoginValid(formData);
     setErrors(errorCheck);
-  }, [formData, apiError]);
+  }, [formData]);
 
-  
-  const getErrorMessage = (errorMessage: string, status: number) => {
-    // Обработка русских сообщений с бекенда
-    if (errorMessage.includes("Неверный email или пароль")) {
-      return "Invalid email or password";
-    }
-    if (errorMessage.includes("Пользователь с таким email уже существует")) {
-      return "User with this email already exists";
-    }
-    if (errorMessage.includes("Пользователь с таким username уже существует")) {
-      return "User with this username already exists";
-    }
+  const getErrorMessage = useCallback((errorMessage: string, status: number): string => {
     if (errorMessage.includes("Current password is incorrect")) {
       return "Current password is incorrect";
     }
@@ -57,24 +47,10 @@ export const LoginForm: React.FC = () => {
       return "New password must be different from current password";
     }
 
-    // Обработка по статус кодам
-    switch (status) {
-      case 401:
-        return "Invalid email or password";
-      case 404:
-        return "User not found";
-      case 409:
-        return "User with this email already exists";
-      case 429:
-        return "Too many attempts. Please try again later";
-      case 400:
-        return "Invalid data provided";
-      default:
-        return errorMessage || "Something went wrong. Please try again";
-    }
-  };
+    return ERROR_MESSAGES[status] || errorMessage || "Something went wrong. Please try again";
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (errors.username.length === 0 && errors.password.length === 0) {
@@ -89,33 +65,29 @@ export const LoginForm: React.FC = () => {
 
         const data = await response.json();
 
-        // Проверяем и HTTP статус И поле success
         if (response.ok && data.success) {
           localStorage.setItem("token", data.data.tokenInfo.token);
           navigate("/");
         } else {
           const errorMessage = data.message || "Something went wrong";
-
-          // Переводим русские сообщения
           setApiError(getErrorMessage(errorMessage, response.status));
         }
       } catch (error) {
-        console.error("Login error:", error);
         setApiError("Network error. Please check your connection");
       } finally {
         setIsLoading(false);
       }
     }
-  };
+  }, [errors, formData, navigate, getErrorMessage]);
 
-  const isFormValid = () => {
+  const isFormValid = useCallback(() => {
     return (
       errors.username.length === 0 &&
       errors.password.length === 0 &&
       formData.username.trim() !== "" &&
       formData.password.trim() !== ""
     );
-  };
+  }, [errors, formData]);
 
   return (
     <div
@@ -131,7 +103,6 @@ export const LoginForm: React.FC = () => {
         transition={{ duration: 0.8, type: "spring", damping: 20 }}
         className="relative w-[800px] bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 flex overflow-hidden"
       >
-        {/* Левая часть - Форма */}
         <div className="flex-1 p-12">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -145,7 +116,6 @@ export const LoginForm: React.FC = () => {
           </motion.div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* API Error Display с улучшенным дизайном */}
             {apiError && (
               <motion.div
                 initial={{ opacity: 1, height: 0, scale: 0.95 }}
@@ -173,7 +143,6 @@ export const LoginForm: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Username Field */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -211,7 +180,6 @@ export const LoginForm: React.FC = () => {
               )}
             </motion.div>
 
-            {/* Password Field */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -295,7 +263,6 @@ export const LoginForm: React.FC = () => {
               )}
             </motion.div>
 
-            {/* Submit Button */}
             <motion.button
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -320,7 +287,6 @@ export const LoginForm: React.FC = () => {
               )}
             </motion.button>
 
-            {/* Sign Up Link */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -342,7 +308,6 @@ export const LoginForm: React.FC = () => {
           </form>
         </div>
 
-        {/* Правая часть - Декоративная секция */}
         <div className="relative w-[46%] flex flex-col justify-center items-center bg-gradient-to-br from-purple-600/30 to-violet-700/30 backdrop-blur-sm">
           <motion.div
             className="relative z-10 text-center px-8"
@@ -387,4 +352,4 @@ export const LoginForm: React.FC = () => {
   );
 };
 
-export default LoginForm;
+export default memo(LoginForm);

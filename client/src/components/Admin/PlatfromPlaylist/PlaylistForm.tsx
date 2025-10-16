@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo, memo } from "react";
 import { UploadOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import type { Track } from "../../../types/TrackData";
 import { useNotification } from "../../../hooks/useNotification";
@@ -25,6 +25,10 @@ interface PlaylistFormProps {
   initialCoverUrl?: string;
 }
 
+/**
+ * Playlist form component with cover upload, name, description, and tags
+ * Includes validation hints and playlist statistics
+ */
 const PlaylistForm: React.FC<PlaylistFormProps> = ({
   formData,
   tracks,
@@ -38,13 +42,11 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
   const { showError } = useNotification();
 
   useEffect(() => {
-
     if (initialCoverUrl && !coverFile) {
       setCoverPreview(initialCoverUrl);
     }
   }, [initialCoverUrl, coverFile]);
 
-  // Handle cover file change
   const handleCoverChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -62,8 +64,7 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
 
       setCoverFile(file);
 
-      // Clean up previous preview
-      if (coverPreview) {
+      if (coverPreview && !coverPreview.startsWith("http")) {
         URL.revokeObjectURL(coverPreview);
       }
 
@@ -86,6 +87,12 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
     },
     [onFormChange]
   );
+
+  const totalDuration = useMemo(() => {
+    return Math.round(
+      tracks.reduce((sum, track) => sum + (track.duration || 0), 0) / 60
+    );
+  }, [tracks]);
 
   return (
     <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
@@ -149,7 +156,7 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               placeholder="Enter playlist name"
-              className="w-full px-3 xs:px-4 py-2.5 xs:py-3 bg-white/1 1 md:backdrop-blur-md border border-white/20 rounded-lg xs:rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-white/40 focus:bg-white/5 transition-all duration-200 text-sm xs:text-base"
+              className="w-full px-3 xs:px-4 py-2.5 xs:py-3 bg-white/10 md:backdrop-blur-md border border-white/20 rounded-lg xs:rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-white/40 focus:bg-white/5 transition-all duration-200 text-sm xs:text-base"
             />
           ) : (
             <div className="text-white text-lg font-medium">
@@ -168,7 +175,7 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
               onChange={(e) => handleInputChange("description", e.target.value)}
               placeholder="Describe your playlist..."
               rows={3}
-              className="w-full px-3 xs:px-4 py-2.5 xs:py-3 bg-white/1  md:backdrop-blur-md border border-white/20 rounded-lg xs:rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-white/40 focus:bg-white/5  transition-all duration-200 resize-none text-sm xs:text-base"
+              className="w-full px-3 xs:px-4 py-2.5 xs:py-3 bg-white/10 md:backdrop-blur-md border border-white/20 rounded-lg xs:rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-white/40 focus:bg-white/5 transition-all duration-200 resize-none text-sm xs:text-base"
             />
           ) : (
             <div className="text-white/80">
@@ -226,11 +233,7 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
           </div>
           <div>
             <div className="text-2xl font-bold text-white">
-              {Math.round(
-                tracks.reduce((sum, track) => sum + (track.duration || 0), 0) /
-                  60
-              )}
-              m
+              {totalDuration}m
             </div>
             <div className="text-white/60 text-sm">Duration</div>
           </div>
@@ -240,4 +243,4 @@ const PlaylistForm: React.FC<PlaylistFormProps> = ({
   );
 };
 
-export default PlaylistForm;
+export default memo(PlaylistForm);

@@ -31,6 +31,7 @@ export const CurrentTrackSlice = createSlice({
   },
 });
 
-export const { setCurrentTrack, setIsPlaying, playTrack } = CurrentTrackSlice.actions;
+export const { setCurrentTrack, setIsPlaying, playTrack } =
+  CurrentTrackSlice.actions;
 
 export default CurrentTrackSlice.reducer;

@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Header from "../components/artist/Header";
 import MainMenu from "../components/artist/MainMenu";
 import type { Artist } from "../types/ArtistData";
@@ -10,16 +10,13 @@ import { useImagePreloader } from "../hooks/useImagePreloader";
 import { useFollowArtist } from "../hooks/useFollowArtist";
 
 /**
- * Artist page component displaying artist information, tracks, and albums
- * Complex parts: Error handling, loading states, image preloading
+ * Artist page component
+ * Displays artist information, tracks, and albums with loading/error states
  */
 const Artist = () => {
   const location = useLocation();
-
-  // Extract artist ID from URL path
   const artistId = location.pathname.split("/artist/")[1];
 
-  // Fetch artist data
   const {
     data: artist,
     loading: artistLoading,
@@ -27,7 +24,6 @@ const Artist = () => {
     refetch: refetchArtist,
   } = useArtistData(artistId || "");
 
-  // Fetch artist tracks
   const {
     tracks,
     loading: tracksLoading,
@@ -40,7 +36,6 @@ const Artist = () => {
     toggleFollow,
   } = useFollowArtist(artist?._id || "");
 
-  // Fetch artist albums
   const { albums, isLoading: albumsLoading } = useArtistAlbums(
     artist?._id || "",
     {
@@ -49,26 +44,26 @@ const Artist = () => {
     }
   );
 
-  // Preload all images for better UX
-  const imagesToPreload = [
-    artist?.avatar,
-    ...tracks.map((track) => track.coverUrl),
-    ...albums.map((album) => album.coverUrl),
-  ].filter(Boolean) as string[];
+  const imagesToPreload = useMemo(
+    () =>
+      [
+        artist?.avatar,
+        ...tracks.map((track) => track.coverUrl),
+        ...albums.map((album) => album.coverUrl),
+      ].filter(Boolean) as string[],
+    [artist?.avatar, tracks, albums]
+  );
 
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
-  // Determine overall loading state (excluding isFollowingLoading)
   const isDataLoading = artistLoading || tracksLoading || albumsLoading;
   const isImagesLoading = !allImagesLoaded && imagesToPreload.length > 0;
   const isOverallLoading = isDataLoading || isImagesLoading;
 
-  // Errors (followError handled separately in components)
   const isDataError = artistError || tracksError;
   const isImageError = !allImagesLoaded && imagesToPreload.length === 0;
   const isOverallError = isDataError || isImageError;
 
-  // Show loading state while any data or images are loading
   if (isOverallLoading) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
@@ -86,7 +81,6 @@ const Artist = () => {
     );
   }
 
-  // Show error state if artist loading failed
   if (isOverallError) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
@@ -160,7 +154,6 @@ const Artist = () => {
     );
   }
 
-  // Show message if no artist data available
   if (!artist) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">

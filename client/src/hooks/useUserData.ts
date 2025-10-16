@@ -11,31 +11,24 @@ interface UseUserDataReturn {
 }
 
 /**
- * Custom hook for fetching user data by ID
+ * Hook for fetching user data by ID
  * Provides comprehensive state management and error handling
  */
 export const useUserData = (userId: string): UseUserDataReturn => {
-  // State management
   const [data, setData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Refs for cleanup and mount state tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
-  /**
-   * Core data fetching function with comprehensive error handling
-   */
   const loadUserData = useCallback(async (id: string) => {
-    // Input validation
     if (!id?.trim()) {
       setError("Invalid user ID");
       setIsLoading(false);
       return;
     }
 
-    // Cancel previous request to prevent race conditions
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -61,39 +54,32 @@ export const useUserData = (userId: string): UseUserDataReturn => {
 
       const responseData = await response.json();
 
-      // Validate response structure
       if (!responseData || typeof responseData !== "object") {
         throw new Error("Invalid response format");
       }
 
-      // Early return if component unmounted
       if (!isMountedRef.current) return;
 
-      // Extract user data
       const userData = responseData.data || responseData;
 
       if (!userData || typeof userData !== "object") {
         throw new Error("Invalid user data format");
       }
 
-      // Update state with validated data
       setData(userData);
     } catch (error) {
-      // Ignore abort errors (expected behavior)
       if (error instanceof Error && error.name === "AbortError") {
         return;
       }
 
       if (!isMountedRef.current) return;
 
-      // Transform error messages for better UX
       let errorMessage = "Unknown error occurred";
 
       if (error instanceof Error) {
         errorMessage = error.message;
       }
 
-      // Provide user-friendly error messages
       if (
         errorMessage.includes("Failed to fetch") ||
         errorMessage.includes("NetworkError")
@@ -109,7 +95,6 @@ export const useUserData = (userId: string): UseUserDataReturn => {
         errorMessage = "Server error";
       }
 
-      console.error("User data loading error:", error);
       setError(errorMessage);
       setData(null);
     } finally {
@@ -119,21 +104,16 @@ export const useUserData = (userId: string): UseUserDataReturn => {
     }
   }, []);
 
-  /**
-   * Refetch current data with same parameters
-   */
   const refetch = useCallback(() => {
     if (userId) {
       loadUserData(userId);
     }
   }, [userId, loadUserData]);
 
-  // Initial data loading effect
   useEffect(() => {
     if (userId) {
       loadUserData(userId);
     } else {
-      // Reset state when no user ID provided
       setData(null);
       setIsLoading(false);
       setError("User ID is required");
@@ -144,7 +124,6 @@ export const useUserData = (userId: string): UseUserDataReturn => {
     };
   }, [userId, loadUserData]);
 
-  // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
 

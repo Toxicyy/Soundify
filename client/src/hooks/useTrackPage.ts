@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { api } from "../shared/api";
+import { useEffect, useState } from "react";
 import type { Track } from "../types/TrackData";
+import { api } from "../shared/api";
 
 interface UseTrackPageReturn {
   track: Track | null;
@@ -9,6 +9,10 @@ interface UseTrackPageReturn {
   refetch: () => Promise<void>;
 }
 
+/**
+ * Hook for fetching track data for track page
+ * Provides loading states and error handling
+ */
 export const useTrackPage = (trackId: string): UseTrackPageReturn => {
   const [track, setTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +50,6 @@ export const useTrackPage = (trackId: string): UseTrackPageReturn => {
       const errorMessage =
         err instanceof Error ? err.message : "Unknown error occurred";
       setError(errorMessage);
-      console.error("Error fetching track for page:", err);
     } finally {
       setLoading(false);
     }

@@ -9,9 +9,8 @@ import type { LocalTrack, AlbumTracksListProps } from "../../types/LocalTrack";
 import type { Track } from "../../types/TrackData";
 
 /**
- * Album Tracks List Component
- * Displays and manages tracks in album creation
- * Responsive layout with drag-and-drop reordering
+ * Album tracks list with drag-drop reordering
+ * Features: add tracks, reorder, play preview, edit metadata
  */
 const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   tracks,
@@ -25,7 +24,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Handle drag and drop
   const handleDragStart = useCallback((index: number) => {
     setIsDragging(true);
     setDragOverIndex(index);
@@ -68,10 +66,8 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
     setDragOverIndex(closestIndex);
   }, []);
 
-  // Handle track play (integrate with Redux queue)
   const handleTrackPlay = useCallback(
     (_selectedTrack: LocalTrack, trackIndex: number) => {
-      // Create fresh blob URLs for Redux
       const convertedTracks = tracks.map((localTrack) => {
         const freshAudioUrl = URL.createObjectURL(localTrack.file);
         const freshCoverUrl = URL.createObjectURL(localTrack.coverFile);
@@ -99,7 +95,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
         };
       });
 
-      // Dispatch to Redux queue
       dispatch(
         playTrackAndQueue({
           contextTracks: convertedTracks as Track[],
@@ -110,7 +105,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
     [tracks, dispatch]
   );
 
-  // Calculate total duration
   const totalDuration = tracks.reduce(
     (sum, track) => sum + (track.duration || 0),
     0
@@ -125,7 +119,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
     return `${minutes}m`;
   };
 
-  // Empty state component
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-12 lg:py-16">
       <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
@@ -148,7 +141,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
     </div>
   );
 
-  // Header stats component
   const HeaderStats = () =>
     tracks.length > 0 ? (
       <div className="flex flex-wrap items-center gap-3 lg:gap-6 text-sm text-white/70">
@@ -160,7 +152,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
       </div>
     ) : null;
 
-  // Footer info component
   const FooterInfo = () =>
     tracks.length > 0 ? (
       <div className="p-3 lg:p-4 border-t border-white/10 bg-white/5">
@@ -181,7 +172,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
 
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-lg lg:rounded-2xl border border-white/10 overflow-hidden">
-      {/* Header - Responsive layout */}
       <div className="p-4 lg:p-6 border-b border-white/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
           <div>
@@ -205,7 +195,6 @@ const AlbumTracksList: React.FC<AlbumTracksListProps> = ({
         <HeaderStats />
       </div>
 
-      {/* Main Content */}
       <div className="min-h-[300px] lg:min-h-[400px]">
         {tracks.length === 0 ? (
           <EmptyState />

@@ -1,4 +1,4 @@
-import { type FC } from "react";
+import { type FC, memo, useCallback, type JSX } from "react";
 import {
   ApartmentOutlined,
   ClockCircleOutlined,
@@ -20,48 +20,82 @@ interface MobileNavigationProps {
   navigationItems: NavigationItem[];
 }
 
+const ICON_MAP: Record<string, (isActive: boolean) => JSX.Element> = {
+  Home: (isActive) => (
+    <HomeOutlined
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+  Playlists: (isActive) => (
+    <ApartmentOutlined
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+  Artists: (isActive) => (
+    <InsertRowRightOutlined
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+  "Liked Songs": (isActive) => (
+    <HeartFilled
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+  Recently: (isActive) => (
+    <ClockCircleOutlined
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+  "New Playlist": (isActive) => (
+    <PlusOutlined
+      style={{
+        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
+        fontSize: "20px",
+      }}
+    />
+  ),
+};
+
+const SHORT_NAMES: Record<string, string> = {
+  Home: "Home",
+  Playlists: "Playlists",
+  Artists: "Artists",
+  "Liked Songs": "Liked",
+  Recently: "Recent",
+  "New Playlist": "New",
+};
+
 /**
- * Mobile tab-bar navigation component
- * Features horizontal icon-based navigation with active states
+ * Mobile bottom navigation bar
+ * Fixed tab-bar with icon-based navigation and active states
  */
-export const MobileNavigation: FC<MobileNavigationProps> = ({
-  navigationItems,
-}) => {
+const MobileNavigation: FC<MobileNavigationProps> = ({ navigationItems }) => {
   const location = useLocation();
   const pathname = location.pathname;
 
-  const getIcon = (text: string, isActive: boolean) => {
-    const iconProps = {
-      style: {
-        color: isActive ? "white" : "rgba(255, 255, 255, 0.6)",
-        fontSize: "20px",
-      },
-    };
+  const getIcon = useCallback((text: string, isActive: boolean) => {
+    const iconFunc = ICON_MAP[text];
+    return iconFunc ? iconFunc(isActive) : ICON_MAP.Home(isActive);
+  }, []);
 
-    const icons = {
-      Home: <HomeOutlined {...iconProps} />,
-      Playlists: <ApartmentOutlined {...iconProps} />,
-      Artists: <InsertRowRightOutlined {...iconProps} />,
-      "Liked Songs": <HeartFilled {...iconProps} />,
-      Recently: <ClockCircleOutlined {...iconProps} />,
-      "New Playlist": <PlusOutlined {...iconProps} />,
-    };
-
-    return icons[text as keyof typeof icons] || <HomeOutlined {...iconProps} />;
-  };
-
-  const getDisplayText = (text: string) => {
-    const shortNames = {
-      Home: "Home",
-      Playlists: "Playlists",
-      Artists: "Artists",
-      "Liked Songs": "Liked",
-      Recently: "Recent",
-      "New Playlist": "New",
-    };
-
-    return shortNames[text as keyof typeof shortNames] || text;
-  };
+  const getDisplayText = useCallback((text: string) => {
+    return SHORT_NAMES[text] || text;
+  }, []);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-md border-t border-white/10 z-50">
@@ -73,7 +107,7 @@ export const MobileNavigation: FC<MobileNavigationProps> = ({
             <Link
               key={item.text}
               to={item.path}
-              onClick={item.callback ? item.callback : undefined}
+              onClick={item.callback || undefined}
               className="relative flex flex-col items-center justify-center py-2 px-1 min-w-0 flex-1 hover:bg-white/5 rounded-lg transition-colors duration-200"
             >
               <div className="mb-1">{getIcon(item.text, isActive)}</div>
@@ -85,7 +119,6 @@ export const MobileNavigation: FC<MobileNavigationProps> = ({
                 {getDisplayText(item.text)}
               </span>
 
-              {/* Active indicator */}
               {isActive && (
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
               )}
@@ -96,3 +129,6 @@ export const MobileNavigation: FC<MobileNavigationProps> = ({
     </div>
   );
 };
+
+export default memo(MobileNavigation);
+export { MobileNavigation };

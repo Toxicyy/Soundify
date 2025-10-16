@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { api, type ChartTrack, type ChartMetadata, type ChartResponse } from "../shared/api";
+import {
+  api,
+  type ChartTrack,
+  type ChartMetadata,
+  type ChartResponse,
+} from "../shared/api";
 
 interface UseChartsOptions {
   limit?: number;
@@ -7,16 +12,17 @@ interface UseChartsOptions {
   refreshInterval?: number;
 }
 
+/**
+ * Hook for fetching music charts data
+ * Supports global, trending, and country-specific charts
+ * Features auto-refresh and mock data fallback
+ */
 export const useCharts = (
   type: "global" | "trending" | "country",
   countryCode?: string,
   options: UseChartsOptions = {}
 ) => {
-  const {
-    limit = 50,
-    autoRefresh = false,
-    refreshInterval = 300000, // 5 минут
-  } = options;
+  const { limit = 50, autoRefresh = false, refreshInterval = 300000 } = options;
 
   const [data, setData] = useState<ChartTrack[]>([]);
   const [metadata, setMetadata] = useState<ChartMetadata | null>(null);
@@ -24,7 +30,9 @@ export const useCharts = (
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
-  // Mock данные для разработки
+  /**
+   * Generates mock chart data for development
+   */
   const getMockData = (): ChartTrack[] => {
     if (type === "trending") {
       return [
@@ -44,7 +52,6 @@ export const useCharts = (
           peakPosition: 1,
           lastUpdated: new Date().toISOString(),
         },
-        // ... другие mock-треки
       ];
     }
     return [
@@ -64,7 +71,6 @@ export const useCharts = (
         peakPosition: 1,
         lastUpdated: new Date().toISOString(),
       },
-      // ... другие mock-треки
     ];
   };
 
@@ -93,7 +99,6 @@ export const useCharts = (
 
         if (!response.ok) {
           if (response.status === 404) {
-            console.warn("Using mock data");
             setData(getMockData());
             setMetadata({
               type,
@@ -112,7 +117,8 @@ export const useCharts = (
         const result: ChartResponse = await response.json();
         if (!result.success) throw new Error(result.message);
 
-        const tracks = type === "trending" ? result.data.trending : result.data.chart;
+        const tracks =
+          type === "trending" ? result.data.trending : result.data.chart;
         if (!tracks) throw new Error("No tracks received");
 
         setData(tracks);
@@ -127,11 +133,16 @@ export const useCharts = (
     [type, countryCode, limit]
   );
 
+  /**
+   * Returns human-readable time since last update
+   */
   const getTimeSinceUpdate = useCallback(() => {
     if (!metadata?.lastUpdated) return null;
     const lastUpdate = new Date(metadata.lastUpdated);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - lastUpdate.getTime()) / 60000);
+    const diffInMinutes = Math.floor(
+      (now.getTime() - lastUpdate.getTime()) / 60000
+    );
 
     if (diffInMinutes < 1) return "Just now";
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;

@@ -51,9 +51,8 @@ interface SaveProgress {
 }
 
 /**
- * Batch Save Modal Component
- * Handles batch album creation with real-time progress tracking
- * Responsive design with mobile and desktop layouts
+ * Batch album creation modal with real-time progress tracking
+ * Features: SSE progress updates, cancellation, error handling
  */
 const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
   isOpen,
@@ -89,7 +88,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
   const [saveStarted, setSaveStarted] = useState(false);
   const [albumCreated, setAlbumCreated] = useState(false);
 
-  // Start save process
   const startSaveProcess = useCallback(async () => {
     try {
       setProgress((prev) => ({
@@ -113,7 +111,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
         overallProgress: 10,
       }));
 
-      // Start progress tracking via SSE
       const tracker = new BatchProgressTracker(
         sessionId,
         handleProgressUpdate,
@@ -132,7 +129,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     }
   }, [albumData, tracks]);
 
-  // Handle progress updates from SSE
   const handleProgressUpdate = useCallback((newProgress: any) => {
     setProgress((prev) => ({
       ...prev,
@@ -162,13 +158,11 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
         : prev.tracks,
     }));
 
-    // Disable cancel once near completion
     if (newProgress.phase === "completed" || newProgress.overallProgress > 90) {
       setCanCancel(false);
     }
   }, []);
 
-  // Handle completion
   const handleComplete = useCallback(
     (success: boolean, message?: string) => {
       setCanCancel(false);
@@ -185,7 +179,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
 
         showSuccess("Album created successfully!");
 
-        // Auto-redirect after 3 seconds
         setTimeout(() => {
           handleRedirectToStudio();
         }, 3000);
@@ -196,7 +189,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     [showSuccess]
   );
 
-  // Handle errors
   const handleError = useCallback(
     (error: string) => {
       setProgress((prev) => ({
@@ -217,7 +209,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     [showError]
   );
 
-  // Handle cancel
   const handleCancel = useCallback(async () => {
     if (!canCancel || !progress.sessionId) return;
 
@@ -248,7 +239,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     setCanCancel(false);
   }, [canCancel, progress.sessionId, showSuccess, showError]);
 
-  // Handle redirect to studio
   const handleRedirectToStudio = useCallback(() => {
     if (progressTrackerRef.current) {
       progressTrackerRef.current.stop();
@@ -260,7 +250,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     navigate("/artist-studio");
   }, [onSuccess, onClose, navigate]);
 
-  // Handle close
   const handleClose = useCallback(() => {
     if (albumCreated || progress.phase === "completed") {
       handleRedirectToStudio();
@@ -278,7 +267,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     onClose,
   ]);
 
-  // Update totalTracks when tracks prop changes
   useEffect(() => {
     setProgress((prev) => ({
       ...prev,
@@ -293,7 +281,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     }));
   }, [tracks]);
 
-  // Start save process when modal opens
   useEffect(() => {
     if (isOpen && !saveStarted) {
       setSaveStarted(true);
@@ -303,7 +290,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     }
   }, [isOpen, saveStarted, startSaveProcess]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (progressTrackerRef.current) {
@@ -313,7 +299,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     };
   }, []);
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setSaveStarted(false);
@@ -346,7 +331,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     }
   }, [isOpen, albumData.name, tracks]);
 
-  // Get phase color
   const getPhaseColor = (phase: SavePhase): string => {
     switch (phase) {
       case "completed":
@@ -358,7 +342,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
     }
   };
 
-  // Get status icon
   const getStatusIcon = (status: TrackProgress["status"]) => {
     switch (status) {
       case "pending":
@@ -403,7 +386,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
       maskClosable={false}
     >
       <div className="space-y-4 lg:space-y-6">
-        {/* Header - Responsive layout */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h2 className="text-xl lg:text-2xl font-semibold text-white">
@@ -443,7 +425,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           </div>
         </div>
 
-        {/* Overall Progress */}
         <div className="space-y-2 lg:space-y-3">
           <div className="flex justify-between items-center">
             <span
@@ -474,7 +455,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           </div>
         </div>
 
-        {/* Current Track Progress */}
         <AnimatePresence>
           {progress.phase === "tracks" && progress.currentTrack > 0 && (
             <motion.div
@@ -504,7 +484,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Phase Indicators - Responsive layout */}
         <div className="grid grid-cols-2 lg:flex lg:items-center lg:justify-between gap-2 lg:gap-0 text-xs lg:text-sm">
           {[
             { key: "album" as const, label: "Album" },
@@ -565,7 +544,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           })}
         </div>
 
-        {/* Tracks List - Responsive scrolling */}
         <div className="max-h-40 lg:max-h-60 overflow-y-auto space-y-2 queue-scroll">
           <h4 className="text-white font-medium mb-3 text-sm lg:text-base">
             Track Progress
@@ -606,7 +584,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           ))}
         </div>
 
-        {/* Success Actions */}
         <AnimatePresence>
           {isCompleted && (
             <motion.div
@@ -625,7 +602,6 @@ const BatchSaveModal: React.FC<BatchSaveModalProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Error Actions */}
         <AnimatePresence>
           {hasError && (
             <motion.div

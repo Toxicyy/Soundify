@@ -10,31 +10,8 @@ import { useArtistProfileCheck } from "../hooks/useArtistProfileCheck";
 import Home from "../components/BecomeAnArtist/Home";
 
 /**
- * Become an Artist Page - Responsive design with authentication
- *
- * RESPONSIVE DESIGN:
- * - Adaptive padding: pl-4 (mobile) to pl-[22vw] (desktop with player)
- * - Mobile-first approach with proper breakpoints
- * - Flexible layout that works on all screen sizes
- * - Touch-optimized form interactions
- *
- * AUTHENTICATION:
- * - Checks user authentication before allowing access
- * - Shows login prompt for unauthenticated users
- * - Handles artist profile creation workflow
- * - Proper error handling and user feedback
- *
- * LAYOUT BREAKPOINTS:
- * - Mobile (< 768px): Full width with minimal padding
- * - Tablet (768px - 1279px): Medium padding with sidebar space
- * - Desktop (>= 1280px): Full sidebar with player (pl-[22vw])
- *
- * FEATURES:
- * - Multi-step artist creation process
- * - Image upload with preview functionality
- * - Social media links integration
- * - Genre selection with validation
- * - Real-time form validation and feedback
+ * Become an Artist Page
+ * Features: responsive design, authentication check, artist profile creation
  */
 
 export type ArtistCreate = {
@@ -58,13 +35,9 @@ const DEFAULT_ARTIST: ArtistCreate = {
   socialLinks: {},
 };
 
-/**
- * Authentication Warning Component
- */
 const AuthenticationWarning = () => (
   <div className="min-h-screen w-full flex items-center justify-center p-4">
     <div className="max-w-md w-full bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
-      {/* Icon */}
       <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center">
         <svg
           className="w-8 h-8 text-green-400"
@@ -81,14 +54,12 @@ const AuthenticationWarning = () => (
         </svg>
       </div>
 
-      {/* Content */}
       <h1 className="text-2xl font-bold text-white mb-4">Join as an Artist</h1>
       <p className="text-white/70 mb-6 leading-relaxed">
         You need to be logged in to create an artist profile and start sharing
         your music with the world.
       </p>
 
-      {/* Actions */}
       <div className="space-y-3">
         <button
           onClick={() => (window.location.href = "/login")}
@@ -104,7 +75,6 @@ const AuthenticationWarning = () => (
         </button>
       </div>
 
-      {/* Additional info */}
       <p className="text-white/50 text-sm mt-6">
         Ready to share your talent? Join thousands of artists today!
       </p>
@@ -123,15 +93,12 @@ export default function BecomeAnArtist() {
 
   if (hasArtistProfile) return <Home />;
 
-  // Check authentication status
   const isAuthenticated = !!currentUser && !isCurrentUserLoading;
 
-  // Show authentication warning for unauthenticated users
   if (!isAuthenticated && !isCurrentUserLoading) {
     return <AuthenticationWarning />;
   }
 
-  // Loading state during auth check
   if (isCurrentUserLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
@@ -161,15 +128,8 @@ export default function BecomeAnArtist() {
 
   return (
     <div className="min-h-screen w-full flex flex-col mb-30">
-      {/* 
-        Responsive container with adaptive padding:
-        - Mobile: pl-4 pr-4 (no sidebar)
-        - Tablet: pl-6 pr-6 (partial sidebar)
-        - Desktop: pl-[22vw] pr-[2vw] (full sidebar with player)
-      */}
       <div className="flex-1 pl-4 pr-4 md:pl-6 md:pr-6 xl:pl-[22vw] xl:pr-[2vw] py-4 sm:py-6 transition-all duration-300">
         <div className="max-w-7xl mx-auto flex flex-col gap-4 sm:gap-6">
-          {/* Header Section */}
           <div className="w-full">
             <Header
               imageSrc={artist.imageSrc || Anonym}
@@ -180,7 +140,6 @@ export default function BecomeAnArtist() {
             />
           </div>
 
-          {/* Main Content Section */}
           <div className="flex-1 w-full">
             <MainMenu
               localChanges={artist}

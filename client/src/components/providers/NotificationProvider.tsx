@@ -6,8 +6,7 @@ interface NotificationProviderProps {
 }
 
 /**
- * Global notification provider using react-hot-toast
- * Provides toast notifications with glassmorphism design
+ * Global notification provider with glassmorphism design
  */
 export const NotificationProvider: FC<NotificationProviderProps> = ({
   children,
@@ -23,7 +22,6 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({
           right: 20,
         }}
         toastOptions={{
-          // Default options for all toasts
           duration: 4000,
           style: {
             background: "rgba(255, 255, 255, 0.1)",
@@ -37,7 +35,6 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({
             padding: "16px",
             maxWidth: "400px",
           },
-          // Custom styles for different types
           success: {
             style: {
               background: "rgba(34, 197, 94, 0.1)",

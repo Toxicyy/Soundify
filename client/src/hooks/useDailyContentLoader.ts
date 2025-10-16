@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { api } from "../shared/api";
-import { useImagePreloader } from "./useImagePreloader";
 import type { Artist } from "../types/ArtistData";
 import type { Track } from "../types/TrackData";
 import type { Playlist } from "../types/Playlist";
+import { useImagePreloader } from "./useImagePreloader";
 
 interface DailyData {
   artistsData: { artist: Artist; tracks: Track[] }[];
   featuredPlaylist: Playlist | null;
 }
 
+/**
+ * Hook for loading daily content (featured artists and playlists)
+ * Preloads all images before marking content as ready
+ */
 export const useDailyContentLoader = () => {
   const [dailyContent, setDailyContent] = useState<DailyData>({
     artistsData: [],
@@ -20,14 +24,12 @@ export const useDailyContentLoader = () => {
 
   const { allImagesLoaded } = useImagePreloader(imageSrcs);
 
-  // Общее состояние загрузки - данные + изображения
   const isFullyLoaded = !dataLoading && allImagesLoaded;
 
-  const loadDailyContent = async () => {
+  const loadDailyContent = useCallback(async () => {
     setDataLoading(true);
 
     try {
-      // Функция загрузки данных артистов
       const getArtistsTrack = async (slug: string) => {
         const artistResponse = await api.artist.getBySlug(slug);
         const artistData = await artistResponse.json();
@@ -41,20 +43,17 @@ export const useDailyContentLoader = () => {
         };
       };
 
-      // Функция получения последнего платформенного плейлиста
       const getLatestFeaturedPlaylist = async () => {
-        // Используем существующий роут /playlists/featured
-        const response = await api.playlist.getFeatured({limit: 1});
-        
+        const response = await api.playlist.getFeatured({ limit: 1 });
+
         if (!response.ok) {
           throw new Error("Failed to fetch featured playlist");
         }
 
         const data = await response.json();
-        return data.data?.[0] || null; // Берем первый плейлист из списка
+        return data.data?.[0] || null;
       };
 
-      // Загружаем все данные параллельно
       const [artist1Data, artist2Data, featuredPlaylist] = await Promise.all([
         getArtistsTrack("kai-angel"),
         getArtistsTrack("9mice"),
@@ -68,17 +67,13 @@ export const useDailyContentLoader = () => {
         featuredPlaylist,
       });
 
-      // Собираем все URL изображений для предзагрузки
       const allImageSrcs: string[] = [];
 
-      // Изображения артистов и их треков
       artistsData.forEach((artistData) => {
-        // Аватар артиста
         if (artistData.artist.avatar) {
           allImageSrcs.push(artistData.artist.avatar);
         }
 
-        // Обложки треков (берем первые 2 трека каждого артиста)
         artistData.tracks.slice(0, 2).forEach((track: Track) => {
           if (track.coverUrl) {
             allImageSrcs.push(track.coverUrl);
@@ -86,7 +81,6 @@ export const useDailyContentLoader = () => {
         });
       });
 
-      // Обложка платформенного плейлиста
       if (featuredPlaylist?.coverUrl) {
         allImageSrcs.push(featuredPlaylist.coverUrl);
       }
@@ -94,10 +88,9 @@ export const useDailyContentLoader = () => {
       setImageSrcs(allImageSrcs);
       setDataLoading(false);
     } catch (error) {
-      console.error("Ошибка загрузки данных:", error);
       setDataLoading(false);
     }
-  };
+  }, []);
 
   return {
     dailyTracks: dailyContent.artistsData,

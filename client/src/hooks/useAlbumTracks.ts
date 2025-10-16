@@ -31,8 +31,8 @@ interface UseAlbumTracksReturn {
 }
 
 /**
- * Custom hook for fetching album tracks with pagination and metadata
- * Handles loading states, error management, and data fetching lifecycle
+ * Hook for fetching album tracks with pagination
+ * Handles loading states, errors, and provides load more functionality
  */
 export const useAlbumTracks = (
   albumId: string,
@@ -45,19 +45,17 @@ export const useAlbumTracks = (
     sortOrder = -1,
   } = options;
 
-  // State management
   const [album, setAlbum] = useState<Album>({} as Album);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // Refs for cleanup and mount state tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
   /**
-   * Main data fetching function with comprehensive error handling
+   * Loads album tracks from API with comprehensive error handling
    */
   const loadAlbumTracks = useCallback(
     async (
@@ -67,14 +65,12 @@ export const useAlbumTracks = (
       sortByParam: string = "createdAt",
       sortOrderParam: number = -1
     ) => {
-      // Input validation
       if (!id?.trim()) {
         setError("Invalid album ID");
         setIsLoading(false);
         return;
       }
 
-      // Cancel previous request to prevent race conditions
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
@@ -100,15 +96,12 @@ export const useAlbumTracks = (
 
         const responseData = await response.json();
 
-        // Validate response structure
         if (!responseData || typeof responseData !== "object") {
           throw new Error("Invalid response format");
         }
 
-        // Early return if component unmounted
         if (!isMountedRef.current) return;
 
-        // Extract and validate data
         const albumData = responseData.data?.album;
         const tracksData = responseData.data?.tracks;
         const paginationData = responseData.pagination;
@@ -117,26 +110,22 @@ export const useAlbumTracks = (
           throw new Error("Invalid tracks data format");
         }
 
-        // Update state with validated data
         setAlbum(albumData || ({} as Album));
         setTracks(tracksData);
         setPagination(paginationData || null);
       } catch (error) {
-        // Ignore abort errors (expected when component unmounts or new request starts)
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
 
         if (!isMountedRef.current) return;
 
-        // Transform error messages for better UX
         let errorMessage = "Unknown error occurred";
 
         if (error instanceof Error) {
           errorMessage = error.message;
         }
 
-        // Provide user-friendly error messages
         if (
           errorMessage.includes("Failed to fetch") ||
           errorMessage.includes("NetworkError")
@@ -148,7 +137,6 @@ export const useAlbumTracks = (
           errorMessage = "Server error";
         }
 
-        console.error("Album tracks loading error:", error);
         setError(errorMessage);
         setAlbum({} as Album);
         setTracks([]);
@@ -162,18 +150,12 @@ export const useAlbumTracks = (
     []
   );
 
-  /**
-   * Refetch current data with same parameters
-   */
   const refetch = useCallback(() => {
     if (albumId) {
       loadAlbumTracks(albumId, page, limit, sortBy, sortOrder);
     }
   }, [albumId, page, limit, sortBy, sortOrder, loadAlbumTracks]);
 
-  /**
-   * Load next page of data if available
-   */
   const loadMore = useCallback(() => {
     if (albumId && pagination?.hasNextPage) {
       loadAlbumTracks(
@@ -186,12 +168,10 @@ export const useAlbumTracks = (
     }
   }, [albumId, pagination, limit, sortBy, sortOrder, loadAlbumTracks]);
 
-  // Initial data loading effect
   useEffect(() => {
     if (albumId) {
       loadAlbumTracks(albumId, page, limit, sortBy, sortOrder);
     } else {
-      // Reset state when no album ID provided
       setAlbum({} as Album);
       setTracks([]);
       setIsLoading(false);
@@ -204,7 +184,6 @@ export const useAlbumTracks = (
     };
   }, [albumId, page, limit, sortBy, sortOrder, loadAlbumTracks]);
 
-  // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
 

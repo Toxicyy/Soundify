@@ -14,7 +14,12 @@ export type SignUpErrors = {
   check: string[];
 };
 
-const SignUpValid = (formData: SignUpFormData) => {
+/**
+ * Validates sign up form data
+ * @param formData - Sign up form data
+ * @returns Object containing validation errors for each field
+ */
+const SignUpValid = (formData: SignUpFormData): SignUpErrors => {
   const errors: SignUpErrors = {
     name: [],
     email: [],
@@ -50,14 +55,17 @@ const SignUpValid = (formData: SignUpFormData) => {
   if (formData.password.length < 6) {
     errors.password.push("Password must be at least 6 characters");
   }
+
   if (!formData.password.match(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/)) {
     errors.password.push(
       "Password must contain at least one letter and one number"
     );
   }
+
   if (!formData.check) {
     errors.check.push("You must agree to the terms of service");
   }
+
   return errors;
 };
 

@@ -3,7 +3,9 @@ import type { Playlist } from "../types/Playlist";
 
 export const BASEURL = import.meta.env.VITE_API_BASE_URL;
 
-// Helper function to get auth headers
+/**
+ * Get authorization headers
+ */
 const getAuthHeaders = (includeAuth = true) => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -19,7 +21,9 @@ const getAuthHeaders = (includeAuth = true) => {
   return headers;
 };
 
-// Helper function to build query string
+/**
+ * Build query string from params object
+ */
 const buildQueryString = (params: Record<string, any>) => {
   const filtered = Object.entries(params).filter(
     ([_, value]) => value !== null && value !== undefined && value !== ""
@@ -57,7 +61,6 @@ export const api = {
       });
     },
 
-    // Change password
     changePassword: async (
       currentPassword: string,
       newPassword: string,
@@ -92,12 +95,6 @@ export const api = {
       });
     },
 
-    /**
-     * Get user's liked playlists
-     * @param userId - ID of the user
-     * @param options - Pagination options
-     * @returns Promise<Response> - API response with liked playlists
-     */
     getLikedPlaylists: async (
       options: { page?: number; limit?: number } = {}
     ): Promise<Response> => {
@@ -149,7 +146,6 @@ export const api = {
       });
     },
 
-    // New follow/like methods
     followArtist: async (userId: string, artistId: string) => {
       return fetch(`${BASEURL}/api/users/${userId}/follow/artist/${artistId}`, {
         method: "PUT",
@@ -167,12 +163,6 @@ export const api = {
       );
     },
 
-    /**
-     * Like a playlist
-     * @param userId - ID of the user liking the playlist
-     * @param playlistId - ID of the playlist to like
-     * @returns Promise<Response> - API response
-     */
     likePlaylist: async (
       userId: string,
       playlistId: string
@@ -189,12 +179,6 @@ export const api = {
       });
     },
 
-    /**
-     * Unlike a playlist
-     * @param userId - ID of the user unliking the playlist
-     * @param playlistId - ID of the playlist to unlike
-     * @returns Promise<Response> - API response
-     */
     unlikePlaylist: async (
       userId: string,
       playlistId: string
@@ -211,7 +195,6 @@ export const api = {
       });
     },
 
-    // Update user profile
     updateProfile: async (userId: string, profileData: FormData) => {
       return fetch(`${BASEURL}/api/users/${userId}/profile`, {
         method: "PUT",
@@ -222,7 +205,6 @@ export const api = {
       });
     },
 
-    // Skip tracking
     syncSkipData: async (skipCount: number) => {
       return fetch(`${BASEURL}/api/users/skip-sync`, {
         method: "POST",
@@ -319,11 +301,6 @@ export const api = {
       });
     },
 
-    /**
-     * Like an artist
-     * @param artistId - ID of the artist to like
-     * @returns Promise<Response> - API response
-     */
     like: async (artistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/artists/${artistId}/like`, {
         method: "POST",
@@ -331,17 +308,13 @@ export const api = {
       });
     },
 
-    /**
-     * Unlike an artist
-     * @param artistId - ID of the artist to unlike
-     * @returns Promise<Response> - API response
-     */
     unlike: async (artistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/artists/${artistId}/like`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
     },
+
     update: async (artistId: string, artistData: any, isFormData = false) => {
       return fetch(`${BASEURL}/api/artists/${artistId}`, {
         method: "PUT",
@@ -352,6 +325,7 @@ export const api = {
         body: isFormData ? artistData : JSON.stringify(artistData),
       });
     },
+
     getArtistTracks: async (
       artistId: string,
       limit?: number
@@ -458,11 +432,6 @@ export const api = {
       });
     },
 
-    /**
-     * Like a playlist
-     * @param playlistId - ID of the playlist to like
-     * @returns Promise<Response> - API response
-     */
     like: async (playlistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
         method: "POST",
@@ -470,11 +439,6 @@ export const api = {
       });
     },
 
-    /**
-     * Unlike a playlist
-     * @param playlistId - ID of the playlist to unlike
-     * @returns Promise<Response> - API response
-     */
     unlike: async (playlistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/playlists/${playlistId}/like`, {
         method: "DELETE",
@@ -482,11 +446,6 @@ export const api = {
       });
     },
 
-    /**
-     * Get playlist like status for current user
-     * @param playlistId - ID of the playlist
-     * @returns Promise<Response> - API response with like status
-     */
     getLikeStatus: async (playlistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/playlists/${playlistId}/like-status`, {
         method: "GET",
@@ -494,11 +453,6 @@ export const api = {
       });
     },
 
-    /**
-     * Get user's liked playlists
-     * @param options - Pagination options
-     * @returns Promise<Response> - API response with liked playlists
-     */
     getLiked: async (
       options: { page?: number; limit?: number } = {}
     ): Promise<Response> => {
@@ -508,11 +462,6 @@ export const api = {
       });
     },
 
-    /**
-     * Get playlist statistics including like count
-     * @param playlistId - ID of the playlist
-     * @returns Promise<Response> - API response with playlist stats
-     */
     getStats: async (playlistId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/playlists/${playlistId}/statistics`, {
         method: "GET",
@@ -546,12 +495,6 @@ export const api = {
       });
     },
 
-    /**
-     * Get playlists by user ID
-     * @param userId - User ID
-     * @param options - Query options
-     * @returns Promise<Response> - API response
-     */
     getByUser: async (
       userId: string,
       options: {
@@ -625,11 +568,6 @@ export const api = {
       });
     },
 
-    /**
-     * Like a track
-     * @param trackId - ID of the track to like
-     * @returns Promise<Response> - API response
-     */
     like: async (trackId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
         method: "POST",
@@ -637,17 +575,13 @@ export const api = {
       });
     },
 
-    /**
-     * Unlike a track
-     * @param trackId - ID of the track to unlike
-     * @returns Promise<Response> - API response
-     */
     unlike: async (trackId: string): Promise<Response> => {
       return fetch(`${BASEURL}/api/tracks/${trackId}/like`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
     },
+
     getPlaylistUrl: (trackId: string) => {
       return `${BASEURL}/api/tracks/${trackId}/playlist.m3u8`;
     },
@@ -661,6 +595,7 @@ export const api = {
         },
       });
     },
+
     getTrack: async (
       trackId: string,
       auth: boolean = true
@@ -674,6 +609,7 @@ export const api = {
             },
       });
     },
+
     uploadTrack: (
       formData: FormData,
       progressCallback?: (progress: number) => void
@@ -681,17 +617,15 @@ export const api = {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
-        // Отслеживание прогресса загрузки
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable && progressCallback) {
-            const progress = (event.loaded / event.total) * 70; // 70% для загрузки
+            const progress = (event.loaded / event.total) * 70;
             progressCallback(progress);
           }
         });
 
         xhr.onload = function () {
           if (xhr.status >= 200 && xhr.status < 300) {
-            // Имитация конвертации HLS
             let conversionProgress = 70;
             const conversionInterval = setInterval(() => {
               if (progressCallback) {
@@ -720,22 +654,13 @@ export const api = {
           "Authorization",
           `Bearer ${localStorage.getItem("token")}`
         );
-        xhr.timeout = 300000; // 5 минут таймаут
+        xhr.timeout = 300000;
         xhr.send(formData);
       });
     },
   },
 
-  /**
-   * Recommendations API
-   */
   recommendations: {
-    /**
-     * Get recommendations for user
-     * @param userId - ID of the user
-     * @param options - Query options
-     * @returns Promise<Response> - API response with recommendations
-     */
     getForUser: async (
       userId: string,
       options: { limit?: number } = {}
@@ -749,7 +674,6 @@ export const api = {
 
   admin: {
     playlist: {
-      // Получить все платформенные плейлисты
       getPlatform: async (
         options: {
           page?: number;
@@ -763,7 +687,6 @@ export const api = {
         });
       },
 
-      // Получить черновики платформенных плейлистов
       getDrafts: async (
         options: {
           page?: number;
@@ -776,7 +699,6 @@ export const api = {
         });
       },
 
-      // Создать платформенный плейлист
       create: async (playlistData: FormData) => {
         return fetch(`${BASEURL}/api/playlists/admin/platform`, {
           method: "POST",
@@ -787,7 +709,6 @@ export const api = {
         });
       },
 
-      // Обновить платформенный плейлист
       update: async (playlistId: string, playlistData: FormData) => {
         return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
           method: "PUT",
@@ -798,7 +719,6 @@ export const api = {
         });
       },
 
-      // Опубликовать платформенный плейлист
       publish: async (playlistId: string) => {
         return fetch(
           `${BASEURL}/api/playlists/admin/platform/${playlistId}/publish`,
@@ -809,7 +729,6 @@ export const api = {
         );
       },
 
-      // Удалить платформенный плейлист
       delete: async (playlistId: string) => {
         return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
           method: "DELETE",
@@ -817,12 +736,12 @@ export const api = {
         });
       },
 
-      // Получить статистику платформенных плейлистов
       getStats: async () => {
         return fetch(`${BASEURL}/api/playlists/admin/platform/stats`, {
           headers: getAuthHeaders(),
         });
       },
+
       createPlatform: async (playlistData: any) => {
         return fetch(`${BASEURL}/api/playlists/admin/platform`, {
           method: "POST",
@@ -833,6 +752,7 @@ export const api = {
           body: JSON.stringify(playlistData),
         });
       },
+
       updatePlatform: async (playlistId: string, playlistData: any) => {
         return fetch(`${BASEURL}/api/playlists/admin/platform/${playlistId}`, {
           method: "PUT",
@@ -845,28 +765,28 @@ export const api = {
       },
     },
   },
+
   analytics: {
     getDashboard: async () => {
       return fetch(`${BASEURL}/api/analytics/dashboard`, {
         headers: getAuthHeaders(),
       });
     },
+
     getUsers: async (queryParams: string) => {
       return fetch(`${BASEURL}/api/analytics/users?${queryParams}`, {
         headers: getAuthHeaders(),
       });
     },
+
     getStreams: async (period: string) => {
       return fetch(`${BASEURL}/api/analytics/streams?period=${period}`, {
         headers: getAuthHeaders(),
       });
     },
   },
+
   charts: {
-    /**
-     * Получить глобальный чарт
-     * @param limit - количество треков
-     */
     getGlobal: async (limit: number = 50): Promise<Response> => {
       const query = buildQueryString({ limit });
       return fetch(`${BASEURL}/api/charts/global${query}`, {
@@ -875,10 +795,6 @@ export const api = {
       });
     },
 
-    /**
-     * Получить чарт трендов
-     * @param limit - количество треков
-     */
     getTrending: async (limit: number = 50): Promise<Response> => {
       const query = buildQueryString({ limit });
       return fetch(`${BASEURL}/api/charts/trending${query}`, {
@@ -887,11 +803,6 @@ export const api = {
       });
     },
 
-    /**
-     * Получить страновой чарт
-     * @param countryCode - код страны (например, 'US')
-     * @param limit - количество треков
-     */
     getCountry: async (
       countryCode: string,
       limit: number = 50
@@ -903,18 +814,12 @@ export const api = {
       });
     },
 
-    /**
-     * Получить список доступных стран
-     */
     getAvailableCountries: async (): Promise<Response> => {
       return fetch(`${BASEURL}/api/charts/countries`, {
         headers: getAuthHeaders(),
       });
     },
 
-    /**
-     * Получить статистику чартов (для админов)
-     */
     getStats: async (): Promise<Response> => {
       return fetch(`${BASEURL}/api/charts/stats`, {
         headers: getAuthHeaders(),
@@ -923,7 +828,6 @@ export const api = {
   },
 };
 
-// Type definitions for API responses
 export interface PlaylistLikeResponse {
   success: boolean;
   message: string;
@@ -1082,5 +986,5 @@ export interface CountriesResponse {
 
 export interface ChartStatsResponse {
   success: boolean;
-  data: any; // Можно заменить на конкретный тип, если известна структура
+  data: any;
 }

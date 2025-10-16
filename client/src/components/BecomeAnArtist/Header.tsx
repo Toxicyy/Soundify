@@ -6,28 +6,6 @@ import styled from "styled-components";
 import TextArea from "antd/es/input/TextArea";
 import type { ArtistCreate } from "../../Pages/BecomeAnArtist";
 
-/**
- * Become Artist Header - Responsive design with enhanced modal
- *
- * RESPONSIVE FEATURES:
- * - Avatar sizes adapt to screen size and available space
- * - Modal scales properly on all devices
- * - Mobile-optimized form layout
- * - Touch-friendly interaction targets
- *
- * MODAL IMPROVEMENTS:
- * - Proper scroll handling without internal scrollbars
- * - Background scroll lock during modal interaction
- * - Responsive layout within modal
- * - Enhanced accessibility features
- *
- * IMAGE UPLOAD:
- * - Drag & drop support with visual feedback
- * - File validation with user-friendly errors
- * - Preview functionality with proper aspect ratios
- * - Mobile-optimized file selection
- */
-
 interface HeaderProps {
   imageSrc: string;
   localChanges: ArtistCreate;
@@ -86,6 +64,10 @@ const StyledTextArea = styled(TextArea)`
   }
 `;
 
+/**
+ * Become Artist header with profile edit modal
+ * Features: avatar upload, name/bio edit, responsive layout
+ */
 const Header: FC<HeaderProps> = ({
   imageSrc,
   localChanges,
@@ -97,9 +79,6 @@ const Header: FC<HeaderProps> = ({
   const [tempChanges, setTempChanges] = useState<Partial<ArtistCreate>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /**
-   * Body scroll lock effect - prevents background scrolling during modal interaction
-   */
   useEffect(() => {
     if (isModalOpen) {
       const scrollY = window.scrollY;
@@ -139,7 +118,6 @@ const Header: FC<HeaderProps> = ({
       setIsModalOpen(false);
       resetModal();
     } catch (error) {
-      console.error("Save failed:", error);
       alert("Failed to save changes");
     }
   };
@@ -212,14 +190,14 @@ const Header: FC<HeaderProps> = ({
           }}
           subtitle={
             <div className="truncate">
-              {localChanges.bio || "Create your own music and share it with the world."}
+              {localChanges.bio ||
+                "Create your own music and share it with the world."}
             </div>
           }
           isLoading={false}
         />
       </BaseHeader>
 
-      {/* Enhanced Modal with responsive design */}
       <Modal
         open={isModalOpen}
         onOk={handleOk}
@@ -267,7 +245,6 @@ const Header: FC<HeaderProps> = ({
         }}
       >
         <div className="p-4 sm:p-6">
-          {/* Header */}
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
             <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold tracking-wider">
               Edit Artist Profile
@@ -281,9 +258,7 @@ const Header: FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Content with responsive layout */}
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Image Section */}
             <div className="flex flex-col items-center lg:items-start">
               <div className="relative w-32 h-32 sm:w-40 sm:h-40 lg:w-44 lg:h-44 hover:scale-105 transition-all duration-200 cursor-pointer group">
                 <img
@@ -317,7 +292,6 @@ const Header: FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Form Fields */}
             <div className="flex-1 space-y-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">

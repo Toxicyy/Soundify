@@ -11,7 +11,7 @@ interface UseFollowArtistReturn {
 
 /**
  * Hook for following/unfollowing artists
- * Manages follow state and provides toggle functionality
+ * Provides optimistic updates and error handling
  */
 export const useFollowArtist = (artistId: string): UseFollowArtistReturn => {
   const { data: user, isLoading: isUserLoading } = useGetUserQuery();
@@ -58,7 +58,6 @@ export const useFollowArtist = (artistId: string): UseFollowArtistReturn => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       setError(errorMessage);
-      console.error("Error toggling follow status:", error);
     } finally {
       setIsLoading(false);
     }

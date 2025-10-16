@@ -24,32 +24,29 @@ interface TrackPageContentProps {
 }
 
 /**
- * Track page content component with detailed track information
+ * Track page content with playback controls and detailed metadata
  */
 const TrackPageContent = ({ track }: TrackPageContentProps) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Local state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLikeHovered, setIsLikeHovered] = useState(false);
 
-  // Refs
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
-  // Redux state
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
 
-  // Custom hooks
   const { isLiked, isPending: likePending, toggleLike } = useLike(track._id);
   const { showSuccess, showError } = useNotification();
 
-  // Computed values
   const isCurrentTrack = currentTrack.currentTrack?._id === track._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
   const duration = useFormatTime(track.duration || 0);
 
-  // Event handlers
+  /**
+   * Toggles play/pause for the track
+   */
   const handlePlayClick = useCallback(() => {
     if (isCurrentTrack) {
       dispatch(setIsPlaying(!currentTrack.isPlaying));
@@ -58,6 +55,9 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
     }
   }, [track, isCurrentTrack, currentTrack.isPlaying, dispatch]);
 
+  /**
+   * Handles like button click
+   */
   const handleLikeClick = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -92,12 +92,14 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
     }
   }, [track, navigate]);
 
+  /**
+   * Shares track using Web Share API or clipboard fallback
+   */
   const handleShareClick = useCallback(async () => {
     try {
       if (!track) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
-      // Проверяем поддержку Web Share API (для мобильных устройств)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
           typeof track.artist === "string" ? track.artist : track.artist?.name;
@@ -114,19 +116,16 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Обработка ошибок
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!track) return;
         const url = `${window.location.origin}/track/${track._id}`;
         await navigator.clipboard.writeText(url);
         showSuccess("Track link copied to clipboard!");
-      } catch (clipboardError) {
+      } catch {
         showError("Failed to share track. Please copy the URL manually.");
       }
     }
@@ -136,10 +135,10 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
     (index: number) => {
       const menuActions = [
         () => handleLikeClick({} as React.MouseEvent),
-        () => {}, // Add to queue
+        () => {},
         handleArtistClick,
         handleAlbumClick,
-        () => {}, // Info - already on info page
+        () => {},
         handleShareClick,
       ];
 
@@ -177,7 +176,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-white/20">
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
-        {/* Track Cover */}
         <div className="w-full max-w-[250px] sm:max-w-[300px] mx-auto lg:mx-0">
           <div className="aspect-square rounded-lg overflow-hidden bg-white/5 border border-white/10 shadow-lg">
             <img
@@ -190,9 +188,7 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
           </div>
         </div>
 
-        {/* Track Information */}
         <div className="flex-1 flex flex-col gap-6 w-full">
-          {/* Title and Artist */}
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
               {track.name}
@@ -205,9 +201,7 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
             </button>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center gap-4">
-            {/* Play Button */}
             <button
               onClick={handlePlayClick}
               className="w-14 h-14 sm:w-16 sm:h-16 bg-white hover:bg-white/90 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 shadow-lg"
@@ -231,7 +225,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               )}
             </button>
 
-            {/* Like Button */}
             <button
               onClick={handleLikeClick}
               onMouseEnter={() => setIsLikeHovered(true)}
@@ -261,7 +254,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               )}
             </button>
 
-            {/* Context Menu */}
             <div className="relative" ref={ellipsisRef}>
               <button
                 onClick={handleEllipsisClick}
@@ -286,9 +278,7 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
             </div>
           </div>
 
-          {/* Track Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-white/80">
-            {/* Album */}
             <div className="space-y-1">
               <div className="text-sm text-white/50 uppercase tracking-wide">
                 Album
@@ -309,7 +299,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               </div>
             </div>
 
-            {/* Duration */}
             <div className="space-y-1">
               <div className="text-sm text-white/50 uppercase tracking-wide">
                 Duration
@@ -317,7 +306,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               <div className="text-base">{duration}</div>
             </div>
 
-            {/* Genre */}
             {track.genre && (
               <div className="space-y-1">
                 <div className="text-sm text-white/50 uppercase tracking-wide">
@@ -327,7 +315,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               </div>
             )}
 
-            {/* Release Date */}
             <div className="space-y-1">
               <div className="text-sm text-white/50 uppercase tracking-wide">
                 Release Date
@@ -338,7 +325,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               </div>
             </div>
 
-            {/* Listen Count */}
             <div className="space-y-1">
               <div className="text-sm text-white/50 uppercase tracking-wide">
                 Plays
@@ -349,7 +335,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
               </div>
             </div>
 
-            {/* Like Count */}
             <div className="space-y-1">
               <div className="text-sm text-white/50 uppercase tracking-wide">
                 Likes
@@ -361,7 +346,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
             </div>
           </div>
 
-          {/* Tags */}
           {track.tags && track.tags.length > 0 && (
             <div className="space-y-2">
               <div className="text-sm text-white/50 uppercase tracking-wide">
@@ -382,7 +366,6 @@ const TrackPageContent = ({ track }: TrackPageContentProps) => {
         </div>
       </div>
 
-      {/* Future: Recommendations section */}
       <div className="space-y-4 mt-8 pt-8 border-t border-white/10">
         <h3 className="text-xl font-semibold text-white">
           More like this track

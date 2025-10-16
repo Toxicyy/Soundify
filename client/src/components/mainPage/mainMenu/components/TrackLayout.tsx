@@ -1,3 +1,7 @@
+import { memo, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { motion } from "framer-motion";
 import {
   CaretRightOutlined,
   EllipsisOutlined,
@@ -5,22 +9,18 @@ import {
   HeartOutlined,
   PauseOutlined,
 } from "@ant-design/icons";
-import { useState, useRef, useCallback } from "react";
 import type { Track } from "../../../../types/TrackData";
 import { useFormatTime } from "../../../../hooks/useFormatTime";
 import { useLike } from "../../../../hooks/useLike";
+import { useNotification } from "../../../../hooks/useNotification";
+import { useGetUserQuery } from "../../../../state/UserApi.slice";
 import type { AppDispatch, AppState } from "../../../../store";
-import { useDispatch, useSelector } from "react-redux";
 import {
   setCurrentTrack,
   setIsPlaying,
 } from "../../../../state/CurrentTrack.slice";
-import ContextMenu from "./ContextMenu";
 import { addToQueue, playTrackAndQueue } from "../../../../state/Queue.slice";
-import { useNavigate } from "react-router-dom";
-import { useNotification } from "../../../../hooks/useNotification";
-import { motion } from "framer-motion";
-import { useGetUserQuery } from "../../../../state/UserApi.slice";
+import ContextMenu from "./ContextMenu";
 import { api } from "../../../../shared/api";
 
 interface TrackLayoutProps {
@@ -29,11 +29,15 @@ interface TrackLayoutProps {
   isMobile?: boolean;
 }
 
-export default function TrackLayout({
+/**
+ * Track display component with play controls and context menu
+ * Supports mobile and desktop layouts with loading states
+ */
+const TrackLayout = ({
   track,
   isLoading = false,
   isMobile = false,
-}: TrackLayoutProps) {
+}: TrackLayoutProps) => {
   const [likeHover, setLikeHover] = useState(false);
   const [ellipsisHover, setEllipsisHover] = useState(false);
   const [hover, setHover] = useState(false);
@@ -58,25 +62,25 @@ export default function TrackLayout({
     toggleLike,
   } = useLike(track?._id || "");
 
-  const togglePlayPauseWithRecommendations = async () => {
+  const togglePlayPauseWithRecommendations = useCallback(async () => {
     if (!track || isLoading) return;
 
-    // Если это текущий трек - просто переключаем паузу
     if (isCurrentTrack) {
       dispatch(setIsPlaying(!currentTrack.isPlaying));
       return;
     }
 
+    let playQueue = [track];
     try {
-      if (!user?._id) return;
-      const response = await api.recommendations.getForUser(user?._id);
-      const recommendations = await response.json();
-
-      const playQueue = [track, ...recommendations];
+      if (user?._id) {
+        const response = await api.recommendations.getForUser(user._id);
+        const recommendations = await response.json();
+        playQueue = [track, ...recommendations];
+      }
 
       dispatch(
         playTrackAndQueue({
-          track, // Текущий трек
+          track,
           contextTracks: playQueue,
           startIndex: 0,
         })
@@ -86,55 +90,59 @@ export default function TrackLayout({
         dispatch(setIsPlaying(true));
       }, 50);
     } catch (error) {
-      console.error("Ошибка при получении рекомендаций:", error);
-
       dispatch(setCurrentTrack(track));
       setTimeout(() => {
         dispatch(setIsPlaying(true));
       }, 50);
     }
-  };
+  }, [
+    track,
+    isLoading,
+    isCurrentTrack,
+    currentTrack.isPlaying,
+    user,
+    dispatch,
+  ]);
 
-  const handleEllipsisClick = () => {
-    setMenuOpen(!menuOpen);
-  };
+  const handleEllipsisClick = useCallback(() => {
+    setMenuOpen((prev) => !prev);
+  }, []);
 
-  const handleLikeClick = async () => {
+  const handleLikeClick = useCallback(async () => {
     if (!track?._id) return;
     await toggleLike();
-  };
+  }, [track, toggleLike]);
 
-  const handleAddToQueue = () => {
+  const handleAddToQueue = useCallback(() => {
     if (!track) return;
     dispatch(addToQueue(track));
-  };
+  }, [track, dispatch]);
 
-  const handleArtistClick = () => {
+  const handleArtistClick = useCallback(() => {
     if (!track) return;
     navigate(`/artist/${track.artist._id}`);
-  };
+  }, [track, navigate]);
 
-  const handleAlbumClick = () => {
+  const handleAlbumClick = useCallback(() => {
     if (!track) return;
     if (track.album == null) return;
-    if (track.album == "single") {
+    if (track.album === "single") {
       navigate(`/single/${track._id}`);
     } else {
       navigate(`/album/${track.album._id}`);
     }
-  };
+  }, [track, navigate]);
 
-  const handleInfoClick = () => {
+  const handleInfoClick = useCallback(() => {
     if (!track) return;
     navigate(`/track/${track._id}`);
-  };
+  }, [track, navigate]);
 
   const handleShareClick = useCallback(async () => {
     try {
       if (!track) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
-      // Проверяем поддержку Web Share API (для мобильных устройств)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
           typeof track.artist === "string" ? track.artist : track.artist?.name;
@@ -151,12 +159,9 @@ export default function TrackLayout({
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Обработка ошибок
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!track) return;
@@ -169,26 +174,34 @@ export default function TrackLayout({
     }
   }, [track, showSuccess, showError]);
 
-  const handleMenuItemClick = (index: number) => {
-    const menuActions = [
+  const handleMenuItemClick = useCallback(
+    (index: number) => {
+      const menuActions = [
+        handleLikeClick,
+        handleAddToQueue,
+        handleArtistClick,
+        handleAlbumClick,
+        handleInfoClick,
+        handleShareClick,
+      ];
+
+      if (index >= menuActions.length) return;
+      menuActions[index]();
+    },
+    [
       handleLikeClick,
       handleAddToQueue,
       handleArtistClick,
       handleAlbumClick,
       handleInfoClick,
       handleShareClick,
-    ];
+    ]
+  );
 
-    if (index >= menuActions.length) return;
-
-    menuActions[index]();
-  };
-
-  const handleCloseMenu = () => {
+  const handleCloseMenu = useCallback(() => {
     setMenuOpen(false);
-  };
+  }, []);
 
-  // Mobile Layout
   const MobileLayout = () => (
     <motion.div
       className={`bg-white/10 rounded-xl p-3 border border-white/10 transition-all duration-200 ${
@@ -199,19 +212,16 @@ export default function TrackLayout({
       onClick={
         menuOpen || likeHover || ellipsisHover
           ? () => {}
-          : () => {
-              togglePlayPauseWithRecommendations();
-            }
+          : togglePlayPauseWithRecommendations
       }
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
       <div className="flex items-center gap-3">
-        {/* Cover Image */}
         <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative">
           {isLoading ? (
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-lg">🎵</div>
               </div>
@@ -227,7 +237,6 @@ export default function TrackLayout({
                 }}
               />
 
-              {/* Play overlay */}
               {hover && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   {isThisTrackPlaying ? (
@@ -245,12 +254,11 @@ export default function TrackLayout({
           )}
         </div>
 
-        {/* Track Info */}
         <div className="flex-1 min-w-0">
           {isLoading ? (
             <div className="space-y-2">
-              <div className="h-4 bg-gradient-to-r from-white/10 via-white/20 to-white/10 rounded w-3/4"></div>
-              <div className="h-3 bg-gradient-to-r from-white/8 via-white/15 to-white/8 rounded w-1/2"></div>
+              <div className="h-4 bg-gradient-to-r from-white/10 via-white/20 to-white/10 rounded w-3/4" />
+              <div className="h-3 bg-gradient-to-r from-white/8 via-white/15 to-white/8 rounded w-1/2" />
             </div>
           ) : (
             <>
@@ -268,19 +276,16 @@ export default function TrackLayout({
           )}
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2">
           {isLoading ? (
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-white/10 rounded-full"></div>
-              <div className="w-4 h-4 bg-white/10 rounded-sm"></div>
+              <div className="w-4 h-4 bg-white/10 rounded-full" />
+              <div className="w-4 h-4 bg-white/10 rounded-sm" />
             </div>
           ) : (
             <>
-              {/* Duration */}
               <span className="text-white/50 text-xs">{duration}</span>
 
-              {/* Like Button */}
               {likePending ? (
                 <div className="animate-spin rounded-full h-3 w-3 border-b border-white" />
               ) : isLiked ? (
@@ -307,7 +312,6 @@ export default function TrackLayout({
                 />
               )}
 
-              {/* Menu */}
               <div className="relative" ref={ellipsisRef}>
                 <EllipsisOutlined
                   style={{ color: "white", fontSize: "14px" }}
@@ -332,7 +336,6 @@ export default function TrackLayout({
     </motion.div>
   );
 
-  // Desktop/Tablet Layout (Original)
   const DesktopLayout = () => (
     <div
       className={`flex justify-between items-center w-full ${
@@ -343,23 +346,20 @@ export default function TrackLayout({
       onClick={
         menuOpen || likeHover || ellipsisHover
           ? () => {}
-          : () => {
-              togglePlayPauseWithRecommendations();
-            }
+          : togglePlayPauseWithRecommendations
       }
     >
       <div className="flex gap-2 md:gap-3 items-end justify-center">
         <div className="w-12 h-12 md:w-16 md:h-16 xl:w-[65px] xl:h-[65px] rounded-lg xl:rounded-[10px] flex items-center justify-center relative overflow-hidden group">
           {isLoading ? (
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg xl:rounded-[10px]">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-white/40 text-lg xl:text-2xl">🎵</div>
               </div>
             </div>
           ) : (
             <>
-              {/* Изображение обложки */}
               <img
                 src={track?.coverUrl}
                 alt={track?.name}
@@ -369,7 +369,6 @@ export default function TrackLayout({
                 }}
               />
 
-              {/* Overlay при hover */}
               <div
                 className={`absolute inset-0 transition bg-black rounded-lg xl:rounded-[10px] ${
                   hover ? "opacity-50" : "opacity-0"
@@ -377,7 +376,6 @@ export default function TrackLayout({
                 style={{ zIndex: 20 }}
               />
 
-              {/* Кнопки play/pause при hover */}
               {hover && (
                 <div className="flex items-center justify-center absolute inset-0 z-30">
                   {isThisTrackPlaying ? (
@@ -408,7 +406,7 @@ export default function TrackLayout({
         <div className="flex flex-col gap-1 xl:gap-2 min-w-0 flex-1">
           {isLoading ? (
             <div className="h-4 xl:h-5 w-24 xl:w-36 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed" />
             </div>
           ) : (
             <h1 className="text-white text-sm md:text-base xl:text-lg tracking-wider truncate">
@@ -418,7 +416,7 @@ export default function TrackLayout({
 
           {isLoading ? (
             <div className="h-3 xl:h-4 w-12 xl:w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer-delayed-2" />
             </div>
           ) : (
             <h1
@@ -434,7 +432,7 @@ export default function TrackLayout({
       <div className="flex gap-2 md:gap-3 xl:gap-4 items-center relative">
         {isLoading ? (
           <div className="h-3 xl:h-4 w-8 xl:w-12 mr-8 xl:mr-20 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer" />
           </div>
         ) : (
           <h1
@@ -447,7 +445,7 @@ export default function TrackLayout({
 
         {isLoading ? (
           <div className="w-4 h-4 xl:w-5 xl:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed" />
           </div>
         ) : likePending ? (
           <div className="animate-spin rounded-full h-3 w-3 xl:h-4 xl:w-4 border-b-2 border-white mr-1" />
@@ -477,7 +475,7 @@ export default function TrackLayout({
 
         {isLoading ? (
           <div className="w-4 h-4 xl:w-5 xl:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-sm relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2" />
           </div>
         ) : (
           <div className="relative" ref={ellipsisRef}>
@@ -504,4 +502,6 @@ export default function TrackLayout({
   );
 
   return isMobile ? <MobileLayout /> : <DesktopLayout />;
-}
+};
+
+export default memo(TrackLayout);

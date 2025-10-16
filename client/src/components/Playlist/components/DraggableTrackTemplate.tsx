@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import {
   CaretRightOutlined,
   PauseOutlined,
@@ -31,7 +31,8 @@ interface DraggableTrackTemplateProps {
 }
 
 /**
- * Компонент трека с поддержкой Drag & Drop в стиле TrackTemplate
+ * Draggable track card with playback and context menu
+ * Features drag-and-drop, like functionality, and track actions
  */
 const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   track,
@@ -49,8 +50,9 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   const currentTrackState = useSelector(
     (state: AppState) => state.currentTrack
   );
+  const navigate = useNavigate();
+  const { showSuccess, showError } = useNotification();
 
-  // Local state
   const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -58,14 +60,10 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
   const [isContextMenuHovered, setIsContextMenuHovered] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
   const ellipsisRef = useRef<HTMLDivElement>(null);
-  const { showSuccess, showError } = useNotification();
 
-  // Computed values
   const isCurrentTrack = currentTrackState.currentTrack?._id === track._id;
   const isPlaying = isCurrentTrack && currentTrackState.isPlaying;
-  const navigate = useNavigate();
 
-  // Custom hooks
   const duration = useFormatTime(track?.duration || 0);
   const {
     isLiked,
@@ -73,9 +71,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     toggleLike,
   } = useLike(isLoading ? "" : track._id);
 
-  /**
-   * Обработка воспроизведения трека
-   */
   const handlePlayTrack = useCallback(() => {
     if (isCurrentTrack) {
       dispatch(setIsPlaying(!currentTrackState.isPlaying));
@@ -89,9 +84,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     }
   }, [dispatch, isCurrentTrack, currentTrackState.isPlaying, allTracks, index]);
 
-  /**
-   * Drag & Drop обработчики
-   */
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       if (!isEditable) return;
@@ -99,7 +91,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", index.toString());
 
-      // Создаем кастомный drag image
       const dragImage = dragRef.current?.cloneNode(true) as HTMLElement;
       if (dragImage) {
         dragImage.style.opacity = "0.8";
@@ -153,9 +144,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     [index, isEditable, onDragEnd]
   );
 
-  /**
-   * Обработка лайка
-   */
   const handleLikeClick = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -166,17 +154,11 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     [isLoading, likePending, toggleLike]
   );
 
-  /**
-   * Добавление в очередь
-   */
   const handleAddToQueue = useCallback(() => {
     if (!track || isLoading) return;
     dispatch(addToQueue(track));
   }, [track, isLoading, dispatch]);
 
-  /**
-   * Обработка контекстного меню
-   */
   const handleEllipsisClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -185,9 +167,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     [isMenuOpen]
   );
 
-  /**
-   * Обработка удаления трека
-   */
   const handleRemoveTrack = useCallback(() => {
     if (onRemove) {
       onRemove(track._id);
@@ -195,31 +174,30 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     setIsMenuOpen(false);
   }, [track._id, onRemove]);
 
-  const handleArtistClick = () => {
+  const handleArtistClick = useCallback(() => {
     if (!track) return;
     navigate(`/artist/${track.artist._id}`);
-  };
+  }, [track, navigate]);
 
-  const handleAlbumClick = () => {
+  const handleAlbumClick = useCallback(() => {
     if (!track) return;
-    if (track.album == "single") {
+    if (track.album === "single") {
       navigate(`/single/${track._id}`);
     } else {
       navigate(`/album/${track.album}`);
     }
-  };
+  }, [track, navigate]);
 
-  const handleInfoClick = () => {
+  const handleInfoClick = useCallback(() => {
     if (!track) return;
     navigate(`/track/${track._id}`);
-  };
+  }, [track, navigate]);
 
   const handleShareClick = useCallback(async () => {
     try {
       if (!track) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
-      // Проверяем поддержку Web Share API (для мобильных устройств)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
           typeof track.artist === "string" ? track.artist : track.artist?.name;
@@ -236,12 +214,9 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Обработка ошибок
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!track) return;
@@ -253,19 +228,17 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
       }
     }
   }, [track, showSuccess, showError]);
-  /**
-   * Обработка действий контекстного меню
-   */
+
   const handleMenuItemClick = useCallback(
     (index: number) => {
       const menuActions = [
-        () => handleLikeClick({} as React.MouseEvent), // Like/Unlike
-        handleAddToQueue, // Add to queue
-        handleArtistClick, // Go to artist
-        handleAlbumClick, // Go to album
-        handleInfoClick, // Track info
-        handleShareClick, // Share
-        () => handleRemoveTrack(), // Remove from playlist (новый пункт)
+        () => handleLikeClick({} as React.MouseEvent),
+        handleAddToQueue,
+        handleArtistClick,
+        handleAlbumClick,
+        handleInfoClick,
+        handleShareClick,
+        () => handleRemoveTrack(),
       ];
 
       if (index < menuActions.length) {
@@ -273,12 +246,17 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         setIsMenuOpen(false);
       }
     },
-    [handleLikeClick, handleAddToQueue, handleRemoveTrack]
+    [
+      handleLikeClick,
+      handleAddToQueue,
+      handleArtistClick,
+      handleAlbumClick,
+      handleInfoClick,
+      handleShareClick,
+      handleRemoveTrack,
+    ]
   );
 
-  /**
-   * Handle image loading errors
-   */
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       e.currentTarget.style.display = "none";
@@ -286,7 +264,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
     []
   );
 
-  // Render skeleton loading state
   if (isLoading) {
     return (
       <div
@@ -294,15 +271,12 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         role="listitem"
         aria-label="Loading track"
       >
-        {/* Drag handle skeleton */}
         <div className="w-1 h-8 bg-white/10 rounded animate-pulse"></div>
 
-        {/* Track number skeleton */}
         <div className="h-6 w-6 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-md relative overflow-hidden mx-auto">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
         </div>
 
-        {/* Track info skeleton */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 backdrop-blur-md border border-white/20 rounded-lg relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
@@ -317,28 +291,24 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
           </div>
         </div>
 
-        {/* Listen count skeleton */}
         <div className="flex justify-center">
           <div className="h-4 w-12 sm:w-16 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Like button skeleton */}
         <div className="flex justify-center">
           <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-full relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
           </div>
         </div>
 
-        {/* Duration skeleton */}
         <div className="flex justify-center">
           <div className="h-4 w-8 bg-gradient-to-r from-white/8 via-white/15 to-white/8 backdrop-blur-md border border-white/15 rounded-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -skew-x-12 animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Menu button skeleton */}
         <div className="flex justify-center">
           <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-white/10 via-white/20 to-white/10 backdrop-blur-md border border-white/20 rounded-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
@@ -371,7 +341,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
       role="listitem"
       aria-label={`${track.name} by ${track.artist?.name || "Unknown Artist"}`}
     >
-      {/* Drag Handle - полосочка слева */}
       {isEditable ? (
         <div
           className="flex-shrink-0 cursor-grab active:cursor-grabbing"
@@ -382,10 +351,9 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
           </div>
         </div>
       ) : (
-        <div className="w-5"></div> // Placeholder для выравнивания
+        <div className="w-5"></div>
       )}
 
-      {/* Индекс трека */}
       <div
         className={`text-lg sm:text-2xl text-center transition-colors duration-200 ${
           isPlaying ? "text-white" : "text-white/50"
@@ -395,10 +363,8 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         {index + 1}
       </div>
 
-      {/* Track information and cover */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] rounded-lg flex items-center justify-center relative overflow-hidden group/cover">
-          {/* Track cover image */}
           <img
             src={track?.coverUrl || ""}
             alt={`${track?.name} cover`}
@@ -406,7 +372,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
             onError={handleImageError}
           />
 
-          {/* Play/pause overlay on hover */}
           <div
             className={`absolute inset-0 transition-opacity duration-200 bg-black rounded-lg ${
               isHovered ? "opacity-50" : "opacity-0"
@@ -415,7 +380,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
             aria-hidden="true"
           />
 
-          {/* Play/pause button */}
           {isHovered && (
             <button
               className="absolute inset-0 flex items-center justify-center z-30 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
@@ -446,7 +410,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
           )}
         </div>
 
-        {/* Track title and artist */}
         <div className="flex flex-col justify-center min-w-0 flex-1">
           <h3 className="text-sm sm:text-lg font-medium truncate transition-colors text-white group-hover:text-white/90">
             {track.name}
@@ -457,12 +420,10 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         </div>
       </div>
 
-      {/* Listen count */}
       <div className="text-sm sm:text-lg text-white/60 truncate text-center">
         {track.listenCount?.toLocaleString() || "0"}
       </div>
 
-      {/* Like button */}
       <div
         className="flex justify-center transition-opacity duration-300"
         style={{ opacity: isHovered || isLiked ? 1 : 0 }}
@@ -499,12 +460,10 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
         )}
       </div>
 
-      {/* Duration */}
       <div className="text-sm sm:text-lg text-white/60 text-center">
         {duration}
       </div>
 
-      {/* Menu действий */}
       <div
         className="flex justify-center relative"
         ref={ellipsisRef}
@@ -527,7 +486,6 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
           />
         </button>
 
-        {/* Контекстное меню */}
         <ContextMenu
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
@@ -537,11 +495,11 @@ const DraggableTrackTemplate: React.FC<DraggableTrackTemplateProps> = ({
           isLiked={isLiked}
           isPending={likePending}
           usePortal={true}
-          showRemoveFromPlaylist={isEditable} // Показываем пункт только в режиме редактирования
+          showRemoveFromPlaylist={isEditable}
         />
       </div>
     </div>
   );
 };
 
-export default DraggableTrackTemplate;
+export default memo(DraggableTrackTemplate);

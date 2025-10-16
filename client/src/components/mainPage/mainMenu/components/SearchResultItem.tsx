@@ -1,4 +1,4 @@
-import React from "react";
+import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   PlayCircleOutlined,
@@ -13,12 +13,16 @@ interface SearchResultItemProps {
   showPlayButton?: boolean;
 }
 
-const SearchResultItem: React.FC<SearchResultItemProps> = ({
+/**
+ * Individual search result item component
+ * Displays track, artist, album, or playlist with appropriate icon
+ */
+const SearchResultItem = ({
   item,
   onClick,
   showPlayButton = false,
-}) => {
-  const getIcon = () => {
+}: SearchResultItemProps) => {
+  const icon = useMemo(() => {
     switch (item.type) {
       case "track":
         return <PlayCircleOutlined className="text-lg text-white/70" />;
@@ -31,22 +35,22 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
       default:
         return null;
     }
-  };
+  }, [item.type]);
 
-  const getSecondaryText = () => {
+  const secondaryText = useMemo(() => {
     switch (item.type) {
       case "track":
-        return item.artist?.name || "Неизвестный артист";
+        return item.artist?.name || "Unknown artist";
       case "artist":
-        return `${item.followerCount || 0} подписчиков`;
+        return `${item.followerCount || 0} followers`;
       case "album":
-        return item.artist?.name || "Неизвестный артист";
+        return item.artist?.name || "Unknown artist";
       case "playlist":
-        return item.owner?.name || "Неизвестный пользователь";
+        return item.owner?.name || "Unknown user";
       default:
         return "";
     }
-  };
+  }, [item]);
 
   return (
     <motion.div
@@ -56,7 +60,6 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
       className="px-4 py-3 cursor-pointer transition-all duration-200 flex items-center justify-between group hover:bg-white/10"
     >
       <div className="flex gap-3">
-        {/* Изображение */}
         <div className="relative flex-shrink-0">
           {item.coverUrl || item.avatar ? (
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/10">
@@ -68,11 +71,10 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
             </div>
           ) : (
             <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
-              {getIcon()}
+              {icon}
             </div>
           )}
 
-          {/* Кнопка воспроизведения */}
           {showPlayButton && (
             <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <PlayCircleOutlined className="text-2xl text-white" />
@@ -80,10 +82,9 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
           )}
         </div>
 
-        {/* Информация */}
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-white truncate">{item.name}</h4>
-          <p className="text-sm text-white/60 truncate">{getSecondaryText()}</p>
+          <p className="text-sm text-white/60 truncate">{secondaryText}</p>
         </div>
       </div>
       <div>
@@ -93,4 +94,4 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
   );
 };
 
-export default SearchResultItem;
+export default memo(SearchResultItem);

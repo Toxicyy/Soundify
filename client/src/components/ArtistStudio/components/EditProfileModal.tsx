@@ -14,31 +14,8 @@ import {
 import { api } from "../../../shared/api";
 
 /**
- * EditProfileModal - Fixed modal with proper scroll handling and responsive design
- *
- * SCROLL HANDLING FIXES:
- * - Removed internal modal scrollbars by setting overflow: visible
- * - Modal content scrolls with main page scroll when content exceeds viewport
- * - Background is locked during modal interaction to prevent scroll jumping
- * - Proper z-index management to prevent layering issues
- *
- * RESPONSIVE IMPROVEMENTS:
- * - Mobile-first design with proper touch targets
- * - Adaptive layout that works on all screen sizes
- * - Optimized spacing for mobile devices
- * - Better form validation feedback on small screens
- *
- * ACCESSIBILITY ENHANCEMENTS:
- * - Proper ARIA labels and roles
- * - Keyboard navigation support
- * - Screen reader friendly error messages
- * - Focus management for better UX
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Memoized expensive calculations
- * - Optimized re-renders with useCallback
- * - Lazy loading of file previews
- * - Debounced validation to reduce CPU usage
+ * Edit profile modal for updating artist name, bio, and avatar
+ * Features form validation, drag-and-drop file upload, and scroll handling
  */
 
 interface EditProfileModalProps {
@@ -73,7 +50,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const { showSuccess, showError, showWarning } = useNotification();
 
-  // Form state management
   const [formData, setFormData] = useState<FormData>({
     name: artist.name || "",
     bio: artist.bio || "",
@@ -93,22 +69,15 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
-  /**
-   * Body scroll lock effect - prevents background scrolling when modal is open
-   * This ensures the backdrop content remains static while modal is scrollable
-   */
   useEffect(() => {
     if (isOpen) {
-      // Store current scroll position
       const scrollY = window.scrollY;
 
-      // Lock body scroll
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = "100%";
 
       return () => {
-        // Restore scroll position
         document.body.style.position = "";
         document.body.style.top = "";
         document.body.style.width = "";
@@ -117,9 +86,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   }, [isOpen]);
 
-  /**
-   * Reset form data when modal opens/closes
-   */
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -135,7 +101,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   }, [isOpen, artist]);
 
-  // Optimized form validation with debouncing
   const validateForm = useCallback((): ValidationErrors => {
     const errors: ValidationErrors = {};
 
@@ -154,7 +119,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     return errors;
   }, [formData]);
 
-  // Memoized change detection
   const hasChanges = useMemo(() => {
     return (
       formData.name.trim() !== (artist.name || "") ||
@@ -163,7 +127,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     );
   }, [formData, artist, fileState.file]);
 
-  // File validation with detailed error messages
   const validateFile = useCallback((file: File): string | null => {
     if (!file.type.startsWith("image/")) {
       return "Please select a valid image file";
@@ -181,7 +144,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     return null;
   }, []);
 
-  // Optimized file selection handler
   const handleFileSelect = useCallback(
     (file: File) => {
       const error = validateFile(file);
@@ -204,7 +166,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     [validateFile, showError]
   );
 
-  // Drag & Drop handlers with proper event handling
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -244,12 +205,10 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     [handleFileSelect]
   );
 
-  // Optimized input change handler
   const handleInputChange = useCallback(
     <K extends keyof FormData>(field: K, value: FormData[K]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
 
-      // Clear validation error when user starts typing
       if (validationErrors[field]) {
         setValidationErrors((prev) => {
           const newErrors = { ...prev };
@@ -261,7 +220,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     [validationErrors]
   );
 
-  // Save handler with improved error handling
   const handleSave = useCallback(async () => {
     const errors = validateForm();
     setValidationErrors(errors);
@@ -282,7 +240,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
         formDataToSend.append("avatar", fileState.file);
       }
 
-      const response = await api.artist.update(artist._id, formDataToSend, true);
+      const response = await api.artist.update(
+        artist._id,
+        formDataToSend,
+        true
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -294,7 +256,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
       if (data.success) {
         showSuccess("Profile updated successfully!");
 
-        // Update artist data
         const updatedFields: Partial<Artist> = {
           name: formData.name.trim(),
           bio: formData.bio,
@@ -310,7 +271,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
         throw new Error(data.message || "Failed to update profile");
       }
     } catch (error) {
-      console.error("Save failed:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to update profile";
       showError(errorMessage);
@@ -328,7 +288,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     showWarning,
   ]);
 
-  // Close handler with unsaved changes warning
   const handleClose = useCallback(() => {
     if (isLoading) return;
 
@@ -339,7 +298,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
       if (!confirmClose) return;
     }
 
-    // Reset form state
     setFormData({
       name: artist.name || "",
       bio: artist.bio || "",
@@ -353,12 +311,10 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     onClose();
   }, [isLoading, hasChanges, artist, onClose]);
 
-  // Memoized display image
   const displayImage = useMemo(() => {
     return fileState.preview || artist.avatar || "/default-artist-avatar.png";
   }, [fileState.preview, artist.avatar]);
 
-  // Memoized artist statistics
   const artistStats = useMemo(
     () => [
       {
@@ -421,9 +377,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
           paddingBottom: "40px",
         }}
       >
-        {/* Modal content with proper responsive padding */}
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Header with improved mobile spacing */}
           <div className="flex justify-between items-center pb-4 border-b border-white/10">
             <div className="text-white text-lg sm:text-xl md:text-2xl font-semibold tracking-wider">
               Edit Profile
@@ -438,9 +392,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </button>
           </div>
 
-          {/* Form with responsive layout */}
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Avatar Section - Optimized for mobile */}
             <div className="flex flex-col items-center lg:items-start">
               <label className="block text-white/80 text-sm font-medium mb-3 self-start lg:self-center">
                 Avatar
@@ -464,7 +416,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     loading="lazy"
                   />
 
-                  {/* Overlay with improved accessibility */}
                   <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
                     <div className="text-center">
                       <CameraOutlined className="text-white text-xl sm:text-2xl mb-2" />
@@ -496,9 +447,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </p>
             </div>
 
-            {/* Form Fields with improved mobile layout */}
             <div className="flex-1 space-y-4 sm:space-y-5">
-              {/* Artist Name Field */}
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
                   Artist Name *
@@ -528,7 +477,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 </AnimatePresence>
               </div>
 
-              {/* Biography Field */}
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
                   Biography
@@ -560,7 +508,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 </AnimatePresence>
               </div>
 
-              {/* Current Stats - Read-only with responsive grid */}
               <div className="bg-white/5 rounded-lg p-3 sm:p-4 border border-white/10">
                 <h4 className="text-white font-semibold mb-3 text-sm">
                   Current Stats
@@ -577,7 +524,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </div>
           </div>
 
-          {/* Footer with responsive button layout */}
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-white/10">
             <GlassButton
               onClick={handleClose}

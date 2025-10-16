@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, memo } from "react";
 import {
   ArrowLeftOutlined,
   SaveOutlined,
@@ -20,6 +20,10 @@ interface PlaylistEditorProps {
   onSave: (playlist: Playlist) => void;
 }
 
+/**
+ * Playlist editor with form fields and track management
+ * Handles creating new playlists and editing existing ones
+ */
 const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
   playlist,
   isCreating,
@@ -39,7 +43,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
 
   const { showSuccess, showError, showInfo } = useNotification();
 
-  // Initialize tracks from playlist if editing existing playlist
   useEffect(() => {
     const loadTracks = async () => {
       if (playlist?.tracks && Array.isArray(playlist.tracks) && !isCreating) {
@@ -69,7 +72,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
 
             setTracks(validTracks);
           } catch (error) {
-            console.error("Error loading tracks:", error);
             showError("Failed to load playlist tracks");
           }
         }
@@ -77,7 +79,7 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
     };
 
     loadTracks();
-  }, [playlist, isCreating]);
+  }, [playlist, isCreating, showError]);
 
   const handleFormChange = useCallback(
     (
@@ -120,7 +122,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
         if (shouldPublish) {
           requestData.publish = true;
         }
-
 
         let response;
 
@@ -186,7 +187,6 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
 
         onSave(result.data);
       } catch (error: any) {
-        console.error("Save error:", error);
         showError(error.message || "Failed to save playlist");
       } finally {
         saveAction(false);
@@ -319,4 +319,4 @@ const PlaylistEditor: React.FC<PlaylistEditorProps> = ({
   );
 };
 
-export default PlaylistEditor;
+export default memo(PlaylistEditor);

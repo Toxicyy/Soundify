@@ -25,9 +25,8 @@ interface AlbumTrackItemProps {
 }
 
 /**
- * Album Track Item Component
- * Individual track display with responsive layout and controls
- * Supports drag-and-drop, play/pause, edit, and delete actions
+ * Album track item with drag-drop, play/pause, edit, delete
+ * Responsive layout for desktop and mobile
  */
 const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
   track,
@@ -47,7 +46,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Get current playing state from Redux
   const { currentTrack, isPlaying } = useSelector(
     (state: any) => state.currentTrack
   );
@@ -55,7 +53,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     (state: any) => state.queue
   );
 
-  // Check if this track is currently playing
   const isCurrentTrack =
     currentTrack?._id === `temp_${track.tempId}` ||
     queueCurrentTrack?._id === `temp_${track.tempId}` ||
@@ -63,11 +60,8 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     queueCurrentTrack?._id === track.tempId;
 
   const isTrackPlaying = isCurrentTrack && isPlaying;
-
-  // Show drag handle only if more than one track
   const shouldShowDrag = totalTracks > 1;
 
-  // Format duration
   const formatDuration = useCallback((seconds?: number) => {
     if (!seconds) return "--:--";
     const mins = Math.floor(seconds / 60);
@@ -75,7 +69,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }, []);
 
-  // Format file size
   const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) return "0 B";
     const k = 1024;
@@ -84,7 +77,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }, []);
 
-  // Handle play/pause click
   const handlePlayPause = useCallback(() => {
     if (isCurrentTrack) {
       dispatch(setIsPlaying(!isPlaying));
@@ -93,7 +85,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     }
   }, [isCurrentTrack, isPlaying, onPlay, dispatch]);
 
-  // Drag handlers
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
       if (!shouldShowDrag || !onDragStart) {
@@ -104,7 +95,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", index.toString());
 
-      // Create custom drag image
       const dragImage = dragRef.current?.cloneNode(true) as HTMLElement;
       if (dragImage) {
         dragImage.style.opacity = "0.8";
@@ -158,7 +148,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     [index, onDragEnd, shouldShowDrag]
   );
 
-  // Handle remove with confirmation
   const handleRemove = useCallback(() => {
     const confirmed = window.confirm(
       `Remove "${track.metadata.name}" from album?`
@@ -170,7 +159,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
     }
   }, [track.metadata.name, onRemove, dispatch]);
 
-  // Responsive grid layout
   const gridCols = shouldShowDrag
     ? "grid-cols-[auto_auto_1fr_auto_auto_auto_auto] lg:grid-cols-[30px_50px_1fr_100px_80px_40px_40px]"
     : "grid-cols-[auto_1fr_auto_auto_auto_auto] lg:grid-cols-[50px_1fr_100px_80px_40px_40px]";
@@ -199,7 +187,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         }}
         data-track-index={index}
       >
-        {/* Drag Handle - Show only if multiple tracks */}
         {shouldShowDrag && (
           <div
             className="flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
@@ -215,7 +202,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           </div>
         )}
 
-        {/* Track Number / Play Button */}
         <div className="text-center">
           {isHovered ? (
             <button
@@ -250,7 +236,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           )}
         </div>
 
-        {/* Track Info - Responsive layout */}
         <div className="flex items-center gap-2 lg:gap-3 min-w-0">
           <img
             src={URL.createObjectURL(track.coverFile)}
@@ -285,17 +270,14 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           </div>
         </div>
 
-        {/* File Size - Hidden on small screens */}
         <div className="text-xs lg:text-sm text-center transition-colors duration-200 text-white/60 hidden sm:block">
           {formatFileSize(track.file.size)}
         </div>
 
-        {/* Duration */}
         <div className="text-xs lg:text-sm text-center transition-colors duration-200 text-white/60">
           {formatDuration(track.duration)}
         </div>
 
-        {/* Edit Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -313,7 +295,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
           />
         </button>
 
-        {/* Remove Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -332,7 +313,6 @@ const AlbumTrackItem: React.FC<AlbumTrackItemProps> = ({
         </button>
       </div>
 
-      {/* Edit Modal */}
       <EditTrackModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

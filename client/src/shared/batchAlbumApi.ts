@@ -30,7 +30,6 @@ const getAuthToken = (): string | null => {
 
 /**
  * Create FormData for batch album creation
- * Properly formats data for server-side processing
  */
 export const createBatchFormData = (
   albumData: AlbumData,
@@ -38,7 +37,6 @@ export const createBatchFormData = (
 ): FormData => {
   const formData = new FormData();
 
-  // Album metadata
   formData.append("albumName", albumData.name);
   formData.append("albumDescription", albumData.description || "");
   formData.append("albumType", albumData.type);
@@ -47,14 +45,12 @@ export const createBatchFormData = (
     formData.append("releaseDate", albumData.releaseDate.toISOString());
   }
 
-  // Album cover
   if (albumData.coverFile) {
     formData.append("albumCover", albumData.coverFile);
   } else {
     throw new Error("Album cover is required");
   }
 
-  // Album genre (auto-determined from tracks)
   if (tracks.length > 0) {
     const genreCounts = tracks.reduce((acc, track) => {
       const genre = track.metadata.genre;
@@ -73,20 +69,16 @@ export const createBatchFormData = (
     }
   }
 
-  // Track data as separate form fields (NOT JSON object)
   tracks.forEach((track, arrayIndex) => {
     const formIndex = arrayIndex;
 
-    // Track metadata
     formData.append(`tracks[${formIndex}][name]`, track.metadata.name);
     formData.append(`tracks[${formIndex}][genre]`, track.metadata.genre || "");
 
-    // Track tags (each tag separately)
     track.metadata.tags.forEach((tag) => {
       formData.append(`tracks[${formIndex}][tags]`, tag);
     });
 
-    // Track files
     formData.append(`tracks[${formIndex}][audio]`, track.file);
     formData.append(`tracks[${formIndex}][cover]`, track.coverFile);
   });
@@ -102,7 +94,6 @@ export const createBatchAlbum = async (
   tracks: LocalTrack[]
 ): Promise<BatchAlbumResponse> => {
   try {
-    // Validation
     if (!albumData.name || !albumData.name.trim()) {
       throw new Error("Album name is required");
     }
@@ -115,7 +106,6 @@ export const createBatchAlbum = async (
       throw new Error("At least 2 tracks are required for an album");
     }
 
-    // Validate each track
     tracks.forEach((track, index) => {
       if (!track.metadata.name || !track.metadata.name.trim()) {
         throw new Error(`Track ${index + 1} name is required`);
@@ -140,7 +130,6 @@ export const createBatchAlbum = async (
       body: formData,
       headers: {
         Authorization: `Bearer ${token}`,
-        // Don't set Content-Type - browser sets it with boundary for FormData
       },
     });
 
@@ -158,7 +147,7 @@ export const createBatchAlbum = async (
             errorMessage += `\nDetails: ${errorData.details}`;
           }
         }
-      } catch (parseError) {
+      } catch {
         const errorText = await response.text().catch(() => "Unknown error");
         errorMessage = errorText || errorMessage;
       }
@@ -186,7 +175,6 @@ export const createBatchAlbum = async (
 
 /**
  * SSE Progress tracker for real-time updates
- * Handles connection management and automatic reconnection
  */
 export class BatchProgressTracker {
   private eventSource: EventSource | null = null;
@@ -239,16 +227,12 @@ export class BatchProgressTracker {
           const data = JSON.parse(event.data);
           this.handleMessage(data);
         } catch (error) {
-          console.error("Failed to parse SSE message:", error);
           this.onError("Failed to parse progress data");
         }
       };
 
-      this.eventSource.onerror = (error) => {
-        console.error("SSE error:", error);
-
+      this.eventSource.onerror = () => {
         if (this.eventSource?.readyState === EventSource.CLOSED) {
-          // Attempt reconnection
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
 
@@ -263,7 +247,6 @@ export class BatchProgressTracker {
         }
       };
     } catch (error) {
-      console.error("Failed to create SSE connection:", error);
       this.onError("Failed to start progress tracking");
     }
   }
@@ -292,9 +275,6 @@ export class BatchProgressTracker {
         this.onError(data.message || "Unknown error occurred");
         this.stop();
         break;
-
-      default:
-        console.warn("Unknown SSE message type:", data.type, data);
     }
   }
 
@@ -359,15 +339,12 @@ export const cancelBatchCreation = async (
     );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Cancel request failed:", errorData);
       return false;
     }
 
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error("Cancel batch creation failed:", error);
     return false;
   }
 };
@@ -395,7 +372,7 @@ export const getBatchProgress = async (
 
     if (!response.ok) {
       if (response.status === 404) {
-        return null; // Session not found
+        return null;
       }
       throw new Error(`HTTP ${response.status}`);
     }
@@ -403,7 +380,6 @@ export const getBatchProgress = async (
     const data = await response.json();
     return data.success ? data.data.progress : null;
   } catch (error) {
-    console.error("Get batch progress failed:", error);
     return null;
   }
 };

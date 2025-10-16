@@ -12,6 +12,10 @@ interface UsePlaylistReturn {
   switchUnsavedChangesToFalse: () => void;
 }
 
+/**
+ * Hook for managing playlist data and local changes
+ * Tracks unsaved changes and provides methods for fetching and updating
+ */
 export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [localChanges, setLocalChanges] = useState<Partial<Playlist>>({});
@@ -56,11 +60,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load playlist";
       setError(errorMessage);
-
-      if (errorMessage.includes("Authentication")) {
-        // localStorage.removeItem('token');
-        // navigate('/login');
-      }
     } finally {
       setLoading(false);
     }
@@ -75,7 +74,6 @@ export const usePlaylist = (playlistId?: string): UsePlaylistReturn => {
     setHasUnsavedChanges(true);
   }, []);
 
-  // Получаем текущее состояние (оригинал + локальные изменения)
   const currentPlaylist: Playlist | null =
     playlist && Object.keys(localChanges).length > 0
       ? { ...playlist, ...localChanges }

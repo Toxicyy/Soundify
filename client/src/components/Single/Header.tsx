@@ -9,14 +9,12 @@ interface SingleHeaderProps {
 }
 
 /**
- * Single track header component displaying track artwork, title, artist, and duration
- * Uses base header components for consistent styling and loading states
+ * Header component for single track page
+ * Displays track cover, title, artist, and duration
  */
 const SingleHeader: FC<SingleHeaderProps> = ({ track, isLoading }) => {
-  // Format track duration using custom hook
   const formattedDuration = useFormatTime(track?.duration || 0);
 
-  // Generate subtitle with artist and duration information
   const subtitle =
     !isLoading && track.artist ? (
       <div className="flex items-center gap-2 flex-wrap">

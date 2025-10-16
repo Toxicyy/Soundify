@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback } from "react";
+import { type FC, memo, useCallback, useMemo } from "react";
 import type { Track } from "../../types/TrackData";
 import type { Artist } from "../../types/ArtistData";
 import type { Album } from "../../types/AlbumData";
@@ -23,9 +23,8 @@ interface ArtistMainMenuProps {
 }
 
 /**
- * Artist main menu component with comprehensive artist profile display
- * Features tracks list, liked tracks info, music collection, and artist bio
- * Includes responsive design and comprehensive loading states
+ * Artist main menu component with tracks, albums, and artist info
+ * Features playback controls, shuffle, and follow functionality
  */
 const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
   isLoading = false,
@@ -37,20 +36,18 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
   toggleFollow,
   isFollowingLoading = false,
 }) => {
-  // Redux state
   const { shuffle } = useSelector((state: AppState) => state.queue);
   const dispatch = useDispatch<AppDispatch>();
 
-  /**
-   * Handle shuffle toggle
-   */
+  const singleTracks = useMemo(
+    () => tracks.filter((track) => track.album === "single"),
+    [tracks]
+  );
+
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
-  /**
-   * Handle play all tracks from artist
-   */
   const handlePlayAllTracks = useCallback(() => {
     if (tracks.length > 0) {
       dispatch(
@@ -62,22 +59,14 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
     }
   }, [tracks, dispatch]);
 
-  /**
-   * Handle follow/unfollow artist - ИСПРАВЛЕНО: добавил toggleFollow в зависимости
-   */
   const handleFollowArtist = useCallback(() => {
     toggleFollow();
   }, [toggleFollow]);
 
-  /**
-   * Render control panel with play, shuffle, and follow buttons
-   */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-row">
-        {/* Left side - Playback controls */}
         <div className="flex items-center gap-4 order-2 sm:order-1">
-          {/* Play all button */}
           {isLoading ? (
             <div className="w-[65px] h-[65px] rounded-full bg-gradient-to-br from-white/15 via-white/25 to-white/10 border border-white/25 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
@@ -96,7 +85,6 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
             </button>
           )}
 
-          {/* Shuffle button */}
           {isLoading ? (
             <div className="w-[42px] h-[42px] bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-lg relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed"></div>
@@ -117,7 +105,6 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
             </button>
           )}
 
-          {/* Follow button */}
           {isLoading ? (
             <div className="h-10 w-28 sm:w-32 bg-gradient-to-r from-white/10 via-white/20 to-white/10  border border-white/20 rounded-full relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer-delayed-2"></div>
@@ -145,7 +132,6 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
     <main className="bg-white/10 border border-white/20 rounded-3xl shadow-2xl w-full h-full flex flex-col">
       {renderControlPanel()}
 
-      {/* Tracks section with constrained height */}
       <section
         className="px-3 sm:px-6 py-1 flex-1 min-h-0"
         aria-labelledby="popular-tracks"
@@ -157,26 +143,22 @@ const ArtistMainMenu: FC<ArtistMainMenuProps> = ({
         />
       </section>
 
-      {/* Liked tracks info section */}
       <section className="px-3 sm:px-6 py-3" aria-labelledby="liked-tracks">
         <LikedTracksInfo artist={artist} isLoading={isLoading} />
       </section>
 
-      {/* Music collection section */}
       <section className="px-3 sm:px-6 py-5" aria-labelledby="music-collection">
         <MusicList
-          tracks={tracks.filter((track) => track.album === "single")}
+          tracks={singleTracks}
           albums={albums}
           isLoading={isLoading}
         />
       </section>
 
-      {/* Artist information section */}
       <section className="px-3 sm:px-6 py-5 mb-5" aria-labelledby="artist-info">
         <ArtistInfo artist={artist} isLoading={isLoading} />
       </section>
 
-      {/* Additional context for screen readers */}
       {!isLoading && (
         <div className="sr-only">
           <h2>Artist profile for {artist.name}</h2>

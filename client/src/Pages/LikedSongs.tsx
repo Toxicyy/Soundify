@@ -17,9 +17,10 @@ import { useGetUserQuery } from "../state/UserApi.slice";
 import { useLikedTracksLoader } from "../hooks/useLikedTracksLoader";
 
 /**
- * Authentication required state component
- * Displays animated interface encouraging users to sign in
+ * Liked Songs page with authentication and responsive design
+ * Features: auth-gated content, animated auth prompt, track listing
  */
+
 const AuthRequiredState: React.FC = () => {
   const navigate = useNavigate();
 
@@ -30,8 +31,10 @@ const AuthRequiredState: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
-      {/* Animated music icons background */}
-      <div className="absolute inset-0 overflow-hidden opacity-5" aria-hidden="true">
+      <div
+        className="absolute inset-0 overflow-hidden opacity-5"
+        aria-hidden="true"
+      >
         <motion.div
           className="absolute top-10 left-10"
           animate={{
@@ -93,7 +96,6 @@ const AuthRequiredState: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Main content */}
       <motion.div
         className="relative z-10 text-center max-w-md"
         initial={{ scale: 0.8 }}
@@ -105,7 +107,6 @@ const AuthRequiredState: React.FC = () => {
           delay: 0.2,
         }}
       >
-        {/* Heart icon with glow effect */}
         <motion.div
           className="relative mb-6 xs:mb-4"
           initial={{ rotate: -180, scale: 0 }}
@@ -137,7 +138,6 @@ const AuthRequiredState: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Title */}
         <motion.h2
           className="text-2xl xs:text-xl font-bold text-white mb-3 xs:mb-2"
           initial={{ opacity: 0, y: 20 }}
@@ -147,7 +147,6 @@ const AuthRequiredState: React.FC = () => {
           Your Liked Songs Library
         </motion.h2>
 
-        {/* Description */}
         <motion.p
           className="text-white/70 text-base xs:text-sm leading-relaxed mb-8 xs:mb-6"
           initial={{ opacity: 0, y: 20 }}
@@ -158,7 +157,6 @@ const AuthRequiredState: React.FC = () => {
           your ultimate music library
         </motion.p>
 
-        {/* Features list */}
         <motion.div
           className="mb-8 xs:mb-6 space-y-3 xs:space-y-2"
           initial={{ opacity: 0, y: 20 }}
@@ -196,7 +194,6 @@ const AuthRequiredState: React.FC = () => {
           ))}
         </motion.div>
 
-        {/* Action buttons */}
         <motion.div
           className="flex flex-col xs:flex-row gap-3 xs:gap-2"
           initial={{ opacity: 0, y: 20 }}
@@ -226,7 +223,6 @@ const AuthRequiredState: React.FC = () => {
           </motion.button>
         </motion.div>
 
-        {/* Additional info */}
         <motion.p
           className="text-white/50 text-xs xs:text-[10px] mt-6 xs:mt-4"
           initial={{ opacity: 0 }}
@@ -237,8 +233,10 @@ const AuthRequiredState: React.FC = () => {
         </motion.p>
       </motion.div>
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        aria-hidden="true"
+      >
         {Array.from({ length: 8 }).map((_, i) => (
           <motion.div
             key={i}
@@ -261,8 +259,10 @@ const AuthRequiredState: React.FC = () => {
         ))}
       </div>
 
-      {/* Floating hearts */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        aria-hidden="true"
+      >
         {Array.from({ length: 4 }).map((_, i) => (
           <motion.div
             key={`heart-${i}`}
@@ -293,9 +293,6 @@ const AuthRequiredState: React.FC = () => {
   );
 };
 
-/**
- * Loading component for authentication state
- */
 const LoadingComponent: React.FC = () => (
   <motion.div
     className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] flex items-center justify-center"
@@ -310,9 +307,6 @@ const LoadingComponent: React.FC = () => (
   </motion.div>
 );
 
-/**
- * Liked Songs page with responsive design and authentication handling
- */
 export default function LikedSongs() {
   const navigate = useNavigate();
   const { data: user, isFetching: userLoading } = useGetUserQuery();
@@ -330,12 +324,10 @@ export default function LikedSongs() {
     }
   }, [user?._id, userLoading, loadLikedTracks]);
 
-  // Show loading state while checking user authentication
   if (userLoading) {
     return <LoadingComponent />;
   }
 
-  // Show authentication required state if user is not logged in
   if (!user) {
     return (
       <motion.div
@@ -344,14 +336,12 @@ export default function LikedSongs() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Page Header */}
         <motion.header
           className="flex items-center gap-3 xs:gap-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          {/* Back Button */}
           <motion.button
             onClick={() => navigate(-1)}
             className="p-2 xs:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-lg rounded-lg xs:rounded-xl transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20 flex-shrink-0"
@@ -362,7 +352,6 @@ export default function LikedSongs() {
             <ArrowLeftOutlined className="text-white text-base xs:text-xl" />
           </motion.button>
 
-          {/* Page Title Section */}
           <div className="flex items-center gap-2 xs:gap-3">
             <motion.div
               className="p-2 xs:p-3 bg-gradient-to-br from-red-500/20 to-pink-500/20 backdrop-blur-lg rounded-lg xs:rounded-xl border border-red-500/30"
@@ -392,7 +381,6 @@ export default function LikedSongs() {
           </div>
         </motion.header>
 
-        {/* Authentication Required Content */}
         <motion.section
           className="bg-white/5 md:bg-white/5 md:backdrop-blur-lg border border-white/10 rounded-xl xs:rounded-2xl overflow-hidden flex-1 flex items-center justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -407,13 +395,9 @@ export default function LikedSongs() {
     );
   }
 
-  // Main content for authenticated users
   return (
     <div className="h-screen w-full mainMenu pl-4 xl:pl-[22vw] pr-2 xl:pr-[2vw] md:mb-30 flex flex-col gap-3 md:gap-4 xl:gap-5 pt-3 md:pt-6 mb-35 xl:mb-0">
-      {/* Header component with responsive sizing */}
       <Header tracks={likedTracks} />
-
-      {/* MainMenu component takes remaining space */}
       <div className="flex-1 min-h-0 mb-2 md:mb-4 xl:mb-5">
         <MainMenu tracks={likedTracks} isLoading={isLoading} />
       </div>

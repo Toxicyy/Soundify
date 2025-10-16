@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   PlusOutlined,
   SaveOutlined,
@@ -14,15 +14,13 @@ import BatchSaveModal from "../components/CreateAlbum/BatchSaveModal";
 import { useNavigate } from "react-router-dom";
 
 /**
- * Create Album Page - Main interface for album creation
- * Features: Album metadata form, track management, batch upload
- * Responsive: Desktop optimized with different screen widths support
+ * Create Album Page
+ * Features: album metadata form, track management, batch upload
  */
 const CreateAlbumPage: React.FC = () => {
   const { showSuccess, showError, showWarning } = useNotification();
   const navigate = useNavigate();
 
-  // Album data state
   const [albumData, setAlbumData] = useState<AlbumData>({
     name: "",
     description: "",
@@ -32,17 +30,11 @@ const CreateAlbumPage: React.FC = () => {
     coverPreview: null,
   });
 
-  // Tracks state
   const [tracks, setTracks] = useState<LocalTrack[]>([]);
-
-  // Modal states
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isBatchSaveModalOpen, setIsBatchSaveModalOpen] = useState(false);
-
-  // UI states
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Auto-determine album genre based on track genres
   const determineAlbumGenre = useCallback(() => {
     if (tracks.length === 0) return "";
 
@@ -59,14 +51,12 @@ const CreateAlbumPage: React.FC = () => {
     );
   }, [tracks]);
 
-  // Auto-determine album type based on track count
   const determineAlbumType = useCallback(() => {
     if (tracks.length === 1) return "single";
     if (tracks.length <= 6) return "ep";
     return "album";
   }, [tracks.length]);
 
-  // Update album type automatically
   useEffect(() => {
     if (tracks.length > 0) {
       const newType = determineAlbumType();
@@ -74,7 +64,6 @@ const CreateAlbumPage: React.FC = () => {
     }
   }, [tracks.length, determineAlbumType]);
 
-  // Track unsaved changes
   useEffect(() => {
     const hasAlbumData = Boolean(
       albumData.name.trim() ||
@@ -85,7 +74,6 @@ const CreateAlbumPage: React.FC = () => {
     setHasUnsavedChanges(hasAlbumData || hasTracksData);
   }, [albumData, tracks]);
 
-  // Browser close warning
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -97,18 +85,15 @@ const CreateAlbumPage: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Handle album data updates
   const handleAlbumDataChange = useCallback((updates: Partial<AlbumData>) => {
     setAlbumData((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Handle track upload
   const handleTrackUpload = useCallback(
     (newTrack: LocalTrack) => {
       const nextIndex = tracks.length;
       const trackWithIndex = { ...newTrack, index: nextIndex };
 
-      // Check for duplicates
       const isDuplicate = tracks.some(
         (track) =>
           track.file.name === trackWithIndex.file.name &&
@@ -128,7 +113,6 @@ const CreateAlbumPage: React.FC = () => {
     [tracks, showWarning, showSuccess]
   );
 
-  // Handle track removal
   const handleTrackRemove = useCallback((tempId: string) => {
     setTracks((prev) => {
       const trackToRemove = prev.find((t) => t.tempId === tempId);
@@ -141,7 +125,6 @@ const CreateAlbumPage: React.FC = () => {
     });
   }, []);
 
-  // Handle track reordering
   const handleTrackReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
       setTracks((prev) => {
@@ -155,7 +138,6 @@ const CreateAlbumPage: React.FC = () => {
     []
   );
 
-  // Handle track metadata edit
   const handleTrackEdit = useCallback(
     (tempId: string, updates: Partial<LocalTrack["metadata"]>) => {
       setTracks((prev) =>
@@ -169,8 +151,7 @@ const CreateAlbumPage: React.FC = () => {
     []
   );
 
-  // Validation
-  const canSave = useCallback(() => {
+  const canSave = useMemo(() => {
     if (!albumData.name.trim())
       return { valid: false, message: "Album name is required" };
     if (!albumData.coverFile)
@@ -184,9 +165,8 @@ const CreateAlbumPage: React.FC = () => {
     return { valid: true, message: "" };
   }, [albumData, tracks]);
 
-  // Handle save
   const handleSave = useCallback(() => {
-    const validation = canSave();
+    const validation = canSave;
     if (!validation.valid) {
       showError(validation.message);
       return;
@@ -195,7 +175,6 @@ const CreateAlbumPage: React.FC = () => {
     setIsBatchSaveModalOpen(true);
   }, [canSave, showError]);
 
-  // Handle back navigation
   const handleBack = useCallback(() => {
     if (hasUnsavedChanges) {
       const confirmed = window.confirm(
@@ -204,7 +183,6 @@ const CreateAlbumPage: React.FC = () => {
       if (!confirmed) return;
     }
 
-    // Clean up blob URLs
     tracks.forEach((track) => {
       URL.revokeObjectURL(track.audioUrl);
     });
@@ -214,9 +192,8 @@ const CreateAlbumPage: React.FC = () => {
     }
 
     navigate("/artist-studio");
-  }, [hasUnsavedChanges, tracks, albumData.coverPreview]);
+  }, [hasUnsavedChanges, tracks, albumData.coverPreview, navigate]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       tracks.forEach((track) => {
@@ -228,12 +205,11 @@ const CreateAlbumPage: React.FC = () => {
     };
   }, []);
 
-  const validation = canSave();
+  const validation = canSave;
 
   return (
     <div className="min-h-screen mb-32 pl-4 xl:mb-1 xl:pl-[22vw] mx-auto xl:mx-0">
       <div className="p-4 xl:p-8 max-w-[1800px] mx-auto">
-        {/* Header - Responsive layout */}
         <motion.div
           className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 xl:mb-8 gap-4"
           initial={{ opacity: 0, y: -20 }}
@@ -289,7 +265,6 @@ const CreateAlbumPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Unsaved changes indicator */}
         {hasUnsavedChanges && (
           <motion.div
             className="mb-4 lg:mb-6 p-3 lg:p-4 bg-yellow-500/10 backdrop-blur-md border border-yellow-500/20 rounded-lg lg:rounded-2xl"
@@ -308,9 +283,7 @@ const CreateAlbumPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Main content - Responsive grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
-          {/* Album Form - Responsive column span */}
           <motion.div
             className="xl:col-span-1"
             initial={{ opacity: 0, x: -20 }}
@@ -325,7 +298,6 @@ const CreateAlbumPage: React.FC = () => {
             />
           </motion.div>
 
-          {/* Tracks List - Responsive column span */}
           <motion.div
             className="xl:col-span-2"
             initial={{ opacity: 0, x: 20 }}
@@ -343,7 +315,6 @@ const CreateAlbumPage: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Validation message - Responsive positioning */}
         {!validation.valid && (hasUnsavedChanges || tracks.length > 0) && (
           <motion.div
             className="fixed bottom-4 right-4 lg:bottom-6 lg:right-6 p-3 lg:p-4 bg-red-500/20 backdrop-blur-md border border-red-500/30 rounded-lg lg:rounded-2xl max-w-xs lg:max-w-sm"
@@ -357,7 +328,6 @@ const CreateAlbumPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modals */}
       <UploadTrackToAlbumModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { LoginForm } from "../components/login/LoginForm";
 import { MobileAuthForm } from "../components/login/MobileAuthForm.tsx";
 import { useGetUserQuery, userApiSlice } from "../state/UserApi.slice.ts";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store.ts";
 import { motion } from "framer-motion";
+import LoginForm from "../components/login/LoginForm.tsx";
 
 /**
- * Responsive login page
+ * Login page with responsive design
  * Desktop (xl+): Classic design with wave
- * Mobile (<xl): Modern card-based design with animations
+ * Mobile (<xl): Modern card-based design
  */
 export default function Login() {
   const { data: user } = useGetUserQuery();
@@ -21,16 +21,15 @@ export default function Login() {
     dispatch(userApiSlice.util.resetApiState());
     window.location.reload();
   }
+
   return (
     <>
-      {/* Desktop version (xl and above) */}
       {!user && (
         <div className="hidden xl:block">
-          <LoginForm />
+          <LoginForm/>
         </div>
       )}
 
-      {/* Mobile version (less than xl) */}
       {!user && (
         <div className="block xl:hidden">
           <MobileAuthForm initialMode="login" />
@@ -51,7 +50,6 @@ export default function Login() {
             transition={{ duration: 0.6, type: "spring" }}
             className="relative w-[800px] bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10 p-12 text-center"
           >
-            {/* Animated Background Elements */}
             <motion.div
               className="absolute inset-0 rounded-3xl overflow-hidden"
               initial={{ opacity: 0 }}
@@ -69,7 +67,6 @@ export default function Login() {
               />
             </motion.div>
 
-            {/* Content */}
             <div className="relative z-10">
               <motion.div
                 initial={{ y: -20, opacity: 0 }}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UserOutlined,
@@ -25,10 +25,26 @@ interface FormData {
   avatar: File | null;
 }
 
-export default function UserSettingsModal({
-  isOpen,
-  onClose,
-}: UserSettingsModalProps) {
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+const INITIAL_PASSWORD_DATA: PasswordData = {
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
+};
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * Modal for user profile and password settings
+ * Handles profile updates, avatar uploads, and password changes
+ */
+const UserSettingsModal = ({ isOpen, onClose }: UserSettingsModalProps) => {
   const { data: user, refetch } = useGetUserQuery();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -42,13 +58,10 @@ export default function UserSettingsModal({
     avatar: null,
   });
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  const [passwordData, setPasswordData] = useState<PasswordData>(
+    INITIAL_PASSWORD_DATA
+  );
 
-  // Initialize form data when user data loads
   useEffect(() => {
     if (user) {
       setFormData({
@@ -60,54 +73,52 @@ export default function UserSettingsModal({
     }
   }, [user]);
 
-  // Handle form field changes
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleInputChange = useCallback(
+    (field: keyof FormData, value: string) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
-  // Handle password field changes
-  const handlePasswordChange = (field: string, value: string) => {
-    setPasswordData((prev) => ({ ...prev, [field]: value }));
-  };
+  const handlePasswordChange = useCallback(
+    (field: keyof PasswordData, value: string) => {
+      setPasswordData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
-  // Handle avatar upload
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
+  const handleAvatarChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
       if (!file.type.startsWith("image/")) {
         message.error("Please select an image file");
         return;
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > MAX_FILE_SIZE) {
         message.error("File size must be less than 5MB");
         return;
       }
 
       setFormData((prev) => ({ ...prev, avatar: file }));
-
-      // Create preview URL
       const previewUrl = URL.createObjectURL(file);
       setAvatarPreview(previewUrl);
-    }
-  };
+    },
+    []
+  );
 
-  // Handle profile update using regular fetch
-  const handleProfileUpdate = async () => {
+  const handleProfileUpdate = useCallback(async () => {
     if (!user) return;
 
     setIsUpdatingProfile(true);
     try {
       const profileFormData = new FormData();
-
-      // Add text fields
       profileFormData.append("name", formData.name);
       profileFormData.append("username", formData.username);
       profileFormData.append("email", formData.email);
 
-      // Add avatar if selected
       if (formData.avatar) {
         profileFormData.append("avatar", formData.avatar);
       }
@@ -117,11 +128,7 @@ export default function UserSettingsModal({
       if (response.ok) {
         await response.json();
         message.success("Profile updated successfully");
-
-        // Refetch user data to update cache
         await refetch();
-
-        // Reset form and close modal
         setAvatarPreview(null);
         setFormData((prev) => ({ ...prev, avatar: null }));
         onClose();
@@ -129,16 +136,14 @@ export default function UserSettingsModal({
         const error = await response.json();
         message.error(error.message || "Failed to update profile");
       }
-    } catch (error: any) {
-      console.error("Profile update error:", error);
+    } catch (error) {
       message.error("Failed to update profile");
     } finally {
       setIsUpdatingProfile(false);
     }
-  };
+  }, [user, formData, refetch, onClose]);
 
-  // Handle password change using regular fetch
-  const handlePasswordUpdate = async () => {
+  const handlePasswordUpdate = useCallback(async () => {
     if (!user) return;
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -146,8 +151,10 @@ export default function UserSettingsModal({
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      message.error("Password must be at least 6 characters long");
+    if (passwordData.newPassword.length < MIN_PASSWORD_LENGTH) {
+      message.error(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
+      );
       return;
     }
 
@@ -161,31 +168,21 @@ export default function UserSettingsModal({
 
       if (response.ok) {
         message.success("Password updated successfully");
-        setPasswordData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
+        setPasswordData(INITIAL_PASSWORD_DATA);
       } else {
         const error = await response.json();
         message.error(error.message || "Failed to update password");
       }
-    } catch (error: any) {
-      console.error("Password update error:", error);
+    } catch (error) {
       message.error("Failed to update password");
     } finally {
       setIsChangingPassword(false);
     }
-  };
+  }, [user, passwordData]);
 
-  // Reset form when modal closes
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setAvatarPreview(null);
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+    setPasswordData(INITIAL_PASSWORD_DATA);
     if (user) {
       setFormData({
         name: user.name || "",
@@ -195,7 +192,7 @@ export default function UserSettingsModal({
       });
     }
     onClose();
-  };
+  }, [user, onClose]);
 
   if (!user) return null;
 
@@ -205,7 +202,6 @@ export default function UserSettingsModal({
     <AnimatePresence>
       {isOpen && (
         <div className="queue-scroll">
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             initial={{ opacity: 0 }}
@@ -214,7 +210,6 @@ export default function UserSettingsModal({
             onClick={handleClose}
           />
 
-          {/* Modal */}
           <motion.div
             className="fixed inset-0 flex items-center justify-center z-50 p-2 md:p-4"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -223,15 +218,10 @@ export default function UserSettingsModal({
             transition={{ type: "spring", duration: 0.3 }}
           >
             <div className="relative w-full max-w-sm md:max-w-2xl max-h-[95vh] md:max-h-[90vh] overflow-hidden rounded-xl md:rounded-2xl">
-              {/* Glass Background */}
               <div className="absolute inset-0 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl md:rounded-2xl" />
-
-              {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20 rounded-xl md:rounded-2xl" />
 
-              {/* Content */}
               <div className="relative p-4 md:p-6 overflow-y-auto max-h-[95vh] md:max-h-[90vh]">
-                {/* Header */}
                 <div className="flex items-center justify-between mb-4 md:mb-6">
                   <h2 className="text-xl md:text-2xl font-bold text-white">
                     User Settings
@@ -247,13 +237,11 @@ export default function UserSettingsModal({
                   </button>
                 </div>
 
-                {/* Profile Section */}
                 <div className="mb-6 md:mb-8">
                   <h3 className="text-base md:text-lg font-semibold text-white mb-3 md:mb-4 flex items-center gap-2">
                     <UserOutlined /> Profile Information
                   </h3>
 
-                  {/* Avatar Upload */}
                   <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 mb-4 md:mb-6">
                     <div className="relative">
                       <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/20">
@@ -289,7 +277,6 @@ export default function UserSettingsModal({
                     />
                   </div>
 
-                  {/* Form Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
                     <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">
@@ -350,7 +337,6 @@ export default function UserSettingsModal({
                   </button>
                 </div>
 
-                {/* Password Section */}
                 <div>
                   <h3 className="text-base md:text-lg font-semibold text-white mb-3 md:mb-4 flex items-center gap-2">
                     <LockOutlined /> Change Password
@@ -432,4 +418,6 @@ export default function UserSettingsModal({
       )}
     </AnimatePresence>
   );
-}
+};
+
+export default memo(UserSettingsModal);

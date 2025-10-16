@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   EditOutlined,
@@ -19,6 +19,10 @@ interface PlaylistCardProps {
   onPublish: () => void;
 }
 
+/**
+ * Playlist card component with cover, details, and action buttons
+ * Displays playlist status (draft/published) and provides management controls
+ */
 const PlaylistCard: React.FC<PlaylistCardProps> = ({
   playlist,
   index,
@@ -28,6 +32,37 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   onDelete,
   onPublish,
 }) => {
+  const handleImageError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      e.currentTarget.src = "/default-cover.jpg";
+    },
+    []
+  );
+
+  const handlePublish = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onPublish();
+    },
+    [onPublish]
+  );
+
+  const handleEdit = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onEdit();
+    },
+    [onEdit]
+  );
+
+  const handleDelete = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDelete();
+    },
+    [onDelete]
+  );
+
   return (
     <motion.div
       className="group relative bg-white/10 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden hover:bg-white/15 hover:border-white/30 transition-all duration-300 cursor-pointer"
@@ -44,10 +79,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
             src={playlist.coverUrl}
             alt={playlist.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = "/default-cover.jpg";
-            }}
+            onError={handleImageError}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -70,10 +102,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
         <div className="absolute top-2 right-2 flex gap-2 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity duration-300">
           {playlist.isDraft && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPublish();
-              }}
+              onClick={handlePublish}
               className="p-2 bg-green-500/60 backdrop-blur-sm rounded-lg hover:bg-green-500/80 transition-colors"
               title="Publish playlist"
             >
@@ -81,20 +110,14 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
             </button>
           )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
+            onClick={handleEdit}
             className="p-2 bg-black/60 backdrop-blur-sm rounded-lg hover:bg-black/80 transition-colors"
             title="Edit playlist"
           >
             <EditOutlined className="text-white text-sm" />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
+            onClick={handleDelete}
             disabled={isDeleting}
             className="p-2 bg-red-500/60 backdrop-blur-sm rounded-lg hover:bg-red-500/80 transition-colors disabled:opacity-50"
             title="Delete playlist"
@@ -157,4 +180,4 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   );
 };
 
-export default PlaylistCard;
+export default memo(PlaylistCard);

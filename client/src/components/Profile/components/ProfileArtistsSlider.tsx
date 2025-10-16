@@ -1,90 +1,56 @@
-// ProfileArtistsSlider.tsx - Enhanced responsive design
 import { useState, useRef, type FC, useEffect, useCallback, memo } from "react";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useUserLikedArtists } from "../../../hooks/useUserLikedArtists";
 import ProfileArtistTemplate from "./ProfileArtistTemplate";
 
-/**
- * Profile Artists Slider - Enhanced responsive design
- *
- * RESPONSIVE IMPROVEMENTS:
- * - Adaptive card spacing for different screen sizes
- * - Mobile-optimized scroll behavior and touch interactions
- * - Responsive arrow positioning and sizing
- * - Better overflow handling on small screens
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Memoized scroll calculations to prevent excessive re-renders
- * - Efficient event listener management with cleanup
- * - Optimized resize handling for responsive behavior
- * - Smart loading states with proper skeleton UI
- *
- * ACCESSIBILITY FEATURES:
- * - Comprehensive ARIA labels and roles
- * - Keyboard navigation support
- * - Screen reader friendly content announcements
- * - High contrast focus indicators
- */
-
 interface ProfileArtistsSliderProps {
   userId: string;
   isLoading?: boolean;
 }
 
+/**
+ * Horizontal scrollable list of user's followed artists
+ * Features navigation arrows and responsive card layout
+ */
 const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
   userId,
   isLoading = false,
 }) => {
-  // State management
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
-
-  // Refs
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Hook for data fetching
   const {
     artists,
     isLoading: isDataLoading,
     error,
     refetch,
     pagination,
-  } = useUserLikedArtists(userId, {
-    limit: 12,
-  });
+  } = useUserLikedArtists(userId, { limit: 12 });
 
   const hasContent = artists.length > 0;
   const isCurrentLoading = isLoading || isDataLoading;
 
-  /**
-   * Handle scroll event with improved performance
-   */
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
     const maxScrollLeft = scrollWidth - clientWidth;
-    const canScroll = maxScrollLeft > 10; // Minimum scroll threshold
+    const canScroll = maxScrollLeft > 10;
 
     setShowLeftArrow(canScroll && scrollLeft > 10);
     setShowRightArrow(canScroll && scrollLeft < maxScrollLeft - 10);
   }, []);
 
-  /**
-   * Get responsive scroll distance based on screen size
-   */
   const getScrollDistance = useCallback(() => {
     const width = window.innerWidth;
-    if (width < 640) return 180; // Mobile - smaller cards
-    if (width < 1024) return 240; // Tablet
-    return 320; // Desktop
+    if (width < 640) return 180;
+    if (width < 1024) return 240;
+    return 320;
   }, []);
 
-  /**
-   * Scroll functions with responsive behavior
-   */
   const scrollLeft = useCallback(() => {
     scrollContainerRef.current?.scrollBy({
       left: -getScrollDistance(),
@@ -99,26 +65,17 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
     });
   }, [getScrollDistance]);
 
-  // Effects with cleanup
   useEffect(() => {
     handleScroll();
-
     const handleResize = () => handleScroll();
     window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
+    return () => window.removeEventListener("resize", handleResize);
   }, [artists, handleScroll]);
 
-  // Loading state with responsive skeletons
   if (isCurrentLoading) {
     return (
       <div className="overflow-hidden">
-        {/* Title skeleton */}
         <div className="h-6 sm:h-8 w-40 sm:w-48 bg-gradient-to-r from-white/15 via-white/25 to-white/15 rounded-lg mb-6 animate-pulse" />
-
-        {/* Content skeletons with responsive layout */}
         <div className="flex gap-2 sm:gap-3 lg:gap-5 overflow-x-auto pb-4">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex-shrink-0">
@@ -137,7 +94,6 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
       className="overflow-hidden"
       aria-labelledby="artists-section-title"
     >
-      {/* Header with responsive layout */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h2
           id="artists-section-title"
@@ -146,7 +102,6 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
           Following Artists ({totalArtists})
         </h2>
 
-        {/* View All button with responsive positioning */}
         {hasContent && totalArtists > 12 && (
           <Link
             to={`/profile/${userId}/artists`}
@@ -157,7 +112,6 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
         )}
       </div>
 
-      {/* Error state with responsive design */}
       {error && (
         <div className="bg-red-50/10 border border-red-200/20 rounded-lg p-4 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-start gap-3">
@@ -185,9 +139,7 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
         </div>
       )}
 
-      {/* Content area with responsive scrolling */}
       <div className="relative group">
-        {/* Navigation arrows with responsive positioning */}
         {showLeftArrow && hasContent && (
           <button
             onClick={scrollLeft}
@@ -208,7 +160,6 @@ const ProfileArtistsSlider: FC<ProfileArtistsSliderProps> = ({
           </button>
         )}
 
-        {/* Scrollable content container with responsive gaps */}
         <div
           ref={scrollContainerRef}
           className="albums-scroll-light overflow-x-auto pb-4 scroll-smooth"

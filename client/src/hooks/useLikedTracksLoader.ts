@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { api } from "../shared/api";
-import { useImagePreloader } from "./useImagePreloader";
 import type { Track } from "../types/TrackData";
+import { useImagePreloader } from "./useImagePreloader";
+import { api } from "../shared/api";
 
+/**
+ * Hook for loading user's liked tracks with image preloading
+ * Provides methods for adding/removing tracks and refreshing data
+ */
 export const useLikedTracksLoader = () => {
   const [likedTracks, setLikedTracks] = useState<Track[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -11,7 +15,6 @@ export const useLikedTracksLoader = () => {
 
   const { allImagesLoaded } = useImagePreloader(imageSrcs);
 
-  // Общее состояние загрузки - данные + изображения
   const isFullyLoaded = !dataLoading && allImagesLoaded;
 
   const loadLikedTracks = async (userId: string) => {
@@ -36,22 +39,18 @@ export const useLikedTracksLoader = () => {
 
       setLikedTracks(tracks);
 
-      // Собираем все URL изображений для предзагрузки
       const allImageSrcs: string[] = [];
 
       tracks.forEach((track: Track) => {
-        // Обложка трека
         if (track.coverUrl) {
           allImageSrcs.push(track.coverUrl);
         }
       });
 
-      // Убираем дубликаты URL
       const uniqueImageSrcs = [...new Set(allImageSrcs)];
       setImageSrcs(uniqueImageSrcs);
       setDataLoading(false);
     } catch (error) {
-      console.error("Ошибка загрузки любимых треков:", error);
       setError(
         error instanceof Error ? error.message : "Unknown error occurred"
       );
@@ -60,7 +59,6 @@ export const useLikedTracksLoader = () => {
   };
 
   const refreshLikedTracks = async (userId: string) => {
-    // Перезагрузка без сброса текущих данных (для обновления после лайка/дизлайка)
     try {
       const response = await api.user.getLikedSongs(userId);
 
@@ -69,16 +67,16 @@ export const useLikedTracksLoader = () => {
         setLikedTracks(data.data || []);
       }
     } catch (error) {
-      console.error("Ошибка обновления любимых треков:", error);
+      // Silent fail on refresh
     }
   };
 
   const addTrackToLiked = (track: Track) => {
     setLikedTracks((prev) => {
       if (prev.some((t) => t._id === track._id)) {
-        return prev; // Трек already exists
+        return prev;
       }
-      return [track, ...prev]; // Добавляем в начало списка
+      return [track, ...prev];
     });
   };
 
@@ -95,8 +93,8 @@ export const useLikedTracksLoader = () => {
   return {
     likedTracks,
     isLoading: !isFullyLoaded,
-    dataLoading, // Отдельное состояние загрузки данных
-    imagesLoading: !allImagesLoaded, // Отдельное состояние загрузки изображений
+    dataLoading,
+    imagesLoading: !allImagesLoaded,
     error,
     loadLikedTracks,
     refreshLikedTracks,

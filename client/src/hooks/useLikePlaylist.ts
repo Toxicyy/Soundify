@@ -11,13 +11,8 @@ interface UseLikePlaylistReturn {
 }
 
 /**
- * Hook for managing playlist like/unlike functionality
- *
- * Features:
- * - Optimistic updates for immediate UI feedback
- * - Automatic state sync with user data
- * - Comprehensive error handling with rollback
- * - Integration with playlist API endpoints
+ * Hook for managing playlist like/unlike
+ * Features optimistic updates with automatic rollback on errors
  */
 export const useLikePlaylist = (
   playlistId: string,
@@ -30,7 +25,6 @@ export const useLikePlaylist = (
   const [error, setError] = useState<string | null>(null);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
 
-  // Initialize like status from user data
   useEffect(() => {
     if (user?.likedPlaylists && playlistId) {
       const userLikesPlaylist = user.likedPlaylists.includes(playlistId);
@@ -38,7 +32,6 @@ export const useLikePlaylist = (
     }
   }, [user?.likedPlaylists, playlistId]);
 
-  // Update like count when prop changes
   useEffect(() => {
     setLikeCount(initialLikeCount);
   }, [initialLikeCount]);
@@ -55,7 +48,6 @@ export const useLikePlaylist = (
     setError(null);
 
     try {
-      // Optimistic update
       const newLikedState = !isLiked;
       const newCount = newLikedState
         ? likeCount + 1
@@ -64,7 +56,6 @@ export const useLikePlaylist = (
       setIsLiked(newLikedState);
       setLikeCount(newCount);
 
-      // API call
       const response = await api.playlist.likePlaylist(playlistId, newLikedState);
 
       if (!response.ok) {
@@ -78,10 +69,8 @@ export const useLikePlaylist = (
         setLikeCount(data.data.likeCount);
       }
 
-      // Refresh user data
       await refetchUser();
     } catch (error) {
-      // Rollback optimistic updates on error
       setIsLiked(previousLiked);
       setLikeCount(previousCount);
 

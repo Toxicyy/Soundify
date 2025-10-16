@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import { SearchOutlined } from "@ant-design/icons";
 import type { Track } from "../../../types/TrackData";
 import { useNotification } from "../../../hooks/useNotification";
@@ -12,32 +12,16 @@ interface TrackManagerProps {
   isEditing: boolean;
 }
 
-// Search result types
 interface SearchData {
   tracks: Track[];
   artists: any[];
   albums: any[];
 }
 
-// Debounce function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) & { cancel: () => void } {
-  let timeout: number | undefined;
-
-  const debounced = (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-
-  debounced.cancel = () => {
-    clearTimeout(timeout);
-  };
-
-  return debounced;
-}
-
+/**
+ * Track manager with search functionality and track list
+ * Handles adding, removing, and reordering tracks in playlist
+ */
 const TrackManager: React.FC<TrackManagerProps> = ({
   tracks,
   onTracksChange,
@@ -59,32 +43,34 @@ const TrackManager: React.FC<TrackManagerProps> = ({
 
   const { showError } = useNotification();
 
-  // Enhanced API search function
-  const searchAPI = async (query: string): Promise<SearchData> => {
-    try {
-      const response = await api.search.global(query, { limit: 10 });
+  const searchAPI = useCallback(
+    async (query: string): Promise<SearchData> => {
+      try {
+        const response = await api.search.global(query, { limit: 10 });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return {
+          tracks: data.data?.tracks || [],
+          artists: data.data?.artists || [],
+          albums: data.data?.albums || [],
+        };
+      } catch (error) {
+        showError("Failed to search");
+        return { tracks: [], artists: [], albums: [] };
       }
+    },
+    [showError]
+  );
 
-      const data = await response.json();
-      return {
-        tracks: data.data?.tracks || [],
-        artists: data.data?.artists || [],
-        albums: data.data?.albums || [],
-      };
-    } catch (error) {
-      console.error("Search API error:", error);
-      showError("Failed to search");
-      return { tracks: [], artists: [], albums: [] };
-    }
-  };
-
-  // Debounced search function
-  const debouncedSearch = useMemo(
-    () =>
-      debounce(async (searchQuery: string) => {
+  const debouncedSearch = useMemo(() => {
+    let timeout: number;
+    return (searchQuery: string) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(async () => {
         if (!searchQuery.trim()) {
           setSearchResults({ tracks: [], artists: [], albums: [] });
           setSearchContext({ type: "search" });
@@ -97,16 +83,14 @@ const TrackManager: React.FC<TrackManagerProps> = ({
           const results = await searchAPI(searchQuery);
           setSearchResults(results);
         } catch (error) {
-          console.error("Search error:", error);
           setSearchResults({ tracks: [], artists: [], albums: [] });
         } finally {
           setIsSearching(false);
         }
-      }, 500),
-    [showError]
-  );
+      }, 500);
+    };
+  }, [searchAPI]);
 
-  // Handle search query change
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const query = e.target.value;
@@ -123,7 +107,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [debouncedSearch]
   );
 
-  // Handle artist tracks loading
   const handleShowArtistTracks = useCallback(
     async (artistId: string, artistName: string) => {
       try {
@@ -134,25 +117,20 @@ const TrackManager: React.FC<TrackManagerProps> = ({
         if (!response.ok) throw new Error("Failed to fetch artist tracks");
 
         const data = await response.json();
-
-        // Попробуем разные пути к данным
         const tracks = data.data?.tracks || data.tracks || data.data || [];
 
-        // Update search results to show only these tracks
         setSearchResults({
           tracks,
           artists: [],
           albums: [],
         });
 
-        // Set context to artist
         setSearchContext({
           type: "artist",
           name: artistName,
           id: artistId,
         });
       } catch (error) {
-        console.error("Error loading artist tracks:", error);
         showError("Failed to load artist tracks");
       } finally {
         setIsSearching(false);
@@ -161,7 +139,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [showError]
   );
 
-  // Handle album tracks loading
   const handleShowAlbumTracks = useCallback(
     async (albumId: string, albumName: string) => {
       try {
@@ -173,14 +150,12 @@ const TrackManager: React.FC<TrackManagerProps> = ({
         const data = await response.json();
         const tracks = data.data?.tracks || [];
 
-        // Update search results to show only these tracks
         setSearchResults({
           tracks,
           artists: [],
           albums: [],
         });
 
-        // Set context to album
         setSearchContext({
           type: "album",
           name: albumName,
@@ -195,17 +170,15 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [showError]
   );
 
-  // Handle back to search
   const handleBackToSearch = useCallback(() => {
     if (searchQuery.trim()) {
-      // Re-run search with current query
       debouncedSearch(searchQuery);
     } else {
-      // Clear results
       setSearchResults({ tracks: [], artists: [], albums: [] });
       setSearchContext({ type: "search" });
     }
   }, [searchQuery, debouncedSearch]);
+
   const handleAddTrack = useCallback(
     (track: Track) => {
       const isAlreadyAdded = tracks.some((t) => t._id === track._id);
@@ -213,7 +186,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
         setAddingTrackIds((prev) => new Set(prev).add(track._id));
         onTracksChange([...tracks, track]);
 
-        // Remove adding state after short delay
         setTimeout(() => {
           setAddingTrackIds((prev) => {
             const newSet = new Set(prev);
@@ -226,7 +198,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [tracks, onTracksChange]
   );
 
-  // Handle removing track
   const handleRemoveTrack = useCallback(
     (trackId: string) => {
       onTracksChange(tracks.filter((t) => t._id !== trackId));
@@ -234,7 +205,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [tracks, onTracksChange]
   );
 
-  // Handle track reordering
   const handleTrackReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
       const newTracks = [...tracks];
@@ -245,7 +215,6 @@ const TrackManager: React.FC<TrackManagerProps> = ({
     [tracks, onTracksChange]
   );
 
-  // Check if track is in playlist
   const isTrackInPlaylist = useCallback(
     (trackId: string) => {
       return tracks.some((t) => t._id === trackId);
@@ -259,7 +228,7 @@ const TrackManager: React.FC<TrackManagerProps> = ({
         {isEditing ? "Manage Tracks" : "Playlist Tracks"}
       </h2>
 
-      {/* Search Tracks - Only show in edit mode */}
+      {/* Search Tracks */}
       {isEditing && (
         <div className="mb-6">
           <div className="relative">
@@ -303,4 +272,4 @@ const TrackManager: React.FC<TrackManagerProps> = ({
   );
 };
 
-export default TrackManager;
+export default memo(TrackManager);

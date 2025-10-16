@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import type { Track } from "../../../types/TrackData";
 import SearchResultItem from "./SearchResultItem";
 import ArtistResultItem from "./ArtistResultItem";
@@ -26,6 +26,10 @@ interface SearchResultsProps {
   addingTrackIds: Set<string>;
 }
 
+/**
+ * Search results component displaying tracks, artists, and albums
+ * Supports different contexts (general search, artist tracks, album tracks)
+ */
 const SearchResults: React.FC<SearchResultsProps> = ({
   searchResults,
   isSearching,
@@ -93,7 +97,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             </div>
           )}
 
-          {/* Artists Section - Only show in normal search */}
+          {/* Artists Section */}
           {searchContext.type === "search" &&
             searchResults.artists.length > 0 && (
               <div>
@@ -115,7 +119,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
               </div>
             )}
 
-          {/* Albums Section - Only show in normal search */}
+          {/* Albums Section */}
           {searchContext.type === "search" &&
             searchResults.albums.length > 0 && (
               <div>
@@ -158,4 +162,4 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   );
 };
 
-export default SearchResults;
+export default memo(SearchResults);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { playTrackAndQueue, toggleShuffle } from "../../../state/Queue.slice";
 import { setIsPlaying } from "../../../state/CurrentTrack.slice";
@@ -14,33 +14,19 @@ import {
 } from "@ant-design/icons";
 
 interface DraggableTracksListProps {
-  /** Array of tracks to display */
   tracks: Track[];
-  /** Loading state indicator */
   isLoading?: boolean;
-  /** Error message if tracks loading failed */
   tracksError?: string | null;
-  /** Whether the playlist is editable by current user */
   isEditable?: boolean;
-  /** Function to update local playlist state */
   updateLocal?: (updates: Partial<Playlist>) => void;
-  /** Current playlist data */
   playlist?: Playlist | null;
-  /** Callback for removing a track from playlist */
   onRemoveTrack?: (trackId: string) => void;
-  /** Callback for reordering tracks */
   onReorderTracks?: (newTracks: Track[]) => void;
 }
 
 /**
- * Enhanced draggable tracks list component with permissions and callbacks
- *
- * Features:
- * - Role-based editing permissions
- * - Drag & drop reordering with callbacks
- * - Track removal with confirmation
- * - Comprehensive error handling
- * - Responsive design with accessibility
+ * Draggable tracks list with playback controls
+ * Features drag-and-drop reordering, search, and permission-based editing
  */
 const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   tracks,
@@ -61,7 +47,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Отфильтрованные треки
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) {
       return tracks;
@@ -77,7 +62,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
 
   const hasData = filteredTracks.length > 0;
 
-  // Проверяем, играет ли сейчас трек из этого плейлиста
   const isCurrentTrackFromThisPlaylist = useMemo(() => {
     if (!currentTrackState.currentTrack) return false;
     return tracks.some(
@@ -89,9 +73,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     return isCurrentTrackFromThisPlaylist && currentTrackState.isPlaying;
   }, [isCurrentTrackFromThisPlaylist, currentTrackState.isPlaying]);
 
-  /**
-   * Обработка перетаскивания треков с callback
-   */
   const handleDragStart = useCallback((index: number) => {
     setIsDragging(true);
     setDragOverIndex(index);
@@ -104,52 +85,39 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
 
       if (fromIndex === toIndex || !isEditable) return;
 
-      // Создаем новый массив треков с измененным порядком
       const newTracks = [...tracks];
       const [movedTrack] = newTracks.splice(fromIndex, 1);
       newTracks.splice(toIndex, 0, movedTrack);
 
-      // Вызываем callback для уведомления родительского компонента
       if (onReorderTracks) {
         onReorderTracks(newTracks);
       } else if (updateLocal) {
-        // Fallback к старому способу если callback не предоставлен
         updateLocal({
           tracks: newTracks as Track[] | string[],
           trackCount: newTracks.length,
         });
       }
-
     },
     [tracks, updateLocal, onReorderTracks, isEditable]
   );
 
-  /**
-   * Удаление трека из плейлиста с callback
-   */
   const handleRemoveTrack = useCallback(
     (trackId: string) => {
       if (!isEditable) return;
 
-      // Используем callback если предоставлен
       if (onRemoveTrack) {
         onRemoveTrack(trackId);
       } else if (updateLocal) {
-        // Fallback к старому способу
         const newTracks = tracks.filter((track) => track._id !== trackId);
         updateLocal({
           tracks: newTracks as Track[] | string[],
           trackCount: newTracks.length,
         });
       }
-
     },
     [tracks, updateLocal, onRemoveTrack, isEditable]
   );
 
-  /**
-   * Обработка воспроизведения плейлиста
-   */
   const handlePlaylistPlayPause = useCallback(() => {
     if (isLoading || filteredTracks.length === 0) return;
 
@@ -171,21 +139,14 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     dispatch,
   ]);
 
-  /**
-   * Переключение режима shuffle
-   */
   const handleShuffle = useCallback(() => {
     dispatch(toggleShuffle());
   }, [dispatch]);
 
-  /**
-   * Очистка поиска
-   */
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
   }, []);
 
-  // Обработка DragOver для контейнера
   const handleContainerDragOver = useCallback(
     (e: React.DragEvent) => {
       if (!isEditable) return;
@@ -215,9 +176,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     [isEditable]
   );
 
-  /**
-   * Рендер скелетонов для загрузки
-   */
   const renderSkeletons = () =>
     Array.from({ length: 8 }).map((_, index) => (
       <DraggableTrackTemplate
@@ -230,9 +188,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
       />
     ));
 
-  /**
-   * Рендер ошибки
-   */
   const renderError = () => (
     <div className="text-center py-8" role="alert">
       <div className="w-16 h-16 mx-auto rounded-full bg-red-500/20 flex items-center justify-center mb-3">
@@ -261,9 +216,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     </div>
   );
 
-  /**
-   * Рендер пустого состояния
-   */
   const renderEmptyState = () => {
     const isSearchEmpty = searchQuery.trim() && filteredTracks.length === 0;
 
@@ -308,13 +260,9 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     );
   };
 
-  /**
-   * Рендер панели управления
-   */
   const renderControlPanel = () => (
     <div className="pt-3 px-3 flex-shrink-0">
       <div className="flex items-center justify-between mb-5 px-3 gap-4 flex-col sm:flex-row">
-        {/* Элементы управления воспроизведением */}
         <div className="flex items-center gap-4 order-2 sm:order-1">
           <button
             className="bg-white/40 rounded-full w-[65px] h-[65px] flex items-center justify-center cursor-pointer hover:scale-110 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
@@ -349,7 +297,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
           </button>
         </div>
 
-        {/* Поиск */}
         <div className="relative order-1 sm:order-2 w-full sm:w-auto">
           <div className="relative flex items-center">
             <SearchOutlined
@@ -381,7 +328,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
     <div className="flex flex-col pb-10">
       {renderControlPanel()}
 
-      {/* Информация о редактируемом режиме */}
       {isEditable && hasData && (
         <div className="px-6 mb-4">
           <div className="flex items-center gap-2 text-white/60 text-sm">
@@ -393,7 +339,6 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
         </div>
       )}
 
-      {/* Список треков */}
       <div className="space-y-2 mt-2 px-3" onDragOver={handleContainerDragOver}>
         {isLoading
           ? renderSkeletons()
@@ -420,4 +365,4 @@ const DraggableTracksList: React.FC<DraggableTracksListProps> = ({
   );
 };
 
-export default DraggableTracksList;
+export default memo(DraggableTracksList);

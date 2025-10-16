@@ -1,55 +1,66 @@
+import { useEffect, useState, memo, useMemo } from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { skipToken } from "@reduxjs/toolkit/query/react";
+import type { AppState } from "../../../store";
+import { useGetUserQuery } from "../../../state/UserApi.slice";
+import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
+import type { Playlist } from "../../../types/Playlist";
 import SearchInput from "./components/SearchInput";
 import UserIcon from "./components/UserIcon";
 import SettingsMenu from "./components/SettingsMenu";
-import userAvatar from "../../../images/User/Anonym.jpg";
 import PlaylistModule from "./components/PlaylistModule";
 import ArtistModule from "./components/ArtistModule";
-import chartImage from "../../../images/chart/global.jpg";
-import Queue from "./components/Queue";
-import { useSelector } from "react-redux";
-import type { AppState } from "../../../store";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { useGetUserQuery } from "../../../state/UserApi.slice";
-import { useEffect, useState } from "react";
-import { useDailyContentLoader } from "../../../hooks/useDailyContentLoader";
-import type { Playlist } from "../../../types/Playlist";
 import ChartModule from "./components/ChartModule";
-import { skipToken } from "@reduxjs/toolkit/query/react";
+import Queue from "./components/Queue";
 import AnimatedBurgerMenu from "./components/AnimatedBurgerMenu";
+import userAvatar from "../../../images/User/Anonym.jpg";
+import chartImage from "../../../images/chart/global.jpg";
 
-export default function MainMenu() {
+/**
+ * Main page layout component with responsive sidebar and content
+ * Features user authentication, daily content, and queue management
+ */
+const MainMenu = () => {
   const queueOpen = useSelector((state: AppState) => state.queue.isOpen);
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
+
+  const token = useMemo(() => localStorage.getItem("token"), []);
+
   const { data: user, isFetching } = useGetUserQuery(
     token ? undefined : skipToken
   );
+
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
 
-  // Используем новый хук
   const { dailyTracks, featuredPlaylist, isLoading, loadDailyContent } =
     useDailyContentLoader();
 
   useEffect(() => {
     loadDailyContent();
-  }, []);
+  }, [loadDailyContent]);
 
-  // Функция для переключения меню настроек
   const toggleSettingsMenu = () => {
-    setIsSettingsMenuOpen(!isSettingsMenuOpen);
+    setIsSettingsMenuOpen((prev) => !prev);
   };
 
-  // Функция для закрытия меню настроек
   const closeSettingsMenu = () => {
     setIsSettingsMenuOpen(false);
   };
 
+  const handleSignUp = () => {
+    navigate("/signup");
+  };
+
+  const handleSignIn = () => {
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen w-full mainMenu pl-4 xl:pl-[22vw] mb-35 xl:mb-0 pt-3 md:pt-6 flex flex-col xl:flex-row gap-4 md:gap-6 xl:gap-10 overflow-hidden">
-      {/* Main Content - Full width on mobile/tablet, 62% on desktop */}
       <div className="w-full xl:w-[65%] flex flex-col px-2 md:px-4 xl:px-0 overflow-y-auto xl:overflow-y-visible">
-        {/* Header with Search and User - Mobile/Tablet only */}
+        {/* Mobile/Tablet Header */}
         <div className="flex xl:hidden items-center justify-between mb-4 md:mb-6 flex-shrink-0">
           <motion.div
             initial={{ opacity: 0, y: -300 }}
@@ -57,18 +68,15 @@ export default function MainMenu() {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="w-full flex items-center justify-between gap-3"
           >
-            {/* Search Input */}
             <div className="flex-1 mr-5 max-w-md">
               <SearchInput />
             </div>
 
-            {/* User and Settings Section */}
             <div className="flex items-center gap-3">
               {user && (
                 <UserIcon userIcon={user?.avatar ? user.avatar : userAvatar} />
               )}
 
-              {/* Settings button for mobile/tablet */}
               {user && (
                 <div className="relative">
                   <AnimatedBurgerMenu
@@ -88,7 +96,7 @@ export default function MainMenu() {
           </motion.div>
         </div>
 
-        {/* Desktop Header with Search and User */}
+        {/* Desktop Header */}
         <div className="hidden xl:flex items-center justify-end mb-6">
           <motion.div
             initial={{ opacity: 0, y: -300 }}
@@ -103,7 +111,7 @@ export default function MainMenu() {
           </motion.div>
         </div>
 
-        {/* Auth buttons for non-logged users - Mobile/Tablet only */}
+        {/* Auth buttons for non-logged users - Mobile/Tablet */}
         {!user && !isFetching && (
           <motion.div
             initial={{ opacity: 0, height: 0, y: -400 }}
@@ -114,14 +122,16 @@ export default function MainMenu() {
           >
             <button
               className="px-6 py-2.5 rounded-lg bg-purple-900/30 backdrop-blur-md border border-purple-500/30 text-purple-100 font-medium hover:bg-purple-800/40 transition-all duration-300 shadow-lg hover:shadow-purple-900/30 hover:scale-[1.02] active:scale-95"
-              onClick={() => navigate("/signup")}
+              onClick={handleSignUp}
+              aria-label="Sign up for account"
             >
               Sign Up
             </button>
 
             <button
               className="px-6 py-2.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-purple-900/20 hover:scale-[1.02] active:scale-95"
-              onClick={() => navigate("/login")}
+              onClick={handleSignIn}
+              aria-label="Sign in to account"
             >
               Sign In
             </button>
@@ -130,7 +140,6 @@ export default function MainMenu() {
 
         {/* Main Content Grid */}
         <div className="flex-1 flex flex-col gap-4 md:gap-6 xl:gap-8 min-h-0 pb-4">
-          {/* Playlist Module */}
           <motion.div
             initial={{ opacity: 0, x: 2000 }}
             animate={{ opacity: 1, x: 0 }}
@@ -138,12 +147,11 @@ export default function MainMenu() {
             className="flex-shrink-0"
           >
             <PlaylistModule
-              playlist={featuredPlaylist ? featuredPlaylist : ({} as Playlist)}
+              playlist={featuredPlaylist || ({} as Playlist)}
               isLoading={isLoading}
             />
           </motion.div>
 
-          {/* Artists Module */}
           <motion.div
             initial={{ opacity: 0, y: 1200 }}
             animate={{ opacity: 1, y: 0 }}
@@ -153,7 +161,6 @@ export default function MainMenu() {
             <ArtistModule dailyTracks={dailyTracks} isLoading={isLoading} />
           </motion.div>
 
-          {/* Chart Module - Show on mobile/tablet below artists */}
           <AnimatePresence>
             <motion.div
               className="block xl:hidden flex-shrink-0"
@@ -167,7 +174,6 @@ export default function MainMenu() {
           </AnimatePresence>
         </div>
 
-        {/* Loading indicator */}
         {isLoading && (
           <div className="fixed bottom-4 right-4 bg-black/80 text-white px-3 py-2 text-sm rounded-lg backdrop-blur-md border border-white/20 z-50">
             Loading...
@@ -177,7 +183,6 @@ export default function MainMenu() {
 
       {/* Right Sidebar - Desktop Only */}
       <div className="hidden xl:flex xl:w-[35%] flex-col gap-0 overflow-hidden xl:mt-2">
-        {/* User Greeting - Desktop only */}
         {!isFetching && user && (
           <motion.div
             className="flex items-center justify-between mb-4 relative"
@@ -217,7 +222,7 @@ export default function MainMenu() {
           </motion.div>
         )}
 
-        {!user && (
+        {!user && !isFetching && (
           <motion.div
             className="flex items-center mb-4 relative flex-shrink-0 gap-4 mx-auto"
             initial={{ opacity: 1, height: 0, y: -400 }}
@@ -231,21 +236,22 @@ export default function MainMenu() {
           >
             <button
               className="px-6 py-2.5 rounded-lg bg-purple-900/30 backdrop-blur-md border border-purple-500/30 text-purple-100 font-medium hover:bg-purple-800/40 transition-all duration-300 shadow-lg hover:shadow-purple-900/30 hover:scale-[1.02] active:scale-95"
-              onClick={() => navigate("/signup")}
+              onClick={handleSignUp}
+              aria-label="Sign up for account"
             >
               Sign Up
             </button>
 
             <button
               className="px-6 py-2.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-purple-900/20 hover:scale-[1.02] active:scale-95"
-              onClick={() => navigate("/login")}
+              onClick={handleSignIn}
+              aria-label="Sign in to account"
             >
               Sign In
             </button>
           </motion.div>
         )}
 
-        {/* Chart Module - Desktop */}
         <AnimatePresence>
           {!queueOpen && (
             <motion.div
@@ -261,7 +267,6 @@ export default function MainMenu() {
           )}
         </AnimatePresence>
 
-        {/* Queue - Desktop */}
         <div
           className={`transition-all duration-500 ${
             queueOpen ? "flex-1 h-full" : "h-auto max-h-96"
@@ -281,10 +286,12 @@ export default function MainMenu() {
         </div>
       </div>
 
-      {/* Mobile/Tablet Queue Overlay - Only render for non-desktop */}
+      {/* Mobile/Tablet Queue Overlay */}
       <div className="xl:hidden">
         <Queue queueOpen={queueOpen} />
       </div>
     </div>
   );
-}
+};
+
+export default memo(MainMenu);

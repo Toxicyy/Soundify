@@ -28,8 +28,8 @@ interface UseUserLikedPlaylistsReturn {
 }
 
 /**
- * Custom hook for fetching user's liked playlists with pagination
- * Handles loading states, error management, and data fetching lifecycle
+ * Hook for fetching user's liked playlists with pagination
+ * Provides load more functionality and auto-fetch option
  */
 export const useUserLikedPlaylists = (
   userId: string,
@@ -37,30 +37,22 @@ export const useUserLikedPlaylists = (
 ): UseUserLikedPlaylistsReturn => {
   const { page = 1, limit = 20, autoFetch = true } = options;
 
-  // State management
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(autoFetch);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
 
-  // Refs for cleanup and mount state tracking
   const abortControllerRef = useRef<AbortController | null>(null);
   const isMountedRef = useRef(true);
 
-  /**
-   * Core data fetching function with comprehensive error handling
-   * Manages request lifecycle, response validation, and state updates
-   */
   const loadUserLikedPlaylists = useCallback(
     async (id: string, pageNum: number = 1, limitNum: number = 20) => {
-      // Input validation
       if (!id?.trim()) {
         setError("Invalid user ID");
         setIsLoading(false);
         return;
       }
 
-      // Cancel previous request to prevent race conditions
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
@@ -84,15 +76,12 @@ export const useUserLikedPlaylists = (
 
         const responseData = await response.json();
 
-        // Validate response structure
         if (!responseData || typeof responseData !== "object") {
           throw new Error("Invalid response format");
         }
 
-        // Early return if component unmounted
         if (!isMountedRef.current) return;
 
-        // Extract and validate data
         const playlistsData = responseData.data || [];
         const paginationData = responseData.pagination;
 
@@ -100,25 +89,21 @@ export const useUserLikedPlaylists = (
           throw new Error("Invalid playlists data format");
         }
 
-        // Update state with validated data
         setPlaylists(playlistsData);
         setPagination(paginationData || null);
       } catch (error) {
-        // Ignore abort errors (expected behavior)
         if (error instanceof Error && error.name === "AbortError") {
           return;
         }
 
         if (!isMountedRef.current) return;
 
-        // Transform error messages for better UX
         let errorMessage = "Unknown error occurred";
 
         if (error instanceof Error) {
           errorMessage = error.message;
         }
 
-        // Provide user-friendly error messages
         if (
           errorMessage.includes("Failed to fetch") ||
           errorMessage.includes("NetworkError")
@@ -134,7 +119,6 @@ export const useUserLikedPlaylists = (
           errorMessage = "Server error";
         }
 
-        console.error("User liked playlists loading error:", error);
         setError(errorMessage);
         setPlaylists([]);
         setPagination(null);
@@ -147,32 +131,24 @@ export const useUserLikedPlaylists = (
     []
   );
 
-  /**
-   * Refetch current data with same parameters
-   */
   const refetch = useCallback(() => {
     if (userId) {
       loadUserLikedPlaylists(userId, page, limit);
     }
   }, [userId, page, limit, loadUserLikedPlaylists]);
 
-  /**
-   * Load next page of data if available
-   */
   const loadMore = useCallback(() => {
     if (userId && pagination?.hasNextPage) {
       loadUserLikedPlaylists(userId, pagination.currentPage + 1, limit);
     }
   }, [userId, pagination, limit, loadUserLikedPlaylists]);
 
-  // Initial data loading effect
   useEffect(() => {
     if (!autoFetch) return;
 
     if (userId) {
       loadUserLikedPlaylists(userId, page, limit);
     } else {
-      // Reset state when no user ID provided
       setPlaylists([]);
       setIsLoading(false);
       setError("User ID is required");
@@ -184,7 +160,6 @@ export const useUserLikedPlaylists = (
     };
   }, [userId, page, limit, loadUserLikedPlaylists, autoFetch]);
 
-  // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
 

@@ -1,48 +1,46 @@
 import { useLocation } from "react-router-dom";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Header from "../components/Album/Header";
 import MainMenu from "../components/Album/MainMenu";
 import { useAlbumTracks } from "../hooks/useAlbumTracks";
 import { useImagePreloader } from "../hooks/useImagePreloader";
 
 /**
- * Album page component displaying album information and tracks
- * Handles loading states, error management, and responsive layout
+ * Album page component
+ * Displays album information and tracks with loading/error states
  */
 const Album = () => {
   const location = useLocation();
-
-  // Extract album ID from URL path
   const albumId = location.pathname.split("/album/")[1];
 
-  // Fetch album data and tracks with pagination
   const { album, tracks, isLoading, error } = useAlbumTracks(albumId, {
     limit: 30,
   });
 
-  // Preload images for better UX
-  const imagesToPreload = [
-    album?.coverUrl,
-    ...tracks.map((track) => track.coverUrl),
-  ].filter(Boolean) as string[];
+  const imagesToPreload = useMemo(
+    () =>
+      [album?.coverUrl, ...tracks.map((track) => track.coverUrl)].filter(
+        Boolean
+      ) as string[],
+    [album?.coverUrl, tracks]
+  );
 
   const { allImagesLoaded } = useImagePreloader(imagesToPreload);
 
-  // Determine overall loading state (data + images)
-  const isOverallLoading =
-    isLoading || (!allImagesLoaded && imagesToPreload.length > 0);
+  const isOverallLoading = useMemo(
+    () => isLoading || (!allImagesLoaded && imagesToPreload.length > 0),
+    [isLoading, allImagesLoaded, imagesToPreload.length]
+  );
 
-  // Show loading state while data or images are loading
   if (isOverallLoading) {
     return (
-      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5  mb-45 xl:mb-5">
+      <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
         <Header tracks={[]} album={{} as any} isLoading={true} />
         <MainMenu tracks={[]} isLoading={true} />
       </div>
     );
   }
 
-  // Show error state if album loading failed
   if (error) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center mb-45 xl:mb-5">
@@ -116,7 +114,6 @@ const Album = () => {
     );
   }
 
-  // Show message if no album data available
   if (!album || !album.name) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
@@ -134,9 +131,8 @@ const Album = () => {
     );
   }
 
-  // Main content render - all data loaded successfully
   return (
-    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5  mb-45 xl:mb-5">
+    <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5 mb-45 xl:mb-5">
       <Header tracks={tracks} album={album} isLoading={false} />
       <MainMenu tracks={tracks} isLoading={false} />
     </main>

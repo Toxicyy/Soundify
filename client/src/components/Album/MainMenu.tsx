@@ -9,8 +9,8 @@ interface AlbumMainMenuProps {
 }
 
 /**
- * Album main menu component displaying track list with controls
- * Features responsive design, loading states, and comprehensive track management
+ * Album main menu displaying track list with controls
+ * Includes responsive design and loading states
  */
 const AlbumMainMenu: FC<AlbumMainMenuProps> = ({
   tracks,
@@ -25,7 +25,6 @@ const AlbumMainMenu: FC<AlbumMainMenuProps> = ({
         tracksError={tracksError}
       />
 
-      {/* Additional context for screen readers */}
       {!isLoading && tracks.length > 0 && (
         <div className="sr-only">
           <h2>

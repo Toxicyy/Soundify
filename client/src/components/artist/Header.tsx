@@ -8,21 +8,18 @@ interface ArtistHeaderProps {
 }
 
 /**
- * Artist header component displaying artist avatar, name, verification status, and follower count
- * Uses base header components for consistent styling and responsive design
+ * Artist header component displaying avatar, name, verification, and follower count
+ * Uses gradient styling for verified artists
  */
 const ArtistHeader: FC<ArtistHeaderProps> = ({ artist, isLoading = false }) => {
-  // Format follower count with proper localization
   const followerCount = artist.followerCount?.toLocaleString() || "0";
 
-  // Generate subtitle with follower information
   const subtitle = !isLoading ? (
     <span className="text-base sm:text-lg font-medium text-white">
       {followerCount} {artist.followerCount === 1 ? "follower" : "followers"}
     </span>
   ) : null;
 
-  // Enhanced title with gradient styling for verified artists
   const titleClassName = artist.isVerified
     ? "bg-gradient-to-br from-white via-pink-300 to-purple-400 bg-clip-text text-transparent"
     : "text-white";

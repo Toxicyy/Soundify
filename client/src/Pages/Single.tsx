@@ -6,22 +6,19 @@ import MainMenu from "../components/Single/MainMenu";
 import { api } from "../shared/api";
 
 /**
- * Single track page component displaying individual track information and controls
+ * Single track page component
  * Handles track data fetching, loading states, and error management
  */
 const Single = () => {
   const location = useLocation();
-
-  // Extract track ID from URL path
   const trackId = location.pathname.split("/single/")[1];
 
-  // Local state management
   const [isLoading, setIsLoading] = useState(false);
   const [track, setTrack] = useState<Track>({} as Track);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Fetch track data from API with comprehensive error handling
+   * Fetch track data from API
    */
   const loadTrack = useCallback(async () => {
     if (!trackId) {
@@ -51,7 +48,6 @@ const Single = () => {
 
       const data = await response.json();
 
-      // Validate response structure
       if (!data || typeof data !== "object") {
         throw new Error("Invalid response format");
       }
@@ -64,7 +60,6 @@ const Single = () => {
         errorMessage = error.message;
       }
 
-      // Provide user-friendly error messages
       if (
         errorMessage.includes("Failed to fetch") ||
         errorMessage.includes("NetworkError")
@@ -76,7 +71,6 @@ const Single = () => {
         errorMessage = "Server error";
       }
 
-      console.error("Track loading error:", error);
       setError(errorMessage);
       setTrack({} as Track);
     } finally {
@@ -84,12 +78,10 @@ const Single = () => {
     }
   }, [trackId]);
 
-  // Load track data on component mount and when trackId changes
   useEffect(() => {
     loadTrack();
   }, [loadTrack]);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5">
@@ -99,7 +91,6 @@ const Single = () => {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 lg:pl-[22vw] lg:pr-[2vw] flex items-center justify-center">
@@ -173,7 +164,6 @@ const Single = () => {
     );
   }
 
-  // Show message if no track data available
   if (!track || !track.name) {
     return (
       <div className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex items-center justify-center">
@@ -191,7 +181,6 @@ const Single = () => {
     );
   }
 
-  // Main content render - track data loaded successfully
   return (
     <main className="w-full min-h-screen pl-4 pr-4 sm:pl-8 sm:pr-8 xl:pl-[22vw] xl:pr-[2vw] flex flex-col gap-5">
       <Header track={track} isLoading={false} />

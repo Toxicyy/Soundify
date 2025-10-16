@@ -17,7 +17,6 @@ export const likeUpdateSlice = createSlice({
     initializeLikes: (state, action: PayloadAction<string[]>) => {
       state.likedTracks = action.payload;
     },
-
     addLike: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       if (!state.likedTracks.includes(trackId)) {
@@ -27,7 +26,6 @@ export const likeUpdateSlice = createSlice({
         state.pendingUpdates.push(trackId);
       }
     },
-
     removeLike: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       state.likedTracks = state.likedTracks.filter((id) => id !== trackId);
@@ -35,14 +33,12 @@ export const likeUpdateSlice = createSlice({
         state.pendingUpdates.push(trackId);
       }
     },
-
     confirmLikeUpdate: (state, action: PayloadAction<string>) => {
       const trackId = action.payload;
       state.pendingUpdates = state.pendingUpdates.filter(
         (id) => id !== trackId
       );
     },
-
     revertLikeUpdate: (
       state,
       action: PayloadAction<{ trackId: string; wasLiked: boolean }>
@@ -59,7 +55,6 @@ export const likeUpdateSlice = createSlice({
         (id) => id !== trackId
       );
     },
-
     clearLikes: (state) => {
       state.likedTracks = [];
       state.pendingUpdates = [];

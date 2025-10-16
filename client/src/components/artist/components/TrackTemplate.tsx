@@ -28,19 +28,16 @@ interface TrackTemplateProps {
 }
 
 /**
- * Skeleton component that perfectly matches the track layout
+ * Skeleton component matching track layout
  */
-const TrackSkeleton = () => {
+const TrackSkeleton = memo(() => {
   return (
     <>
-      {/* Desktop Skeleton (xl and above) */}
       <div className="hidden xl:grid grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_50px] gap-4 items-center px-4 py-3 hover:bg-white/5 transition-colors duration-200 rounded-lg group animate-pulse">
-        {/* Track Number */}
         <div className="text-center">
           <div className="h-6 w-6 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded mx-auto"></div>
         </div>
 
-        {/* Track Info */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-lg flex-shrink-0 relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
@@ -55,35 +52,30 @@ const TrackSkeleton = () => {
           </div>
         </div>
 
-        {/* Album */}
         <div className="text-center">
           <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-2/3 mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Date Added */}
         <div className="text-center">
           <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-16 mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Like Button */}
         <div className="text-center">
           <div className="w-4 h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-full mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Duration */}
         <div className="text-center">
           <div className="h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-12 mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* More Options */}
         <div className="text-center">
           <div className="w-4 h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
@@ -91,52 +83,42 @@ const TrackSkeleton = () => {
         </div>
       </div>
 
-      {/* Mobile/Tablet Skeleton (below xl) */}
       <div className="xl:hidden grid grid-cols-[10px_1.47fr_1fr_0.1fr_0.1fr_40px] md:grid-cols-[20px_1.47fr_1fr_0.1fr_0.1fr_40px] gap-2 sm:gap-4 items-center px-2 sm:px-4 py-3 hover:bg-white/5 transition-colors duration-200 rounded-lg group animate-pulse">
-        {/* Track Number */}
         <div className="text-center">
           <div className="h-4 w-3 md:h-5 md:w-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Track Info */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-lg flex-shrink-0 relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
           <div className="flex flex-col justify-center gap-2 min-w-0 flex-1">
-            <div className="h-3 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-24 sm:w-36 relative overflow-hidden">
-              <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
-            </div>
             <div className="h-3 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-16 sm:w-24 relative overflow-hidden">
               <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
             </div>
           </div>
         </div>
 
-        {/* Listen Count */}
         <div className="text-center">
           <div className="h-3 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-8 sm:w-12 mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Like Button */}
         <div className="flex justify-center">
           <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded-full relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Duration */}
         <div className="text-center">
           <div className="h-3 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded w-6 sm:w-8 mx-auto relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
           </div>
         </div>
 
-        {/* Menu Button */}
         <div className="flex justify-center">
           <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-white/10 via-white/20 to-white/5 rounded relative overflow-hidden">
             <div className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
@@ -145,11 +127,13 @@ const TrackSkeleton = () => {
       </div>
     </>
   );
-};
+});
+
+TrackSkeleton.displayName = "TrackSkeleton";
 
 /**
- * Individual track component with play controls, like functionality, and context menu
- * Supports loading states, responsive design, and comprehensive user interactions
+ * Track row component with playback controls, like button, and context menu
+ * Supports responsive layouts for mobile and desktop
  */
 const TrackTemplate: FC<TrackTemplateProps> = ({
   track,
@@ -157,25 +141,20 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
   isLoading = false,
   allTracks = [],
 }) => {
-  // Local state
   const [isHovered, setIsHovered] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLikeHovered, setIsLikeHovered] = useState(false);
 
-  // Refs
   const ellipsisRef = useRef<HTMLDivElement>(null);
 
-  // Redux state
   const dispatch = useDispatch<AppDispatch>();
   const currentTrack = useSelector((state: AppState) => state.currentTrack);
 
-  // Computed values
   const isCurrentTrack = currentTrack.currentTrack?._id === track?._id;
   const isThisTrackPlaying = isCurrentTrack && currentTrack.isPlaying;
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
 
-  // Custom hooks
   const duration = useFormatTime(track?.duration || 0);
   const {
     isLiked,
@@ -183,10 +162,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     toggleLike,
   } = useLike(isLoading ? "" : track._id);
 
-  // Event handlers
-  /**
-   * Play track with full context queue
-   */
   const playTrackWithContext = useCallback(() => {
     if (!track || isLoading) return;
 
@@ -203,9 +178,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     }
   }, [track, isLoading, allTracks, index, dispatch]);
 
-  /**
-   * Toggle play/pause for current track or start new track
-   */
   const togglePlayPause = useCallback(() => {
     if (!track || isLoading) return;
 
@@ -223,9 +195,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     dispatch,
   ]);
 
-  /**
-   * Handle context menu toggle
-   */
   const handleEllipsisClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -234,9 +203,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     [isMenuOpen]
   );
 
-  /**
-   * Handle like button click with loading state
-   */
   const handleLikeClick = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -247,39 +213,35 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     [isLoading, likePending, toggleLike]
   );
 
-  /**
-   * Add track to queue
-   */
   const handleAddToQueue = useCallback(() => {
     if (!track || isLoading) return;
     dispatch(addToQueue(track));
   }, [track, isLoading, dispatch]);
 
-  const handleArtistClick = () => {
+  const handleArtistClick = useCallback(() => {
     if (!track) return;
     navigate(`/artist/${track.artist._id}`);
-  };
+  }, [track, navigate]);
 
-  const handleAlbumClick = () => {
+  const handleAlbumClick = useCallback(() => {
     if (!track) return;
-    if (track.album == "single") {
+    if (track.album === "single") {
       navigate(`/single/${track._id}`);
     } else {
       navigate(`/album/${track.album._id}`);
     }
-  };
+  }, [track, navigate]);
 
-  const handleInfoClick = () => {
+  const handleInfoClick = useCallback(() => {
     if (!track) return;
     navigate(`/track/${track._id}`);
-  };
+  }, [track, navigate]);
 
   const handleShareClick = useCallback(async () => {
     try {
       if (!track) return;
       const url = `${window.location.origin}/track/${track._id}`;
 
-      // Check support for Web Share API (for mobile devices)
       if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
         const artistName =
           typeof track.artist === "string" ? track.artist : track.artist?.name;
@@ -296,27 +258,21 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         showSuccess("Track link copied to clipboard!");
       }
     } catch (error) {
-      // Handle errors
       if (error === "AbortError") {
         return;
       }
-
-      console.error("Share failed:", error);
 
       try {
         if (!track) return;
         const url = `${window.location.origin}/track/${track._id}`;
         await navigator.clipboard.writeText(url);
         showSuccess("Track link copied to clipboard!");
-      } catch (clipboardError) {
+      } catch {
         showError("Failed to share track. Please copy the URL manually.");
       }
     }
   }, [track, showSuccess, showError]);
 
-  /**
-   * Handle context menu item actions
-   */
   const handleMenuItemClick = useCallback(
     (index: number) => {
       const menuActions = [
@@ -333,12 +289,16 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         setIsMenuOpen(false);
       }
     },
-    [handleLikeClick, handleAddToQueue, handleArtistClick, handleAlbumClick, handleInfoClick, handleShareClick]
+    [
+      handleLikeClick,
+      handleAddToQueue,
+      handleArtistClick,
+      handleAlbumClick,
+      handleInfoClick,
+      handleShareClick,
+    ]
   );
 
-  /**
-   * Handle image loading errors
-   */
   const handleImageError = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       e.currentTarget.style.display = "none";
@@ -346,12 +306,10 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
     []
   );
 
-  // Render skeleton loading state
   if (isLoading) {
     return <TrackSkeleton />;
   }
 
-  // Main track component render
   return (
     <div
       className="grid grid-cols-[10px_1.47fr_1fr_0.1fr_0.1fr_40px] md:grid-cols-[20px_1.47fr_1fr_0.1fr_0.1fr_40px] xl:grid-cols-[50px_1.47fr_1.57fr_0.8fr_50px_80px_50px] gap-2 sm:gap-4 items-center px-2 sm:px-4 py-3 hover:bg-white/5 rounded-lg transition-colors duration-200 group cursor-pointer"
@@ -363,7 +321,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         typeof track.artist === "string" ? track.artist : track.artist?.name
       }`}
     >
-      {/* Track number */}
       <div
         className={`text-sm sm:text-lg xl:text-2xl text-center transition-colors duration-200 ${
           isThisTrackPlaying ? "text-white" : "text-white/50"
@@ -373,10 +330,8 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         {index + 1}
       </div>
 
-      {/* Track information and cover */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <div className="w-[50px] h-[50px] sm:w-[65px] sm:h-[65px] xl:w-12 xl:h-12 rounded-lg flex items-center justify-center relative overflow-hidden group/cover">
-          {/* Track cover image */}
           <img
             src={track?.coverUrl}
             alt={`${track?.name} cover`}
@@ -385,7 +340,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             loading="lazy"
           />
 
-          {/* Play/pause overlay on hover */}
           <div
             className={`absolute inset-0 transition-opacity duration-200 bg-black rounded-lg ${
               isHovered ? "opacity-50" : "opacity-0"
@@ -394,7 +348,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
             aria-hidden="true"
           />
 
-          {/* Play/pause button */}
           {isHovered && (
             <button
               className="absolute inset-0 flex items-center justify-center z-30 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
@@ -425,7 +378,6 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
           )}
         </div>
 
-        {/* Track title and artist */}
         <div className="flex flex-col justify-center min-w-0 flex-1">
           <h3 className="text-sm sm:text-lg xl:text-base font-medium truncate transition-colors text-white group-hover:text-white/90">
             {track.name}
@@ -438,30 +390,27 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         </div>
       </div>
 
-      {/* Album (Desktop only) */}
       <div className="hidden xl:block text-center">
         <p className="text-base text-white/60 truncate">
           {track.album === "single" ? "Single" : track.album?.name || "Unknown"}
         </p>
       </div>
 
-      {/* Date Added (Desktop only) */}
       <div className="hidden xl:block text-center">
         <p className="text-base text-white/60">
           {new Date(track.createdAt || Date.now()).toLocaleDateString()}
         </p>
       </div>
 
-      {/* Listen count (Mobile/Tablet) OR Like button space (Desktop) */}
       <div className="xl:hidden text-sm sm:text-lg text-white/60 truncate text-center">
         {track.listenCount?.toLocaleString() || "0"}
       </div>
 
-      {/* Like button */}
       <div className="flex justify-center transition-opacity duration-300">
         <div
-          style={{ 
-            opacity: isHovered || isLiked ? 1 : (window.innerWidth >= 1280 ? 0 : 1)
+          style={{
+            opacity:
+              isHovered || isLiked ? 1 : window.innerWidth >= 1280 ? 0 : 1,
           }}
         >
           {likePending ? (
@@ -487,7 +436,9 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
               ) : (
                 <HeartOutlined
                   style={{
-                    color: isLikeHovered ? "#D3D3D3" : "rgba(255, 255, 255, 0.6)",
+                    color: isLikeHovered
+                      ? "#D3D3D3"
+                      : "rgba(255, 255, 255, 0.6)",
                     fontSize: window.innerWidth >= 1280 ? "16px" : "14px",
                   }}
                 />
@@ -497,12 +448,10 @@ const TrackTemplate: FC<TrackTemplateProps> = ({
         </div>
       </div>
 
-      {/* Duration */}
       <div className="text-sm sm:text-lg xl:text-base text-white/60 text-center">
         {duration}
       </div>
 
-      {/* Context menu */}
       <div className="flex justify-center relative" ref={ellipsisRef}>
         <button
           onClick={handleEllipsisClick}
